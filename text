@@ -1,0 +1,32 @@
+SUBDESIGN question_6
+(
+clk : INPUT;
+async_clr : INPUT;
+din[3..0] : INPUT;
+ld : INPUT;
+clr : INPUT;
+en : INPUT;
+q[3..0] : OUTPUT;
+term_ct : OUTPUT;
+)
+VARIABLE
+count[3..0] : DFF;
+BEGIN
+count[].clk = clk;
+count[].clrn = !async_clr;
+IF !ld THEN
+count[].d = din[];
+ELSIF clr THEN
+count[].d = 0;
+ELSIF !en THEN
+count[].d = count[].q - 1;
+ELSE
+count[].d = count[].q;
+END IF;
+q[] = count[].q;
+IF (count[].q == 0) & !en THEN
+term_ct = VCC;
+ELSE
+term_ct = GND;
+END IF;
+END;
