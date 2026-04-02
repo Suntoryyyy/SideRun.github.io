@@ -65,15 +65,10 @@ SideRun_APP/
 └── README.md
 ```
 
-## ✅ CPT208 Deliverables Alignment
-- **Web App**: Yes – Expo Web builds a static site deployable to Vercel/GitHub Pages.
-- **Live URL**: Will be provided after deployment.
-- **3 Must‑Have Playful Features**: Implemented as described above.
-- **Portfolio & Video**: Separate deliverables (outside this repo).
-- **AI Usage Compliance**: Any AI‑generated assets will be properly cited.
-
 ## 📄 License
 For educational use only – CPT208 coursework, University of York.
 
 ## 👥 Team
 *Group A1‑1* – SideRun project.
+Chengyi.Dai23
+Tian.Gao23
