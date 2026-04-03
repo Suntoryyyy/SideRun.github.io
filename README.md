@@ -66,7 +66,7 @@ SideRun_APP/
 ```
 
 ## 📄 License
-For educational use only – CPT208 coursework, University of York.
+For educational use only – CPT208 coursework.
 
 ## 👥 Team
 *Group A1‑1* – SideRun project.
