@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function RegisterScreen({ navigation, setLoggedIn }) {
   const [phone, setPhone] = useState('');
@@ -47,6 +48,13 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+          >
+            <Ionicons name="arrow-back" size={28} color="#111111" />
+          </TouchableOpacity>
           <Text style={styles.title}>JOIN SIDERUN</Text>
           <Text style={styles.subtitle}>
             Create an account to start sharing runs on <Text style={styles.brandText}>SideRun</Text>
@@ -106,9 +114,17 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     padding: 30,
+    paddingTop: 60,
   },
   header: {
     marginBottom: 40,
+    position: 'relative',
+  },
+  backButton: {
+    position: 'absolute',
+    top: -40,
+    left: -10,
+    zIndex: 10,
   },
   title: {
     fontSize: 36,

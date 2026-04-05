@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 
 // Conditionally import MapView for native platforms only
 let MapView, Polyline, Marker;
@@ -289,6 +290,15 @@ export default function RunScreen({ route, navigation }) {
   return (
     <View style={styles.container}>
       <View style={styles.mapContainer}>
+        {/* Floating Back Button */}
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+        >
+          <Ionicons name="arrow-back" size={28} color="#333" />
+        </TouchableOpacity>
+
         {Platform.OS === 'web' ? (
           // Real OpenStreetMap embed for web fallback
           <div style={{ width: '100%', height: '100%', borderRadius: 8, overflow: 'hidden' }}>
@@ -422,6 +432,20 @@ const styles = StyleSheet.create({
   mapContainer: {
     height: height * 0.55,
     position: 'relative',
+  },
+  backButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 40,
+    left: 20,
+    zIndex: 999,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: 20,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   map: {
     ...StyleSheet.absoluteFillObject,

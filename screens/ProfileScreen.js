@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfileScreen({ navigation, handleLogout }) {
   const [currentUser, setCurrentUser] = useState(null);
@@ -94,6 +95,13 @@ export default function ProfileScreen({ navigation, handleLogout }) {
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+          >
+            <Ionicons name="arrow-back" size={28} color="#111111" />
+          </TouchableOpacity>
           <Text style={styles.title}>Personal Settings</Text>
         </View>
 
@@ -174,6 +182,15 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 20,
     marginTop: 10,
+    position: 'relative',
+    alignItems: 'center',
+    paddingTop: 10,
+  },
+  backButton: {
+    position: 'absolute',
+    left: 0,
+    top: 10,
+    zIndex: 10,
   },
   title: {
     fontSize: 28,
