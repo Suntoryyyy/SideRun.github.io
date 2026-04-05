@@ -8,10 +8,19 @@ import {
   Dimensions,
   ScrollView,
   Platform,
+  UIManager,
+  LayoutAnimation,
+  Image
 } from 'react-native';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import MapStyle from './MapStyle.json';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 // Conditionally import MapView for native platforms only
 let MapView, Polyline, Marker;
@@ -34,9 +43,16 @@ export default function RunScreen({ route, navigation }) {
     calories: 0,
     coordinates: [],
   });
+  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
+
+  const togglePanel = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsPanelCollapsed(!isPanelCollapsed);
+  };
   const [currentLocation, setCurrentLocation] = useState(null);
   const [region, setRegion] = useState(null);
   const [friendsWatching, setFriendsWatching] = useState(2);
+  const [userAvatar, setUserAvatar] = useState(null);
   const [cheers, setCheers] = useState([]);
 
   const watchId = useRef(null);
@@ -54,12 +70,31 @@ export default function RunScreen({ route, navigation }) {
 
   useEffect(() => {
     requestLocationPermission();
+    loadUserAvatar();
     return () => {
       if (watchId.current) {
         watchId.current.remove();
       }
     };
   }, []);
+
+  const loadUserAvatar = async () => {
+    try {
+      const currentUser = await AsyncStorage.getItem('currentUser');
+      if (currentUser) {
+        const users = await AsyncStorage.getItem('users');
+        if (users) {
+          const parsedUsers = JSON.parse(users);
+          const found = parsedUsers.find(u => u.username === currentUser);
+          if (found && found.avatar) {
+            setUserAvatar(found.avatar);
+          }
+        }
+      }
+    } catch (e) {
+      console.log(e);
+    }
+  };
 
   const requestLocationPermission = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -95,6 +130,7 @@ export default function RunScreen({ route, navigation }) {
   };
 
   const startRun = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     if (!currentLocation) {
       Alert.alert('Location not available', 'Please wait for location to be determined.');
       return;
@@ -269,6 +305,7 @@ export default function RunScreen({ route, navigation }) {
   };
 
   const sendCheer = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const emojis = ['💪', '🔥', '🏃‍♂️', '🎉', '👍'];
     const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
     setCheers(prev => [...prev, { emoji: randomEmoji, time: Date.now() }]);
@@ -326,8 +363,9 @@ export default function RunScreen({ route, navigation }) {
           <MapView
             style={styles.map}
             region={region}
-            showsUserLocation={true}
+            showsUserLocation={false}
             followsUserLocation={true}
+            customMapStyle={MapStyle}
           >
             {runData.coordinates.length > 1 && (
               <Polyline
@@ -337,7 +375,17 @@ export default function RunScreen({ route, navigation }) {
               />
             )}
             {currentLocation && (
-              <Marker coordinate={currentLocation} title="You are here" />
+              <Marker coordinate={currentLocation} title="You are here" anchor={{ x: 0.5, y: 0.5 }}>
+                <View style={styles.avatarHaloOuter}>
+                  <View style={styles.avatarHaloInner}>
+                    {userAvatar && (userAvatar.startsWith('file:') || userAvatar.startsWith('http') || userAvatar.startsWith('data:')) ? (
+                      <Image source={{ uri: userAvatar }} style={styles.mapAvatarImage} />
+                    ) : (
+                      <Text style={styles.mapAvatarEmoji}>{userAvatar || '👤'}</Text>
+                    )}
+                  </View>
+                </View>
+              </Marker>
             )}
           </MapView>
         )}
@@ -349,36 +397,44 @@ export default function RunScreen({ route, navigation }) {
         ))}
       </View>
 
-      <View style={styles.dashboardContainer}>
-        <View style={styles.dragHandle} />
+      <View style={[styles.dashboardContainer, isPanelCollapsed && styles.dashboardCollapsed]}>
+        <TouchableOpacity 
+          style={styles.dragHandleContainer} 
+          activeOpacity={0.8} 
+          onPress={togglePanel}
+        >
+          <View style={styles.dragHandle} />
+        </TouchableOpacity>
         
-        <View style={styles.statsContainer}>
-          <View style={styles.statsRow}>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{runData.distance.toFixed(2)}</Text>
-              <Text style={styles.statLabel}>KILOMETERS</Text>
+        {!isPanelCollapsed && (
+          <View style={styles.statsContainer}>
+            <View style={styles.statsRow}>
+              <View style={styles.statBox}>
+                <Text style={styles.statValue}>{runData.distance.toFixed(2)}</Text>
+                <Text style={styles.statLabel}>KILOMETERS</Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statValue}>{formatDuration(durationInSeconds)}</Text>
+                <Text style={styles.statLabel}>TIME</Text>
+              </View>
             </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{formatDuration(durationInSeconds)}</Text>
-              <Text style={styles.statLabel}>TIME</Text>
+            
+            <View style={[styles.statsRow, { marginTop: 24 }]}>
+              <View style={styles.statBox}>
+                <Text style={styles.statValue}>{currentPace}</Text>
+                <Text style={styles.statLabel}>CURRENT PACE</Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statValue}>{Math.round(runData.calories)}</Text>
+                <Text style={styles.statLabel}>KCAL BURNED</Text>
+              </View>
             </View>
-          </View>
-          
-          <View style={[styles.statsRow, { marginTop: 24 }]}>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{currentPace}</Text>
-              <Text style={styles.statLabel}>CURRENT PACE</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{Math.round(runData.calories)}</Text>
-              <Text style={styles.statLabel}>KCAL BURNED</Text>
-            </View>
-          </View>
 
-          {mode === 'shared' && (
-            <Text style={styles.friendsText}>👥 {friendsWatching} friends watching</Text>
-          )}
-        </View>
+            {mode === 'shared' && (
+              <Text style={styles.friendsText}>👥 {friendsWatching} friends watching</Text>
+            )}
+          </View>
+        )}
 
         <View style={styles.controlsContainer}>
           {!isRunning ? (
@@ -480,13 +536,54 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     justifyContent: 'space-between',
   },
+  dashboardCollapsed: {
+    flex: 0,
+    height: 180,
+    justifyContent: 'flex-start',
+  },
+  dragHandleContainer: {
+    width: '100%',
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   dragHandle: {
     width: 40,
     height: 5,
     backgroundColor: '#E0E0E0',
     borderRadius: 2.5,
-    alignSelf: 'center',
-    marginBottom: 5,
+  },
+  avatarHaloOuter: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 149, 0, 0.3)', // Tailing halo effect
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarHaloInner: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#FF9500',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 2,
+    borderColor: '#FF9500',
+    overflow: 'hidden',
+  },
+  mapAvatarImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  mapAvatarEmoji: {
+    fontSize: 18,
   },
   statsContainer: {
     paddingHorizontal: 40,

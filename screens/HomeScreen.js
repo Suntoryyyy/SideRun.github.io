@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Image
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 
 const { width } = Dimensions.get('window');
 
@@ -97,15 +98,41 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         {/* Live Weather Preview */}
-        <TouchableOpacity style={styles.weatherCard} activeOpacity={0.9} onPress={() => navigation.navigate('Weather')}>
+        <TouchableOpacity 
+          style={styles.weatherCard} 
+          activeOpacity={0.9} 
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            navigation.navigate('Weather');
+          }}
+        >
           <View style={styles.weatherIconContainer}>
             <Ionicons name="partly-sunny" size={32} color="#24C789" />
           </View>
           <View style={styles.weatherMeta}>
              <Text style={styles.weatherTemp}>18°C · Perfect Conditions</Text>
-             <Text style={styles.weatherTip}>Great time for a quick 5k run before sunset!</Text>
+             <Text style={styles.weatherDesc}>Low wind, great time for a run</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#CCCCCC" />
+          <Ionicons name="chevron-forward" size={24} color="#CCC" />
+        </TouchableOpacity>
+
+        {/* Friend Running Push */}
+        <TouchableOpacity 
+          style={styles.friendPushCard} 
+          activeOpacity={0.9} 
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            navigation.navigate('Run', { mode: 'shared' });
+          }}
+        >
+          <View style={styles.friendPushAvatar}>
+            <Text style={styles.friendPushAvatarText}>🏃</Text>
+          </View>
+          <View style={styles.friendPushMeta}>
+             <Text style={styles.friendPushName}>Alex is running nearby!</Text>
+             <Text style={styles.friendPushAction}>Tap to join their live map</Text>
+          </View>
+          <Ionicons name="map-outline" size={24} color="#FF9500" />
         </TouchableOpacity>
 
         {/* Quick Actions Grid */}
@@ -165,7 +192,10 @@ export default function HomeScreen({ navigation }) {
         <TouchableOpacity
           style={styles.startButton}
           activeOpacity={0.8}
-          onPress={() => navigation.navigate('Run')}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            navigation.navigate('Run');
+          }}
         >
           <Text style={styles.startButtonText}>START</Text>
         </TouchableOpacity>
@@ -340,6 +370,47 @@ const styles = StyleSheet.create({
     color: '#777',
     marginTop: 4,
     lineHeight: 18,
+  },
+  weatherDesc: {
+    fontSize: 13,
+    color: '#777',
+    marginTop: 4,
+    lineHeight: 18,
+  },
+  friendPushCard: {
+    backgroundColor: '#FFF4E5',
+    borderRadius: 20,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#FFE0B2',
+  },
+  friendPushAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFD180',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  friendPushAvatarText: {
+    fontSize: 24,
+  },
+  friendPushMeta: {
+    flex: 1,
+  },
+  friendPushName: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    color: '#E65100',
+    marginBottom: 2,
+  },
+  friendPushAction: {
+    color: '#FF9800',
+    fontSize: 13,
   },
   sectionTitle: {
     fontSize: 18,
