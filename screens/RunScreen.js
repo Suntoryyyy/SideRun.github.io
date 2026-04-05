@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 60 : 40,
+    top: Platform.OS === 'ios' ? 60 : (Platform.OS === 'web' ? 90 : 40),
     left: 20,
     zIndex: 999,
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
@@ -596,8 +596,8 @@ const styles = StyleSheet.create({
   },
   webMapOverlayCard: {
     position: 'absolute',
-    top: 16,
-    left: 16,
+    top: Platform.OS === 'web' ? 20 : 40,
+    right: 20,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -607,6 +607,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     zIndex: 10,
+    alignItems: 'flex-end',
   },
   webMapOverlayText: {
     color: '#24C789',
