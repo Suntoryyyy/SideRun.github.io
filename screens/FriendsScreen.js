@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
+  Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -185,7 +186,11 @@ export default function FriendsScreen({ navigation }) {
         <View key={friend.id} style={styles.friendCard}>
           <View style={styles.friendInfo}>
             <View style={styles.friendMain}>
-              <Text style={styles.friendAvatar}>{friend.avatar}</Text>
+              {friend.avatar && (friend.avatar.startsWith('file:') || friend.avatar.startsWith('http') || friend.avatar.startsWith('data:')) ? (
+                <Image source={{ uri: friend.avatar }} style={styles.friendAvatarImage} />
+              ) : (
+                <Text style={styles.friendAvatar}>{friend.avatar}</Text>
+              )}
               <View style={styles.friendDetails}>
                 <Text style={styles.friendName}>{friend.name}</Text>
                 <Text style={styles.friendStats}>
@@ -234,7 +239,11 @@ export default function FriendsScreen({ navigation }) {
           <View style={styles.rankContainer}>
             <Text style={styles.rank}>#{index + 1}</Text>
           </View>
-          <Text style={styles.leaderAvatar}>{entry.avatar}</Text>
+          {entry.avatar && (entry.avatar.startsWith('file:') || entry.avatar.startsWith('http') || entry.avatar.startsWith('data:')) ? (
+            <Image source={{ uri: entry.avatar }} style={styles.leaderAvatarImage} />
+          ) : (
+            <Text style={styles.leaderAvatar}>{entry.avatar}</Text>
+          )}
           <View style={styles.leaderInfo}>
             <Text style={styles.leaderName}>{entry.name}</Text>
             <Text style={styles.leaderDistance}>{entry.weeklyDistance} km</Text>
@@ -435,6 +444,12 @@ const styles = StyleSheet.create({
     fontSize: 40,
     marginRight: 16,
   },
+  friendAvatarImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 16,
+  },
   friendDetails: {
     flex: 1,
   },
@@ -536,6 +551,12 @@ const styles = StyleSheet.create({
   },
   leaderAvatar: {
     fontSize: 32,
+    marginRight: 16,
+  },
+  leaderAvatarImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     marginRight: 16,
   },
   leaderInfo: {

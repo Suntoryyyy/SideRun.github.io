@@ -9,9 +9,11 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function ProfileScreen({ navigation, handleLogout }) {
   const [currentUser, setCurrentUser] = useState(null);
@@ -20,6 +22,25 @@ export default function ProfileScreen({ navigation, handleLogout }) {
   const [isEditing, setIsEditing] = useState(false);
 
   const avatars = ['👤', '🏃‍♂️', '🏃‍♀️', '😎', '🌟', '🦄', '🐶', '🦊'];
+
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+      base64: true, // Request base64 data for persistence
+    });
+
+    if (!result.canceled) {
+      if (result.assets[0].base64) {
+        // Build data URI for permanent storage, particularly important for Web fallback
+        setAvatar(`data:image/jpeg;base64,${result.assets[0].base64}`);
+      } else {
+        setAvatar(result.assets[0].uri);
+      }
+    }
+  };
 
   useEffect(() => {
     loadUserProfile();
@@ -107,9 +128,22 @@ export default function ProfileScreen({ navigation, handleLogout }) {
 
         <View style={styles.profileCard}>
           <View style={styles.avatarSection}>
-            <Text style={styles.largeAvatar}>{avatar}</Text>
+            {avatar && (avatar.startsWith('file:') || avatar.startsWith('http') || avatar.startsWith('data:')) ? (
+              <Image source={{ uri: avatar }} style={styles.largeAvatarImage} />
+            ) : (
+              <Text style={styles.largeAvatar}>{avatar}</Text>
+            )}
+            
             {isEditing && (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.avatarSelector}>
+                {/* Image upload button */}
+                <TouchableOpacity
+                  style={styles.avatarOption}
+                  onPress={pickImage}
+                >
+                  <Ionicons name="camera" size={24} color="#666" />
+                </TouchableOpacity>
+                
                 {avatars.map((emoji, index) => (
                   <TouchableOpacity
                     key={index}
@@ -213,6 +247,12 @@ const styles = StyleSheet.create({
   },
   largeAvatar: {
     fontSize: 72,
+    marginBottom: 10,
+  },
+  largeAvatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     marginBottom: 10,
   },
   avatarSelector: {

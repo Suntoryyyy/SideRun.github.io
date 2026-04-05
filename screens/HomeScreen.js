@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -47,9 +47,17 @@ export default function HomeScreen({ navigation }) {
             <Ionicons name="menu" size={28} color="#222222" />
           </TouchableOpacity>
           <View style={styles.headerTop}>
-            <View>
-              <Text style={styles.greeting}>{getGreeting()}</Text>
-              <Text style={styles.userName}>{avatar ? `${avatar} ` : ''}{username}</Text>
+            <View style={styles.userInfoContainer}>
+              {avatar && (avatar.startsWith('file:') || avatar.startsWith('http') || avatar.startsWith('data:')) ? (
+                <Image source={{ uri: avatar }} style={styles.homeAvatarImage} />
+              ) : null}
+              <View>
+                <Text style={styles.greeting}>{getGreeting()}</Text>
+                <Text style={styles.userName}>
+                  {avatar && !(avatar.startsWith('file:') || avatar.startsWith('http') || avatar.startsWith('data:')) ? `${avatar} ` : ''}
+                  {username}
+                </Text>
+              </View>
             </View>
             <View style={styles.brandBadge}>
               <Text style={styles.brandText}>siderun</Text>
@@ -187,6 +195,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  userInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  homeAvatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: 10,
   },
   brandBadge: {
     backgroundColor: '#24C789',
