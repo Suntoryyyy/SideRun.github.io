@@ -14,32 +14,54 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import ImageCropperModal from './ImageCropperModal';
 
 export default function ProfileScreen({ navigation, handleLogout }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [username, setUsername] = useState('');
   const [avatar, setAvatar] = useState('👤');
   const [isEditing, setIsEditing] = useState(false);
+  
+  // Cropper State
+  const [cropModalVisible, setCropModalVisible] = useState(false);
+  const [rawImageUri, setRawImageUri] = useState(null);
 
   const avatars = ['👤', '🏃‍♂️', '🏃‍♀️', '😎', '🌟', '🦄', '🐶', '🦊'];
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
+      allowsEditing: Platform.OS !== 'web', // Native uses built-in, Web uses our custom web cropper
       aspect: [1, 1],
-      quality: 0.5,
+      quality: 0.8,
       base64: true, // Request base64 data for persistence
     });
 
     if (!result.canceled) {
-      if (result.assets[0].base64) {
-        // Build data URI for permanent storage, particularly important for Web fallback
-        setAvatar(`data:image/jpeg;base64,${result.assets[0].base64}`);
+      if (Platform.OS === 'web') {
+        const rawUri = result.assets[0].uri;
+        setRawImageUri(rawUri);
+        setCropModalVisible(true);
       } else {
-        setAvatar(result.assets[0].uri);
+        // Native path sets it directly from built-in cropped output
+        if (result.assets[0].base64) {
+          setAvatar(`data:image/jpeg;base64,${result.assets[0].base64}`);
+        } else {
+          setAvatar(result.assets[0].uri);
+        }
       }
     }
+  };
+
+  const handleWebCropSave = (base64CroppedImage) => {
+    setAvatar(base64CroppedImage);
+    setCropModalVisible(false);
+    setRawImageUri(null);
+  };
+
+  const handleWebCropCancel = () => {
+    setCropModalVisible(false);
+    setRawImageUri(null);
   };
 
   useEffect(() => {
@@ -200,6 +222,15 @@ export default function ProfileScreen({ navigation, handleLogout }) {
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {Platform.OS === 'web' && (
+        <ImageCropperModal
+          visible={cropModalVisible}
+          imageUri={rawImageUri}
+          onSave={handleWebCropSave}
+          onCancel={handleWebCropCancel}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }
