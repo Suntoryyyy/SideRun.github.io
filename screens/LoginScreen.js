@@ -1,10 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function LoginScreen({ navigation, setLoggedIn }) {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true); // Default to true
+
+  useEffect(() => {
+    // Check if there's a saved auto-login preference we should load
+    const loadRememberedUser = async () => {
+      try {
+        const savedPhone = await AsyncStorage.getItem('rememberedPhone');
+        if (savedPhone) {
+          setPhone(savedPhone);
+        }
+      } catch (e) {
+        // Ignore
+      }
+    };
+    loadRememberedUser();
+  }, []);
 
   const handleLogin = async () => {
     const trimmedPhone = phone.trim();
@@ -19,7 +37,20 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
       const users = usersData ? JSON.parse(usersData) : {};
 
       if (users[trimmedPhone] && users[trimmedPhone].password === password) {
-        await AsyncStorage.setItem('currentUser', JSON.stringify({ phone: trimmedPhone, username: users[trimmedPhone].username }));
+        const userInfo = JSON.stringify({ phone: trimmedPhone, username: users[trimmedPhone].username });
+        if (rememberMe) {
+          await AsyncStorage.setItem('rememberedPhone', trimmedPhone);
+          await AsyncStorage.setItem('currentUser', userInfo);
+        } else {
+          await AsyncStorage.removeItem('rememberedPhone');
+          if (Platform.OS === 'web') {
+            sessionStorage.setItem('currentUser', userInfo);
+            // Don't save to AsyncStorage so it's wiped when tab closes
+          } else {
+            // For native, no sessionStorage, so we just use AsyncStorage for the current session
+            await AsyncStorage.setItem('currentUser', userInfo);
+          }
+        }
         setLoggedIn(true);
       } else {
         Alert.alert('Login Failed', 'Invalid phone number or password');
@@ -42,6 +73,8 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
             try {
               await AsyncStorage.removeItem('users');
               await AsyncStorage.removeItem('currentUser');
+              await AsyncStorage.removeItem('rememberedPhone');
+              if (Platform.OS === 'web') sessionStorage.removeItem('currentUser');
               Alert.alert('Success', 'All registration data has been cleared.');
             } catch (e) {
               Alert.alert('Error', 'Failed to clear data');
@@ -77,13 +110,34 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
           />
 
           <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your password"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Enter your password"
+              secureTextEntry={!showPassword}
+              value={password}
+              onChangeText={setPassword}
+            />
+            <TouchableOpacity 
+              style={styles.eyeIcon} 
+              onPress={() => setShowPassword(!showPassword)}
+            >
+              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={24} color="#888" />
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity 
+            style={styles.checkboxContainer} 
+            onPress={() => setRememberMe(!rememberMe)}
+            activeOpacity={0.7}
+          >
+            <Ionicons 
+              name={rememberMe ? 'checkmark-circle' : 'ellipse-outline'} 
+              size={24} 
+              color={rememberMe ? '#24C789' : '#888'} 
+            />
+            <Text style={styles.checkboxLabel}>Remember Me</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
             <Text style={styles.loginButtonText}>LOG IN</Text>
@@ -151,6 +205,33 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     fontSize: 16,
     color: '#222222',
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F4F5F7',
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 16,
+    fontSize: 16,
+    color: '#222222',
+  },
+  eyeIcon: {
+    padding: 16,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    marginLeft: 4,
+  },
+  checkboxLabel: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#444444',
   },
   loginButton: {
     backgroundColor: '#24C789',

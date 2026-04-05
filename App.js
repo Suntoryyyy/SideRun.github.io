@@ -5,7 +5,7 @@ import { createDrawerNavigator } from '@react-navigation/drawer';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Platform } from 'react-native';
 import * as Font from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -100,7 +100,14 @@ export default function App() {
   useEffect(() => {
     async function prepareApp() {
       try {
-        await Font.loadAsync(Ionicons.font);
+        if (Platform.OS === 'web') {
+          // Explicitly load font from CDN to avoid GitHub Pages base-path 404s
+          await Font.loadAsync({
+            Ionicons: 'https://unpkg.com/@expo/vector-icons@15.1.1/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf'
+          });
+        } else {
+          await Font.loadAsync(Ionicons.font);
+        }
         await checkLoginStatus();
       } catch (e) {
         console.warn(e);
@@ -113,7 +120,17 @@ export default function App() {
 
   const checkLoginStatus = async () => {
     try {
-      const user = await AsyncStorage.getItem('currentUser');
+      let user = null;
+      // For web, check sessionStorage first (used when Remember Me is unchecked)
+      if (Platform.OS === 'web') {
+        user = sessionStorage.getItem('currentUser');
+      }
+      
+      // If not in sessionStorage, check permanent AsyncStorage
+      if (!user) {
+        user = await AsyncStorage.getItem('currentUser');
+      }
+
       if (user) setIsLoggedIn(true);
     } catch (e) {
       console.error(e);
@@ -122,6 +139,9 @@ export default function App() {
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem('currentUser');
+    if (Platform.OS === 'web') {
+      sessionStorage.removeItem('currentUser');
+    }
     setIsLoggedIn(false);
   };
 
