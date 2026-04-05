@@ -18,6 +18,7 @@ import BadgesScreen from './screens/BadgesScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
+import RunHistoryScreen from './screens/RunHistoryScreen';
 
 const Drawer = createDrawerNavigator();
 const Stack = createStackNavigator();
@@ -85,6 +86,13 @@ function DrawerNavigator({ handleLogout }) {
       <Drawer.Screen 
         name="Badges" 
         component={BadgesScreen} 
+        options={{
+          drawerItemStyle: { display: 'none' }
+        }} 
+      />
+      <Drawer.Screen 
+        name="RunHistory" 
+        component={RunHistoryScreen} 
         options={{
           drawerItemStyle: { display: 'none' }
         }} 

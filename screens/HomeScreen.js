@@ -125,12 +125,12 @@ export default function HomeScreen({ navigation }) {
         {/* Recent Runs Section */}
         <View style={styles.recentSectionHeader}>
           <Text style={styles.sectionTitle}>Recent Runs</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Run')}>
+          <TouchableOpacity onPress={() => navigation.navigate('RunHistory')}>
             <Text style={styles.seeAllText}>See All</Text>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity activeOpacity={0.8} style={styles.recentRunCard} onPress={() => navigation.navigate('Run')}>
+        <TouchableOpacity activeOpacity={0.8} style={styles.recentRunCard} onPress={() => navigation.navigate('RunHistory')}>
           <View style={styles.runIconBox}>
             <Ionicons name="footsteps" size={24} color="#24C789" />
           </View>
@@ -144,7 +144,7 @@ export default function HomeScreen({ navigation }) {
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity activeOpacity={0.8} style={styles.recentRunCard} onPress={() => navigation.navigate('Run')}>
+        <TouchableOpacity activeOpacity={0.8} style={styles.recentRunCard} onPress={() => navigation.navigate('RunHistory')}>
           <View style={styles.runIconBox}>
             <Ionicons name="footsteps" size={24} color="#A0A0A0" />
           </View>
