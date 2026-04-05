@@ -80,30 +80,37 @@ export default function FriendsScreen({ navigation }) {
         await AsyncStorage.setItem('leaderboard', JSON.stringify(mockLeaderboard));
       }
 
-      // Load mock feed
+      // Load feed from memory + mocked defaults
+      const existingFeed = await AsyncStorage.getItem('globalFeed');
       const mockFeed = [
         {
           id: 101,
           name: 'Alice Johnson',
           avatar: '👩‍💼',
-          date: '2 hours ago',
-          distance: '5.2',
+          time: '2 hours ago',
+          distance: '5.20',
+          pace: '5.0',
           duration: '00:26:10',
           likes: 3,
           comments: 1,
+          hasLiked: false
         },
         {
           id: 102,
           name: 'Charlie Brown',
           avatar: '👨‍🎨',
-          date: 'Yesterday',
-          distance: '10.0',
+          time: 'Yesterday',
+          distance: '10.00',
+          pace: '6.5',
           duration: '01:05:40',
           likes: 12,
           comments: 4,
+          hasLiked: false
         }
       ];
-      setFeed(mockFeed);
+
+      const globalFeed = existingFeed ? JSON.parse(existingFeed) : [];
+      setFeed([...globalFeed, ...mockFeed]);
 
     } catch (error) {
       console.error('Error loading friends data:', error);
@@ -305,20 +312,42 @@ export default function FriendsScreen({ navigation }) {
     </View>
   );
 
+  const handleLike = async (id) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setFeed(prev => Math.random() < 2 ? prev.map(item => {
+      if (item.id === id) {
+        return { ...item, hasLiked: !item.hasLiked, likes: item.hasLiked ? item.likes - 1 : item.likes + 1 };
+      }
+      return item;
+    }) : prev);
+  };
+
+  const handleComment = (id) => {
+    Alert.prompt('Add a comment', 'Type your praise...', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Post', onPress: text => {
+        if(text) {
+          setFeed(prev => prev.map(i => i.id === id ? { ...i, comments: i.comments + 1 } : i));
+          Alert.alert('Posted!', `Your comment "${text}" was added.`);
+        }
+      }}
+    ]);
+  };
+
   const renderFeedTab = () => (
     <View style={styles.tabContent}>
       <Text style={styles.sectionTitle}>Friend Activity</Text>
       {feed.map((item, index) => (
         <View key={index} style={styles.feedCard}>
           <View style={styles.feedHeader}>
-            {item.avatar.startsWith('data:') || item.avatar.startsWith('http') || item.avatar.startsWith('file:') ? (
+            {item.avatar && (item.avatar.startsWith('data:') || item.avatar.startsWith('http') || item.avatar.startsWith('file:')) ? (
               <Image source={{ uri: item.avatar }} style={styles.feedAvatarImg} />
             ) : (
-              <Text style={styles.feedAvatarEmoji}>{item.avatar}</Text>
+              <Text style={styles.feedAvatarEmoji}>{item.avatar || '👤'}</Text>
             )}
             <View style={styles.feedHeaderInfo}>
-              <Text style={styles.feedName}>{item.name}</Text>
-              <Text style={styles.feedTime}>{item.date}</Text>
+              <Text style={styles.feedName}>{item.name || item.user}</Text>
+              <Text style={styles.feedTime}>{item.time || item.date}</Text>
             </View>
           </View>
           
@@ -334,17 +363,21 @@ export default function FriendsScreen({ navigation }) {
               <Text style={styles.feedStatLabel}>km</Text>
             </View>
             <View style={styles.feedStatBox}>
+              <Text style={styles.feedStatVal}>{item.pace || '5.5'}</Text>
+              <Text style={styles.feedStatLabel}>Pace</Text>
+            </View>
+            <View style={styles.feedStatBox}>
                <Text style={styles.feedStatVal}>{item.duration}</Text>
                <Text style={styles.feedStatLabel}>Time</Text>
             </View>
           </View>
 
           <View style={styles.feedActions}>
-             <TouchableOpacity style={styles.feedActionBtn} onPress={() => Alert.alert('Liked!')}>
-               <Ionicons name="heart-outline" size={20} color="#666" />
+             <TouchableOpacity style={styles.feedActionBtn} onPress={() => handleLike(item.id)}>
+               <Ionicons name={item.hasLiked ? "heart" : "heart-outline"} size={20} color={item.hasLiked ? "#FF3B30" : "#666"} />
                <Text style={styles.feedActionText}>{item.likes} Likes</Text>
              </TouchableOpacity>
-             <TouchableOpacity style={styles.feedActionBtn} onPress={() => Alert.alert('Reply to activity')}>
+             <TouchableOpacity style={styles.feedActionBtn} onPress={() => handleComment(item.id)}>
                <Ionicons name="chatbubble-outline" size={20} color="#666" />
                <Text style={styles.feedActionText}>{item.comments} Comments</Text>
              </TouchableOpacity>
@@ -679,6 +712,92 @@ const styles = StyleSheet.create({
   },
   medal: {
     fontSize: 28,
+  },
+  feedCard: {
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  feedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  feedAvatarEmoji: {
+    fontSize: 32,
+    marginRight: 10,
+  },
+  feedAvatarImg: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  feedHeaderInfo: {
+    flex: 1,
+  },
+  feedName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#222',
+  },
+  feedTime: {
+    fontSize: 12,
+    color: '#888',
+  },
+  feedMapPlaceholder: {
+    width: '100%',
+    height: 150,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  feedMapText: {
+    fontSize: 14,
+    color: '#AAA',
+    marginTop: 8,
+  },
+  feedStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 16,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#F0F0F0',
+  },
+  feedStatBox: {
+    alignItems: 'center',
+  },
+  feedStatVal: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#222',
+  },
+  feedStatLabel: {
+    fontSize: 12,
+    color: '#888',
+  },
+  feedActions: {
+    flexDirection: 'row',
+  },
+  feedActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 24,
+  },
+  feedActionText: {
+    marginLeft: 6,
+    color: '#666',
+    fontWeight: '500',
   },
   feedCard: {
     backgroundColor: '#FFF',

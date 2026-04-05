@@ -54,6 +54,8 @@ export default function RunScreen({ route, navigation }) {
   const [friendsWatching, setFriendsWatching] = useState(2);
   const [userAvatar, setUserAvatar] = useState(null);
   const [cheers, setCheers] = useState([]);
+  const [visibilityScope, setVisibilityScope] = useState('friends'); // 'public', 'friends', 'private'
+  const [liveFriends, setLiveFriends] = useState([]);
 
   const watchId = useRef(null);
   const lastLocation = useRef(null);
@@ -134,6 +136,17 @@ export default function RunScreen({ route, navigation }) {
     if (!currentLocation) {
       Alert.alert('Location not available', 'Please wait for location to be determined.');
       return;
+    }
+
+    // Mock live friends if not private
+    if (visibilityScope !== 'private') {
+      const mockFriends = [
+        { id: 1, name: 'Alice', avatar: '👩‍💼', latitude: currentLocation.latitude + 0.002, longitude: currentLocation.longitude + 0.001 },
+        { id: 2, name: 'Charlie', avatar: '👨‍🎨', latitude: currentLocation.latitude - 0.001, longitude: currentLocation.longitude - 0.003 },
+      ];
+      setLiveFriends(mockFriends);
+    } else {
+      setLiveFriends([]);
     }
 
     setIsRunning(true);
@@ -245,12 +258,42 @@ export default function RunScreen({ route, navigation }) {
         pace: finalPace.toFixed(1),
         calories: Math.round(runData.calories),
         coordinates: runData.coordinates,
+        scope: visibilityScope,
       };
 
       const existingRuns = await AsyncStorage.getItem('recentRuns');
       const runs = existingRuns ? JSON.parse(existingRuns) : [];
       runs.unshift(runRecord);
       await AsyncStorage.setItem('recentRuns', JSON.stringify(runs.slice(0, 10))); // Keep last 10
+
+      // Publish to global feed if not private
+      if (visibilityScope !== 'private') {
+        try {
+          const currentUser = await AsyncStorage.getItem('currentUser') || 'Me';
+          const existingFeed = await AsyncStorage.getItem('globalFeed');
+          const feed = existingFeed ? JSON.parse(existingFeed) : [];
+          feed.unshift({
+            id: Date.now(),
+            user: currentUser,
+            avatar: userAvatar || '👤',
+            time: 'Just now',
+            distance: runData.distance.toFixed(2),
+            pace: finalPace.toFixed(1),
+            duration: formatDuration(durationInSeconds),
+            likes: 0,
+            comments: 0,
+            hasLiked: false,
+          });
+          await AsyncStorage.setItem('globalFeed', JSON.stringify(feed));
+        } catch (feedError) {
+          console.error('Error saving to feed:', feedError);
+        }
+      }
+
+      // Cleanup live location
+      try {
+        await AsyncStorage.removeItem(`liveRun_${await AsyncStorage.getItem('currentUser')}`);
+      } catch (e) {}
 
       // Update user stats
       const stats = await AsyncStorage.getItem('userStats');
@@ -387,6 +430,20 @@ export default function RunScreen({ route, navigation }) {
                 </View>
               </Marker>
             )}
+            {visibilityScope !== 'private' && isRunning && liveFriends.map((friend) => (
+              <Marker
+                key={friend.id}
+                coordinate={{ latitude: friend.latitude, longitude: friend.longitude }}
+                title={`${friend.name} is running`}
+                anchor={{ x: 0.5, y: 0.5 }}
+              >
+                <View style={[styles.avatarHaloOuter, { backgroundColor: 'rgba(36, 199, 137, 0.2)' }]}>
+                  <View style={[styles.avatarHaloInner, { borderColor: '#24C789' }]}>
+                    <Text style={styles.mapAvatarEmoji}>{friend.avatar}</Text>
+                  </View>
+                </View>
+              </Marker>
+            ))}
           </MapView>
         )}
 
@@ -438,9 +495,24 @@ export default function RunScreen({ route, navigation }) {
 
         <View style={styles.controlsContainer}>
           {!isRunning ? (
-            <TouchableOpacity style={styles.circleStartButton} onPress={startRun}>
-              <Text style={styles.circleStartText}>GO</Text>
-            </TouchableOpacity>
+            <View style={styles.preRunControls}>
+              <View style={styles.scopeSelectorContainer}>
+                {['public', 'friends', 'private'].map((scope) => (
+                  <TouchableOpacity
+                    key={scope}
+                    style={[styles.scopeBtn, visibilityScope === scope && styles.scopeBtnActive]}
+                    onPress={() => setVisibilityScope(scope)}
+                  >
+                    <Text style={[styles.scopeBtnText, visibilityScope === scope && styles.scopeBtnTextActive]}>
+                      {scope.charAt(0).toUpperCase() + scope.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TouchableOpacity style={styles.circleStartButton} onPress={startRun}>
+                <Text style={styles.circleStartText}>GO</Text>
+              </TouchableOpacity>
+            </View>
           ) : (
             <View style={styles.activeControls}>
               {isPaused ? (
@@ -623,6 +695,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingBottom: Platform.OS === 'ios' ? 20 : 0,
+  },
+  preRunControls: {
+    alignItems: 'center',
+    width: '100%',
+  },
+  scopeSelectorContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#E8E8E8',
+    borderRadius: 25,
+    marginBottom: 20,
+    padding: 4,
+    width: '90%',
+    justifyContent: 'space-between',
+  },
+  scopeBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  scopeBtnActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  scopeBtnText: {
+    fontSize: 14,
+    color: '#888',
+    fontWeight: '600',
+  },
+  scopeBtnTextActive: {
+    color: '#222',
+    fontWeight: 'bold',
   },
   circleStartButton: {
     backgroundColor: '#24C789',
