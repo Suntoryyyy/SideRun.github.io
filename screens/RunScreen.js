@@ -340,6 +340,8 @@ export default function RunScreen({ route, navigation }) {
       </View>
 
       <View style={styles.dashboardContainer}>
+        <View style={styles.dragHandle} />
+        
         <View style={styles.statsContainer}>
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
@@ -350,9 +352,16 @@ export default function RunScreen({ route, navigation }) {
               <Text style={styles.statValue}>{formatDuration(durationInSeconds)}</Text>
               <Text style={styles.statLabel}>TIME</Text>
             </View>
+          </View>
+          
+          <View style={[styles.statsRow, { marginTop: 24 }]}>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{currentPace}</Text>
-              <Text style={styles.statLabel}>PACE</Text>
+              <Text style={styles.statLabel}>CURRENT PACE</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>{Math.round(runData.calories)}</Text>
+              <Text style={styles.statLabel}>KCAL BURNED</Text>
             </View>
           </View>
 
@@ -447,9 +456,17 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     justifyContent: 'space-between',
   },
+  dragHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 2.5,
+    alignSelf: 'center',
+    marginBottom: 5,
+  },
   statsContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 15,
+    paddingHorizontal: 40,
+    paddingTop: 5,
   },
   statsRow: {
     flexDirection: 'row',
