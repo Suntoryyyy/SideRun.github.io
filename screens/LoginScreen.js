@@ -29,6 +29,29 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
     }
   };
 
+  const handleClearData = async () => {
+    Alert.alert(
+      'Clear All Data',
+      'Are you sure? This will delete all registered users and reset the database.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear Data',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AsyncStorage.removeItem('users');
+              await AsyncStorage.removeItem('currentUser');
+              Alert.alert('Success', 'All registration data has been cleared.');
+            } catch (e) {
+              Alert.alert('Error', 'Failed to clear data');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -72,6 +95,10 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
               <Text style={styles.registerText}>Sign Up</Text>
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity style={styles.devClearButton} onPress={handleClearData}>
+            <Text style={styles.devClearText}>Wipe All User Data (Dev Tool)</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -156,5 +183,16 @@ const styles = StyleSheet.create({
     color: '#24C789',
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  devClearButton: {
+    marginTop: 60,
+    alignSelf: 'center',
+    padding: 10,
+  },
+  devClearText: {
+    color: '#FF3B30',
+    fontSize: 12,
+    fontWeight: 'bold',
+    opacity: 0.6,
   },
 });

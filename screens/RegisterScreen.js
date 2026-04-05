@@ -20,8 +20,14 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
       const usersData = await AsyncStorage.getItem('users');
       const users = usersData ? JSON.parse(usersData) : {};
 
+      const isUsernameTaken = Object.values(users).some(
+        user => user.username.toLowerCase() === trimmedUsername.toLowerCase()
+      );
+
       if (users[trimmedPhone]) {
         Alert.alert('Registration Failed', 'This phone number is already registered.');
+      } else if (isUsernameTaken) {
+        Alert.alert('Registration Failed', 'This username is already taken. Please choose another one.');
       } else {
         users[trimmedPhone] = { phone: trimmedPhone, username: trimmedUsername, password };
         await AsyncStorage.setItem('users', JSON.stringify(users));
