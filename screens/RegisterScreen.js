@@ -8,7 +8,10 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
   const [password, setPassword] = useState('');
 
   const handleRegister = async () => {
-    if (!phone || !username || !password) {
+    const trimmedPhone = phone.trim();
+    const trimmedUsername = username.trim();
+
+    if (!trimmedPhone || !trimmedUsername || !password) {
       Alert.alert('Error', 'Please fill all fields');
       return;
     }
@@ -17,12 +20,12 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
       const usersData = await AsyncStorage.getItem('users');
       const users = usersData ? JSON.parse(usersData) : {};
 
-      if (users[phone]) {
+      if (users[trimmedPhone]) {
         Alert.alert('Registration Failed', 'This phone number is already registered.');
       } else {
-        users[phone] = { phone, username, password };
+        users[trimmedPhone] = { phone: trimmedPhone, username: trimmedUsername, password };
         await AsyncStorage.setItem('users', JSON.stringify(users));
-        await AsyncStorage.setItem('currentUser', JSON.stringify({ phone, username }));
+        await AsyncStorage.setItem('currentUser', JSON.stringify({ phone: trimmedPhone, username: trimmedUsername }));
         Alert.alert('Success', 'Account created successfully!');
         setLoggedIn(true);
       }

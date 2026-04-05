@@ -7,7 +7,9 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
   const [password, setPassword] = useState('');
 
   const handleLogin = async () => {
-    if (!phone || !password) {
+    const trimmedPhone = phone.trim();
+
+    if (!trimmedPhone || !password) {
       Alert.alert('Error', 'Please enter your phone number and password');
       return;
     }
@@ -16,8 +18,8 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
       const usersData = await AsyncStorage.getItem('users');
       const users = usersData ? JSON.parse(usersData) : {};
 
-      if (users[phone] && users[phone].password === password) {
-        await AsyncStorage.setItem('currentUser', JSON.stringify({ phone, username: users[phone].username }));
+      if (users[trimmedPhone] && users[trimmedPhone].password === password) {
+        await AsyncStorage.setItem('currentUser', JSON.stringify({ phone: trimmedPhone, username: users[trimmedPhone].username }));
         setLoggedIn(true);
       } else {
         Alert.alert('Login Failed', 'Invalid phone number or password');

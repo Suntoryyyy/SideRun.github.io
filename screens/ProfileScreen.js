@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function ProfileScreen({ navigation }) {
+export default function ProfileScreen({ navigation, handleLogout }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [username, setUsername] = useState('');
   const [avatar, setAvatar] = useState('👤');
@@ -71,17 +71,20 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
-  const handleLogout = async () => {
+  const onLogoutPress = async () => {
     Alert.alert('Log Out', 'Are you sure you want to log out?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Log Out',
         style: 'destructive',
-        onPress: async () => {
-          await AsyncStorage.removeItem('currentUser');
-          // Restart the app or reset auth state if App.js listens to event.
-          // Since our App.js reads currentUser on load, we instruct the user to restart or we can hook it up.
-          Alert.alert('Logged Out', 'Please restart the app to return to the login screen.');
+        onPress: () => {
+          if (handleLogout) {
+            handleLogout();
+          } else {
+            AsyncStorage.removeItem('currentUser').then(() => {
+              Alert.alert('Logged Out', 'Please restart the app to return to the login screen.');
+            });
+          }
         }
       }
     ]);
@@ -151,7 +154,7 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <TouchableOpacity style={styles.logoutButton} onPress={onLogoutPress}>
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>
