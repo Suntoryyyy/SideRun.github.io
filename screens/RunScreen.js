@@ -290,24 +290,27 @@ export default function RunScreen({ route, navigation }) {
     <View style={styles.container}>
       <View style={styles.mapContainer}>
         {Platform.OS === 'web' ? (
-          // Web fallback - stylized dark map placeholder inspired by KEEP
-          <View style={styles.webMapPlaceholder}>
-            <View style={styles.webMapGrid}>
-              {[...Array(10)].map((_, i) => (
-                <View key={`h-${i}`} style={[styles.gridLineHorizontal, { top: `${i * 10}%` }]} />
-              ))}
-              {[...Array(10)].map((_, i) => (
-                <View key={`v-${i}`} style={[styles.gridLineVertical, { left: `${i * 10}%` }]} />
-              ))}
+          // Real OpenStreetMap embed for web fallback
+          <div style={{ width: '100%', height: '100%', borderRadius: 8, overflow: 'hidden' }}>
+            <iframe
+              width="100%"
+              height="100%"
+              frameBorder="0"
+              scrolling="no"
+              marginHeight="0"
+              marginWidth="0"
+              src={`https://www.openstreetmap.org/export/embed.html?bbox=${region.longitude - 0.005},${region.latitude - 0.005},${region.longitude + 0.005},${region.latitude + 0.005}&layer=mapnik&marker=${currentLocation?.latitude || region.latitude},${currentLocation?.longitude || region.longitude}`}
+              style={{ border: 'none' }}
+            />
+            <View style={styles.webMapOverlayCard}>
+              <Text style={styles.webMapOverlayText}>GPS Tracking Active</Text>
+              {runData.coordinates.length > 0 && (
+                <Text style={styles.webMapOverlayCoords}>
+                  Route: {runData.coordinates.length} pts logged
+                </Text>
+              )}
             </View>
-            <View style={styles.webMapPulsingDot} />
-            <Text style={styles.webMapText}>GPS ACTIVE</Text>
-            {runData.coordinates.length > 0 && (
-              <Text style={styles.webMapCoords}>
-                Route Tracking • {runData.coordinates.length} points
-              </Text>
-            )}
-          </View>
+          </div>
         ) : (
           // Native map view
           <MapView
@@ -550,59 +553,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  webMapPlaceholder: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#111111',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  webMapGrid: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  gridLineHorizontal: {
+  webMapOverlayCard: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: '#222222',
+    top: 16,
+    left: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    zIndex: 10,
   },
-  gridLineVertical: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: 1,
-    backgroundColor: '#222222',
-  },
-  webMapPulsingDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#24C789',
-    borderWidth: 4,
-    borderColor: 'rgba(36, 199, 137, 0.3)',
-    shadowColor: '#24C789',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 15,
-  },
-  webMapText: {
-    fontSize: 24,
-    color: '#EEEEEE',
-    fontWeight: '900',
-    letterSpacing: 2,
-    marginTop: 24,
-    marginBottom: 8,
-  },
-  webMapSubtext: {
-    fontSize: 16,
-    color: '#AAA',
-    marginBottom: 4,
-  },
-  webMapCoords: {
-    fontSize: 14,
+  webMapOverlayText: {
     color: '#24C789',
-    fontWeight: 'bold',
-  }
+    fontWeight: '800',
+    fontSize: 14,
+  },
+  webMapOverlayCoords: {
+    color: '#666',
+    fontWeight: '600',
+    fontSize: 12,
+    marginTop: 2,
+  },
 });
