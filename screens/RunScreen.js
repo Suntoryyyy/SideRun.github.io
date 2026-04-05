@@ -27,10 +27,9 @@ export default function RunScreen({ route, navigation }) {
   const { mode = 'solo' } = route?.params || {};
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [durationInSeconds, setDurationInSeconds] = useState(0);
   const [runData, setRunData] = useState({
     distance: 0,
-    duration: 0,
-    pace: 0,
     calories: 0,
     coordinates: [],
   });
@@ -40,8 +39,17 @@ export default function RunScreen({ route, navigation }) {
   const [cheers, setCheers] = useState([]);
 
   const watchId = useRef(null);
-  const startTime = useRef(null);
   const lastLocation = useRef(null);
+
+  useEffect(() => {
+    let interval;
+    if (isRunning && !isPaused) {
+      interval = setInterval(() => {
+        setDurationInSeconds(prev => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isRunning, isPaused]);
 
   useEffect(() => {
     requestLocationPermission();
@@ -93,41 +101,46 @@ export default function RunScreen({ route, navigation }) {
 
     setIsRunning(true);
     setIsPaused(false);
-    startTime.current = Date.now();
+    setDurationInSeconds(0);
     lastLocation.current = currentLocation;
 
-    setRunData(prev => ({
-      ...prev,
+    setRunData({
+      distance: 0,
+      calories: 0,
       coordinates: [currentLocation],
-    }));
+    });
 
     watchId.current = await Location.watchPositionAsync(
       {
         accuracy: Location.Accuracy.High,
-        timeInterval: 5000,
-        distanceInterval: 10,
+        timeInterval: 3000,
+        distanceInterval: 5, // Requires 5 meters movement
       },
       (location) => {
         const { latitude, longitude } = location.coords;
         const newLocation = { latitude, longitude };
 
         setCurrentLocation(newLocation);
-        setRunData(prev => {
-          const newCoords = [...prev.coordinates, newLocation];
-          const distance = calculateDistance(newCoords);
-          const duration = (Date.now() - startTime.current) / 1000 / 60; // minutes
-          const pace = duration > 0 ? distance / duration : 0;
-          const calories = distance * 60; // rough estimate
+        
+        const distFromLast = lastLocation.current ? getDistance(lastLocation.current, newLocation) : 0;
+        
+        // Filter out GPS drift: only add if we moved more than 5 meters (0.005 km)
+        // but less than 1km at once (prevents huge jumps in GPS)
+        if (distFromLast > 0.005 && distFromLast < 1.0) {
+          lastLocation.current = newLocation;
+          setRunData(prev => {
+            const newCoords = [...prev.coordinates, newLocation];
+            const newDistance = prev.distance + distFromLast;
+            const calories = newDistance * 60; // rough estimate
 
-          return {
-            ...prev,
-            distance,
-            duration,
-            pace,
-            calories,
-            coordinates: newCoords,
-          };
-        });
+            return {
+              ...prev,
+              distance: newDistance,
+              calories,
+              coordinates: newCoords,
+            };
+          });
+        }
       }
     );
   };
@@ -145,30 +158,32 @@ export default function RunScreen({ route, navigation }) {
     watchId.current = await Location.watchPositionAsync(
       {
         accuracy: Location.Accuracy.High,
-        timeInterval: 5000,
-        distanceInterval: 10,
+        timeInterval: 3000,
+        distanceInterval: 5,
       },
       (location) => {
         const { latitude, longitude } = location.coords;
         const newLocation = { latitude, longitude };
 
         setCurrentLocation(newLocation);
-        setRunData(prev => {
-          const newCoords = [...prev.coordinates, newLocation];
-          const distance = calculateDistance(newCoords);
-          const duration = (Date.now() - startTime.current) / 1000 / 60;
-          const pace = duration > 0 ? distance / duration : 0;
-          const calories = distance * 60;
+        
+        const distFromLast = lastLocation.current ? getDistance(lastLocation.current, newLocation) : 0;
+        
+        if (distFromLast > 0.005 && distFromLast < 1.0) {
+          lastLocation.current = newLocation;
+          setRunData(prev => {
+            const newCoords = [...prev.coordinates, newLocation];
+            const newDistance = prev.distance + distFromLast;
+            const calories = newDistance * 60;
 
-          return {
-            ...prev,
-            distance,
-            duration,
-            pace,
-            calories,
-            coordinates: newCoords,
-          };
-        });
+            return {
+              ...prev,
+              distance: newDistance,
+              calories,
+              coordinates: newCoords,
+            };
+          });
+        }
       }
     );
   };
@@ -181,13 +196,16 @@ export default function RunScreen({ route, navigation }) {
       watchId.current = null;
     }
 
+    const currentDurationMinutes = durationInSeconds / 60;
+    const finalPace = runData.distance > 0 ? (currentDurationMinutes / runData.distance) : 0;
+
     // Save run data
     try {
       const runRecord = {
         date: new Date().toLocaleDateString(),
         distance: runData.distance.toFixed(2),
-        duration: formatDuration(runData.duration),
-        pace: runData.pace.toFixed(1),
+        duration: formatDuration(durationInSeconds),
+        pace: finalPace.toFixed(1),
         calories: Math.round(runData.calories),
         coordinates: runData.coordinates,
       };
@@ -213,7 +231,7 @@ export default function RunScreen({ route, navigation }) {
 
       await AsyncStorage.setItem('userStats', JSON.stringify(userStats));
 
-      Alert.alert('Run Completed!', `Distance: ${runData.distance.toFixed(2)} km\nDuration: ${formatDuration(runData.duration)}`);
+      Alert.alert('Run Completed!', `Distance: ${runData.distance.toFixed(2)} km\nDuration: ${formatDuration(durationInSeconds)}`);
       navigation.goBack();
     } catch (error) {
       console.error('Error saving run:', error);
@@ -230,6 +248,7 @@ export default function RunScreen({ route, navigation }) {
   };
 
   const getDistance = (coord1, coord2) => {
+    if (!coord1 || !coord2) return 0;
     const R = 6371; // Earth's radius in km
     const dLat = (coord2.latitude - coord1.latitude) * Math.PI / 180;
     const dLon = (coord2.longitude - coord1.longitude) * Math.PI / 180;
@@ -241,10 +260,10 @@ export default function RunScreen({ route, navigation }) {
     return R * c;
   };
 
-  const formatDuration = (minutes) => {
-    const hrs = Math.floor(minutes / 60);
-    const mins = Math.floor(minutes % 60);
-    const secs = Math.floor((minutes % 1) * 60);
+  const formatDuration = (totalSeconds) => {
+    const hrs = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
     return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
@@ -256,6 +275,8 @@ export default function RunScreen({ route, navigation }) {
       setCheers(prev => prev.slice(1));
     }, 3000);
   };
+
+  const currentPace = (runData.distance > 0) ? ((durationInSeconds / 60) / runData.distance).toFixed(1) : '0.0';
 
   if (!region) {
     return (
@@ -269,13 +290,21 @@ export default function RunScreen({ route, navigation }) {
     <View style={styles.container}>
       <View style={styles.mapContainer}>
         {Platform.OS === 'web' ? (
-          // Web fallback - show a simple map placeholder
+          // Web fallback - stylized dark map placeholder inspired by KEEP
           <View style={styles.webMapPlaceholder}>
-            <Text style={styles.webMapText}>🗺️ Map View</Text>
-            <Text style={styles.webMapSubtext}>GPS tracking active</Text>
+            <View style={styles.webMapGrid}>
+              {[...Array(10)].map((_, i) => (
+                <View key={`h-${i}`} style={[styles.gridLineHorizontal, { top: `${i * 10}%` }]} />
+              ))}
+              {[...Array(10)].map((_, i) => (
+                <View key={`v-${i}`} style={[styles.gridLineVertical, { left: `${i * 10}%` }]} />
+              ))}
+            </View>
+            <View style={styles.webMapPulsingDot} />
+            <Text style={styles.webMapText}>GPS ACTIVE</Text>
             {runData.coordinates.length > 0 && (
               <Text style={styles.webMapCoords}>
-                Route: {runData.coordinates.length} points tracked
+                Route Tracking • {runData.coordinates.length} points
               </Text>
             )}
           </View>
@@ -315,11 +344,11 @@ export default function RunScreen({ route, navigation }) {
               <Text style={styles.statLabel}>KILOMETERS</Text>
             </View>
             <View style={styles.statBox}>
-              <Text style={styles.statValue}>{formatDuration(runData.duration)}</Text>
+              <Text style={styles.statValue}>{formatDuration(durationInSeconds)}</Text>
               <Text style={styles.statLabel}>TIME</Text>
             </View>
             <View style={styles.statBox}>
-              <Text style={styles.statValue}>{runData.pace.toFixed(1)}</Text>
+              <Text style={styles.statValue}>{currentPace}</Text>
               <Text style={styles.statLabel}>PACE</Text>
             </View>
           </View>
@@ -523,14 +552,47 @@ const styles = StyleSheet.create({
   },
   webMapPlaceholder: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#EAEAEA',
+    backgroundColor: '#111111',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 8,
+    overflow: 'hidden',
+  },
+  webMapGrid: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  gridLineHorizontal: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: '#222222',
+  },
+  gridLineVertical: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: '#222222',
+  },
+  webMapPulsingDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#24C789',
+    borderWidth: 4,
+    borderColor: 'rgba(36, 199, 137, 0.3)',
+    shadowColor: '#24C789',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 15,
   },
   webMapText: {
     fontSize: 24,
-    color: '#888',
+    color: '#EEEEEE',
+    fontWeight: '900',
+    letterSpacing: 2,
+    marginTop: 24,
     marginBottom: 8,
   },
   webMapSubtext: {
