@@ -187,7 +187,7 @@ export default function RunHistoryScreen({ navigation }) {
                 </View>
                 <View style={styles.zoneRow}>
                   <View style={[styles.zoneColor, { backgroundColor: '#34C759', width: '10%' }]} />
-                  <Text style={styles.zoneName}>Warm Up (<110)</Text>
+                  <Text style={styles.zoneName}>Warm Up ({'<110'})</Text>
                   <Text style={styles.zoneTime}>10%</Text>
                 </View>
               </View>
