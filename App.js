@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
@@ -5,6 +6,8 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, ActivityIndicator } from 'react-native';
+import * as Font from 'expo-font';
+import { Ionicons } from '@expo/vector-icons';
 
 // Import screen components
 import HomeScreen from './screens/HomeScreen';
@@ -33,11 +36,50 @@ function DrawerNavigator({ handleLogout }) {
         }
       }}
     >
-      <Drawer.Screen name="Home" component={HomeScreen} />
-      <Drawer.Screen name="Friends" component={FriendsScreen} />
-      <Drawer.Screen name="Run" component={RunScreen} />
-      <Drawer.Screen name="Weather" component={WeatherScreen} />
-      <Drawer.Screen name="Profile">
+      <Drawer.Screen 
+        name="Home" 
+        component={HomeScreen} 
+        options={{
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="home-outline" color={color} size={size} />
+          )
+        }}
+      />
+      <Drawer.Screen 
+        name="Friends" 
+        component={FriendsScreen} 
+        options={{
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="people-outline" color={color} size={size} />
+          )
+        }}
+      />
+      <Drawer.Screen 
+        name="Run" 
+        component={RunScreen} 
+        options={{
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="footsteps-outline" color={color} size={size} />
+          )
+        }}
+      />
+      <Drawer.Screen 
+        name="Weather" 
+        component={WeatherScreen} 
+        options={{
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="partly-sunny-outline" color={color} size={size} />
+          )
+        }}
+      />
+      <Drawer.Screen 
+        name="Profile"
+        options={{
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="person-outline" color={color} size={size} />
+          )
+        }}
+      >
         {props => <ProfileScreen {...props} handleLogout={handleLogout} />}
       </Drawer.Screen>
       <Drawer.Screen 
@@ -56,7 +98,17 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    checkLoginStatus();
+    async function prepareApp() {
+      try {
+        await Font.loadAsync(Ionicons.font);
+        await checkLoginStatus();
+      } catch (e) {
+        console.warn(e);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    prepareApp();
   }, []);
 
   const checkLoginStatus = async () => {
@@ -65,8 +117,6 @@ export default function App() {
       if (user) setIsLoggedIn(true);
     } catch (e) {
       console.error(e);
-    } finally {
-      setIsLoading(false);
     }
   };
 
