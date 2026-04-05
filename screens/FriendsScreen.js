@@ -15,9 +15,10 @@ import { Ionicons } from '@expo/vector-icons';
 export default function FriendsScreen({ navigation }) {
   const [friends, setFriends] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
+  const [feed, setFeed] = useState([]);
   const [addFriendMode, setAddFriendMode] = useState(false);
   const [newFriendName, setNewFriendName] = useState('');
-  const [activeTab, setActiveTab] = useState('friends');
+  const [activeTab, setActiveTab] = useState('friends'); // 'friends', 'leaderboard', 'feed'
 
   useEffect(() => {
     loadFriendsData();
@@ -78,6 +79,32 @@ export default function FriendsScreen({ navigation }) {
         setLeaderboard(mockLeaderboard);
         await AsyncStorage.setItem('leaderboard', JSON.stringify(mockLeaderboard));
       }
+
+      // Load mock feed
+      const mockFeed = [
+        {
+          id: 101,
+          name: 'Alice Johnson',
+          avatar: '👩‍💼',
+          date: '2 hours ago',
+          distance: '5.2',
+          duration: '00:26:10',
+          likes: 3,
+          comments: 1,
+        },
+        {
+          id: 102,
+          name: 'Charlie Brown',
+          avatar: '👨‍🎨',
+          date: 'Yesterday',
+          distance: '10.0',
+          duration: '01:05:40',
+          likes: 12,
+          comments: 4,
+        }
+      ];
+      setFeed(mockFeed);
+
     } catch (error) {
       console.error('Error loading friends data:', error);
     }
@@ -102,21 +129,41 @@ export default function FriendsScreen({ navigation }) {
       } else {
         // search by username
         foundUser = Object.values(users).find(
-          user => user.username.toLowerCase() === searchKey.toLowerCase()
+          user => user.username && user.username.toLowerCase() === searchKey.toLowerCase()
         );
       }
 
-      const friendName = foundUser ? foundUser.username : searchKey; // use input as fallback if no account
+      if (!foundUser) {
+        Alert.alert('Not Found', 'Could not find a user with that username or phone number.');
+        return;
+      }
+
+      if (foundUser.allowStrangersAdd === false) {
+        Alert.alert('Private Profile', 'This user does not allow friend requests from strangers.');
+        return;
+      }
+
+      // Check if already friends
+      const isAlreadyFriend = friends.some(
+        f => f.phone === foundUser.phone || f.name.toLowerCase() === foundUser.username.toLowerCase()
+      );
+
+      if (isAlreadyFriend) {
+        Alert.alert('Already Friends', 'You are already friends with this user.');
+        return;
+      }
+
+      const friendName = foundUser.username;
 
       const newFriend = {
         id: Date.now(),
-        name: friendName,
-        phone: foundUser ? foundUser.phone : null,
+        name: foundUser.username,
+        phone: foundUser.phone,
         weeklyDistance: 0,
         totalRuns: 0,
         isOnline: false,
         lastRun: 'Never',
-        avatar: '👤',
+        avatar: foundUser.avatar || '👤',
       };
 
       const updatedFriends = [...friends, newFriend];
@@ -258,6 +305,55 @@ export default function FriendsScreen({ navigation }) {
     </View>
   );
 
+  const renderFeedTab = () => (
+    <View style={styles.tabContent}>
+      <Text style={styles.sectionTitle}>Friend Activity</Text>
+      {feed.map((item, index) => (
+        <View key={index} style={styles.feedCard}>
+          <View style={styles.feedHeader}>
+            {item.avatar.startsWith('data:') || item.avatar.startsWith('http') || item.avatar.startsWith('file:') ? (
+              <Image source={{ uri: item.avatar }} style={styles.feedAvatarImg} />
+            ) : (
+              <Text style={styles.feedAvatarEmoji}>{item.avatar}</Text>
+            )}
+            <View style={styles.feedHeaderInfo}>
+              <Text style={styles.feedName}>{item.name}</Text>
+              <Text style={styles.feedTime}>{item.date}</Text>
+            </View>
+          </View>
+          
+          {/* Mock Map snapshot area */}
+          <View style={styles.feedMapPlaceholder}>
+            <Ionicons name="map" size={32} color="#CCC" />
+            <Text style={styles.feedMapText}>Track Snapshot</Text>
+          </View>
+
+          <View style={styles.feedStats}>
+            <View style={styles.feedStatBox}>
+              <Text style={styles.feedStatVal}>{item.distance}</Text>
+              <Text style={styles.feedStatLabel}>km</Text>
+            </View>
+            <View style={styles.feedStatBox}>
+               <Text style={styles.feedStatVal}>{item.duration}</Text>
+               <Text style={styles.feedStatLabel}>Time</Text>
+            </View>
+          </View>
+
+          <View style={styles.feedActions}>
+             <TouchableOpacity style={styles.feedActionBtn} onPress={() => Alert.alert('Liked!')}>
+               <Ionicons name="heart-outline" size={20} color="#666" />
+               <Text style={styles.feedActionText}>{item.likes} Likes</Text>
+             </TouchableOpacity>
+             <TouchableOpacity style={styles.feedActionBtn} onPress={() => Alert.alert('Reply to activity')}>
+               <Ionicons name="chatbubble-outline" size={20} color="#666" />
+               <Text style={styles.feedActionText}>{item.comments} Comments</Text>
+             </TouchableOpacity>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -283,6 +379,14 @@ export default function FriendsScreen({ navigation }) {
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
+            style={[styles.tab, activeTab === 'feed' && styles.activeTab]}
+            onPress={() => setActiveTab('feed')}
+          >
+            <Text style={[styles.tabText, activeTab === 'feed' && styles.activeTabText]}>
+              Feed
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={[styles.tab, activeTab === 'leaderboard' && styles.activeTab]}
             onPress={() => setActiveTab('leaderboard')}
           >
@@ -292,7 +396,7 @@ export default function FriendsScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {activeTab === 'friends' ? renderFriendsTab() : renderLeaderboardTab()}
+        {activeTab === 'friends' ? renderFriendsTab() : (activeTab === 'feed' ? renderFeedTab() : renderLeaderboardTab())}
       </ScrollView>
     </View>
   );
@@ -575,5 +679,91 @@ const styles = StyleSheet.create({
   },
   medal: {
     fontSize: 28,
+  },
+  feedCard: {
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  feedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  feedAvatarEmoji: {
+    fontSize: 32,
+    marginRight: 10,
+  },
+  feedAvatarImg: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  feedHeaderInfo: {
+    flex: 1,
+  },
+  feedName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#222',
+  },
+  feedTime: {
+    fontSize: 12,
+    color: '#888',
+  },
+  feedMapPlaceholder: {
+    width: '100%',
+    height: 150,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  feedMapText: {
+    fontSize: 14,
+    color: '#AAA',
+    marginTop: 8,
+  },
+  feedStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 16,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#F0F0F0',
+  },
+  feedStatBox: {
+    alignItems: 'center',
+  },
+  feedStatVal: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#222',
+  },
+  feedStatLabel: {
+    fontSize: 12,
+    color: '#888',
+  },
+  feedActions: {
+    flexDirection: 'row',
+  },
+  feedActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 24,
+  },
+  feedActionText: {
+    marginLeft: 6,
+    color: '#666',
+    fontWeight: '500',
   },
 });

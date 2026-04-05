@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  Switch,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,6 +22,8 @@ export default function ProfileScreen({ navigation, handleLogout }) {
   const [username, setUsername] = useState('');
   const [avatar, setAvatar] = useState('👤');
   const [isEditing, setIsEditing] = useState(false);
+  const [allowFriendsViewRecord, setAllowFriendsViewRecord] = useState(true);
+  const [allowStrangersAdd, setAllowStrangersAdd] = useState(false);
   
   // Cropper State
   const [cropModalVisible, setCropModalVisible] = useState(false);
@@ -76,6 +79,8 @@ export default function ProfileScreen({ navigation, handleLogout }) {
         setCurrentUser(user);
         setUsername(user.username || '');
         setAvatar(user.avatar || '👤');
+        setAllowFriendsViewRecord(user.allowFriendsViewRecord !== false);
+        setAllowStrangersAdd(user.allowStrangersAdd === true);
       }
     } catch (e) {
       console.error('Failed to load user profile', e);
@@ -92,7 +97,13 @@ export default function ProfileScreen({ navigation, handleLogout }) {
       const userString = await AsyncStorage.getItem('currentUser');
       const user = userString ? JSON.parse(userString) : {};
       
-      const updatedUser = { ...user, username, avatar };
+      const updatedUser = { 
+        ...user, 
+        username, 
+        avatar,
+        allowFriendsViewRecord,
+        allowStrangersAdd
+      };
       await AsyncStorage.setItem('currentUser', JSON.stringify(updatedUser));
       
       // Update in the central users DB so friend search also sees the updated name/avatar
@@ -100,8 +111,13 @@ export default function ProfileScreen({ navigation, handleLogout }) {
       if (usersData) {
         const users = JSON.parse(usersData);
         if (updatedUser.phone && users[updatedUser.phone]) {
-          users[updatedUser.phone].username = username;
-          users[updatedUser.phone].avatar = avatar;
+          users[updatedUser.phone] = {
+            ...users[updatedUser.phone],
+            username,
+            avatar,
+            allowFriendsViewRecord,
+            allowStrangersAdd
+          };
           await AsyncStorage.setItem('users', JSON.stringify(users));
         }
       }
@@ -194,6 +210,35 @@ export default function ProfileScreen({ navigation, handleLogout }) {
 
             <Text style={styles.label}>Phone Number</Text>
             <Text style={styles.valueTextDisabled}>{currentUser?.phone || 'Unknown'}</Text>
+          </View>
+
+          <View style={styles.infoSection}>
+            <Text style={styles.sectionHeader}>Privacy Settings</Text>
+            <View style={styles.settingRow}>
+              <View style={styles.settingTextContainer}>
+                <Text style={styles.settingTitle}>Share Running Records</Text>
+                <Text style={styles.settingDesc}>Allow friends to view your running history</Text>
+              </View>
+              <Switch
+                value={allowFriendsViewRecord}
+                onValueChange={setAllowFriendsViewRecord}
+                trackColor={{ false: "#ccc", true: "#24C789" }}
+                disabled={!isEditing}
+              />
+            </View>
+            
+            <View style={styles.settingRow}>
+              <View style={styles.settingTextContainer}>
+                <Text style={styles.settingTitle}>Allow Strangers to Add</Text>
+                <Text style={styles.settingDesc}>Allow people who find your profile to send a friend request</Text>
+              </View>
+              <Switch
+                value={allowStrangersAdd}
+                onValueChange={setAllowStrangersAdd}
+                trackColor={{ false: "#ccc", true: "#24C789" }}
+                disabled={!isEditing}
+              />
+            </View>
           </View>
 
           <View style={styles.actionButtons}>
@@ -324,6 +369,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#222222',
     marginBottom: 15,
+  },
+  sectionHeader: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#222',
+    marginBottom: 16,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  settingTextContainer: {
+    flex: 1,
+    paddingRight: 16,
+  },
+  settingTitle: {
+    fontSize: 16,
+    color: '#222',
+    fontWeight: '600',
+  },
+  settingDesc: {
+    fontSize: 13,
+    color: '#888',
+    marginTop: 4,
   },
   valueText: {
     fontSize: 18,
