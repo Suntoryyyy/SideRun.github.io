@@ -7,8 +7,9 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 
-export default function BadgesScreen() {
+export default function BadgesScreen({ navigation }) {
   const [userStats, setUserStats] = useState({
     totalDistance: 0,
     totalRuns: 0,
@@ -190,8 +191,16 @@ export default function BadgesScreen() {
   const totalCount = allBadges.length;
 
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+        >
+          <Ionicons name="arrow-back" size={28} color="#111111" />
+        </TouchableOpacity>
         <Text style={styles.title}>🏆 Badges & Achievements</Text>
         <Text style={styles.subtitle}>Unlock playful badges as you run!</Text>
         <View style={styles.progressContainer}>
@@ -257,7 +266,8 @@ export default function BadgesScreen() {
           </View>
         ))}
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -266,10 +276,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8F8F8',
   },
+  scrollContent: {
+    paddingBottom: 40,
+  },
   header: {
     alignItems: 'center',
     padding: 20,
-    paddingTop: 40,
+    paddingTop: 60,
+    position: 'relative',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 20,
+    top: 60,
+    zIndex: 10,
   },
   title: {
     fontSize: 28,

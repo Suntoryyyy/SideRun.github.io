@@ -9,8 +9,9 @@ import {
   TextInput,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 
-export default function FriendsScreen() {
+export default function FriendsScreen({ navigation }) {
   const [friends, setFriends] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [addFriendMode, setAddFriendMode] = useState(false);
@@ -249,33 +250,42 @@ export default function FriendsScreen() {
   );
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Friends & Community</Text>
-        <Text style={styles.subtitle}>Connect with fellow runners</Text>
-      </View>
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+          >
+            <Ionicons name="arrow-back" size={28} color="#111111" />
+          </TouchableOpacity>
+          <Text style={styles.title}>Friends & Community</Text>
+          <Text style={styles.subtitle}>Connect with fellow runners</Text>
+        </View>
 
-      <View style={styles.tabBar}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'friends' && styles.activeTab]}
-          onPress={() => setActiveTab('friends')}
-        >
-          <Text style={[styles.tabText, activeTab === 'friends' && styles.activeTabText]}>
-            Friends
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'leaderboard' && styles.activeTab]}
-          onPress={() => setActiveTab('leaderboard')}
-        >
-          <Text style={[styles.tabText, activeTab === 'leaderboard' && styles.activeTabText]}>
-            Leaderboard
-          </Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.tabBar}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'friends' && styles.activeTab]}
+            onPress={() => setActiveTab('friends')}
+          >
+            <Text style={[styles.tabText, activeTab === 'friends' && styles.activeTabText]}>
+              Friends
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'leaderboard' && styles.activeTab]}
+            onPress={() => setActiveTab('leaderboard')}
+          >
+            <Text style={[styles.tabText, activeTab === 'leaderboard' && styles.activeTabText]}>
+              Leaderboard
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-      {activeTab === 'friends' ? renderFriendsTab() : renderLeaderboardTab()}
-    </ScrollView>
+        {activeTab === 'friends' ? renderFriendsTab() : renderLeaderboardTab()}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -284,13 +294,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F4F5F7',
   },
+  scrollContent: {
+    paddingBottom: 40,
+  },
   header: {
     alignItems: 'center',
     padding: 20,
-    paddingTop: 40,
+    paddingTop: 60,
+    position: 'relative',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 20,
+    top: 60,
+    zIndex: 10,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '900',
     color: '#111111',
     marginBottom: 8,

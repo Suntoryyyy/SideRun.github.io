@@ -9,8 +9,9 @@ import {
 } from 'react-native';
 import * as Location from 'expo-location';
 import axios from 'axios';
+import { Ionicons } from '@expo/vector-icons';
 
-export default function WeatherScreen() {
+export default function WeatherScreen({ navigation }) {
   const [weather, setWeather] = useState(null);
   const [forecast, setForecast] = useState([]);
   const [location, setLocation] = useState(null);
@@ -141,13 +142,21 @@ export default function WeatherScreen() {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Weather & Running Guide</Text>
-        <Text style={styles.subtitle}>Smart recommendations for your runs</Text>
-      </View>
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+          >
+            <Ionicons name="arrow-back" size={28} color="#111111" />
+          </TouchableOpacity>
+          <Text style={styles.title}>Weather & Running Guide</Text>
+          <Text style={styles.subtitle}>Smart recommendations for your runs</Text>
+        </View>
 
-      {weather && (
+        {weather && (
         <View style={styles.currentWeatherCard}>
           <View style={styles.weatherMain}>
             <Text style={styles.weatherIcon}>{getWeatherIcon(weather.weather[0].main)}</Text>
@@ -215,7 +224,8 @@ export default function WeatherScreen() {
       <TouchableOpacity style={styles.refreshButton} onPress={getWeatherData}>
         <Text style={styles.refreshButtonText}>Refresh Weather</Text>
       </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -223,6 +233,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F4F5F7',
+  },
+  scrollContent: {
+    paddingBottom: 40,
   },
   loadingContainer: {
     flex: 1,
@@ -238,10 +251,17 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     padding: 20,
-    paddingTop: 40,
+    paddingTop: 60,
+    position: 'relative',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 20,
+    top: 60,
+    zIndex: 10,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '900',
     color: '#111111',
     marginBottom: 8,
