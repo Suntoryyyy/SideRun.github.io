@@ -1,4 +1,6 @@
-import { StyleSheet, Dimensions, Platform } from 'react-native';
+const fs = require('fs');
+
+const lightStyles = `import { StyleSheet, Dimensions, Platform } from 'react-native';
 
 const { height } = Dimensions.get('window');
 
@@ -302,3 +304,6 @@ export default StyleSheet.create({
     marginTop: 2,
   },
 });
+`;
+fs.writeFileSync('styles/RunScreenStyles.js', lightStyles);
+console.log('RunScreenStyles restored to light green/grey theme');

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, ScrollView, Dimensions, Image, Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }) {
   const isFocused = useIsFocused();
+  const startButtonScale = useRef(new Animated.Value(1)).current;
   const [username, setUsername] = useState('Runner');
   const [avatar, setAvatar] = useState(''); // no default fallback here to prefer the greeting without it if missing
 
@@ -31,6 +32,24 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
+  const handlePressIn = () => {
+    Animated.spring(startButtonScale, {
+      toValue: 0.92,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 10
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(startButtonScale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 10
+    }).start();
+  };
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good Morning,';
@@ -45,7 +64,7 @@ export default function HomeScreen({ navigation }) {
         {/* Header Section */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.menuButton} onPress={() => navigation.openDrawer()}>
-            <Ionicons name="menu" size={28} color="#FFFFFF" />
+            <Ionicons name="menu" size={28} color="#222222" />
           </TouchableOpacity>
           <View style={styles.headerTop}>
             <View style={styles.userInfoContainer}>
@@ -107,7 +126,7 @@ export default function HomeScreen({ navigation }) {
           }}
         >
           <View style={styles.weatherIconContainer}>
-            <Ionicons name="partly-sunny" size={32} color="#E11D48" />
+            <Ionicons name="partly-sunny" size={32} color="#24C789" />
           </View>
           <View style={styles.weatherMeta}>
              <Text style={styles.weatherTemp}>18°C · Perfect Conditions</Text>
@@ -159,7 +178,7 @@ export default function HomeScreen({ navigation }) {
 
         <TouchableOpacity activeOpacity={0.8} style={styles.recentRunCard} onPress={() => navigation.navigate('RunHistory')}>
           <View style={styles.runIconBox}>
-            <Ionicons name="footsteps" size={24} color="#E11D48" />
+            <Ionicons name="footsteps" size={24} color="#24C789" />
           </View>
           <View style={styles.runInfo}>
             <Text style={styles.runTitle}>Morning City Run</Text>
@@ -189,16 +208,18 @@ export default function HomeScreen({ navigation }) {
 
       {/* Floating Big Start Button Component */}
       <View style={styles.startActionContainer}>
-        <TouchableOpacity
-          style={styles.startButton}
-          activeOpacity={0.8}
+        <TouchableWithoutFeedback
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
             navigation.navigate('Run');
           }}
         >
-          <Text style={styles.startButtonText}>START</Text>
-        </TouchableOpacity>
+          <Animated.View style={[styles.startButton, { transform: [{ scale: startButtonScale }] }]}>
+            <Text style={styles.startButtonText}>START</Text>
+          </Animated.View>
+        </TouchableWithoutFeedback>
       </View>
     </View>
   );
@@ -207,7 +228,7 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000', // Dark premium mode
+    backgroundColor: '#F4F5F7',
   },
   scrollContent: {
     padding: 20,
@@ -237,7 +258,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   brandBadge: {
-    backgroundColor: '#E11D48',
+    backgroundColor: '#24C789',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -252,37 +273,31 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 16,
-    color: '#8A8D93',
+    color: '#888888',
     marginBottom: 4,
-    fontWeight: '600',
-    letterSpacing: 1,
+    fontWeight: '500',
   },
   userName: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#222222',
   },
   card: {
-    backgroundColor: '#111214', // Deep athletic dark grey
-    borderRadius: 20,
-    padding: 24,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 8,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#2A2C31',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+    marginBottom: 30,
   },
   cardTitle: {
     fontSize: 14,
-    color: '#8A8D93',
-    fontWeight: '800',
-    marginBottom: 24,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
+    color: '#666666',
+    fontWeight: '600',
+    marginBottom: 20,
   },
   statsRow: {
     flexDirection: 'row',
@@ -294,76 +309,70 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statValue: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    marginBottom: 6,
-    fontVariant: ['tabular-nums'],
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#222222',
+    marginBottom: 4,
   },
   statLabel: {
-    fontSize: 11,
-    color: '#8A8D93',
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    fontSize: 12,
+    color: '#999999',
+    fontWeight: '500',
   },
   divider: {
     width: 1,
-    height: 40,
-    backgroundColor: '#2A2C31',
+    height: 30,
+    backgroundColor: '#EEEEEE',
   },
   progressContainer: {
-    marginTop: 24,
-    paddingTop: 20,
+    marginTop: 20,
+    paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#2A2C31',
+    borderTopColor: '#F0F0F0',
   },
   progressTextRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   progressTextLabel: {
     fontSize: 13,
-    color: '#8A8D93',
-    fontWeight: '700',
-    textTransform: 'uppercase',
+    color: '#666',
+    fontWeight: '500',
   },
   progressPercent: {
-    fontSize: 14,
-    color: '#E11D48',
-    fontWeight: '900',
+    fontSize: 13,
+    color: '#24C789',
+    fontWeight: 'bold',
   },
   progressBarBg: {
     height: 8,
-    backgroundColor: '#1C1D21',
+    backgroundColor: '#F0F0F0',
     borderRadius: 4,
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#E11D48',
+    backgroundColor: '#24C789',
     borderRadius: 4,
   },
   weatherCard: {
-    backgroundColor: '#111214',
-    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     padding: 16,
-    marginBottom: 24,
+    marginBottom: 30,
     flexDirection: 'row',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
     shadowRadius: 10,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: '#2A2C31',
+    elevation: 3,
   },
   weatherIconContainer: {
     width: 50,
     height: 50,
-    backgroundColor: 'rgba(225, 29, 72, 0.1)',
+    backgroundColor: '#E8F8F2',
     borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
@@ -373,41 +382,37 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   weatherTemp: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#222',
   },
   weatherTip: {
     fontSize: 13,
-    color: '#8A8D93',
+    color: '#777',
     marginTop: 4,
-    fontWeight: '500',
+    lineHeight: 18,
   },
   weatherDesc: {
     fontSize: 13,
-    color: '#8A8D93',
+    color: '#777',
     marginTop: 4,
-    fontWeight: '500',
+    lineHeight: 18,
   },
   friendPushCard: {
-    backgroundColor: '#111214',
+    backgroundColor: '#FFF4E5',
     borderRadius: 20,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#E11D48',
-    shadowColor: '#E11D48',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    borderColor: '#FFE0B2',
   },
   friendPushAvatar: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#1C1D21',
+    backgroundColor: '#FFD180',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -419,55 +424,50 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   friendPushName: {
-    fontWeight: '800',
+    fontWeight: 'bold',
     fontSize: 16,
-    color: '#FFFFFF',
-    marginBottom: 4,
+    color: '#E65100',
+    marginBottom: 2,
   },
   friendPushAction: {
-    color: '#E11D48',
+    color: '#FF9800',
     fontSize: 13,
-    fontWeight: '700',
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#222222',
     marginBottom: 16,
-    letterSpacing: 0.5,
   },
   recentSectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 10,
-    marginBottom: 5,
   },
   seeAllText: {
     fontSize: 14,
-    color: '#E11D48',
-    fontWeight: '800',
-    textTransform: 'uppercase',
+    color: '#24C789',
+    fontWeight: '600',
+    marginBottom: 16,
   },
   recentRunCard: {
-    backgroundColor: '#111214',
-    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: '#2A2C31',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
   },
   runIconBox: {
     width: 48,
     height: 48,
-    backgroundColor: '#1C1D21',
+    backgroundColor: '#F7F7F7',
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
@@ -477,67 +477,60 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   runTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 6,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#222',
+    marginBottom: 4,
   },
   runDate: {
     fontSize: 13,
-    color: '#8A8D93',
-    fontWeight: '600',
+    color: '#888',
   },
   runStats: {
     alignItems: 'flex-end',
   },
   runDistance: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#E11D48',
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#24C789',
   },
   runTime: {
     fontSize: 13,
-    color: '#8A8D93',
-    marginTop: 4,
-    fontWeight: '600',
-    fontVariant: ['tabular-nums'],
+    color: '#888',
+    marginTop: 2,
   },
   gridContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   gridBox: {
     width: (width - 56) / 2, // 20 padding each side + 16 gap
-    backgroundColor: '#111214',
-    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     padding: 20,
     alignItems: 'center',
     justifyContent: 'center',
     height: 110,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: '#2A2C31',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
   },
   gridBoxEmpty: {
     backgroundColor: 'transparent',
-    borderWidth: 0,
     elevation: 0,
     shadowOpacity: 0,
   },
   gridEmoji: {
     fontSize: 32,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   gridText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    textAlign: 'center',
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#444',
   },
   startActionContainer: {
     position: 'absolute',
@@ -546,28 +539,25 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: 20,
     paddingBottom: Platform.OS === 'ios' ? 40 : 30,
-    paddingTop: 20,
-    backgroundColor: 'rgba(0,0,0,0.85)',
+    paddingTop: 10,
+    backgroundColor: 'transparent', 
   },
   startButton: {
-    backgroundColor: '#E11D48',
-    height: 64,
-    borderRadius: 32,
+    backgroundColor: '#24C789',
+    height: 60,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#E11D48',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.6,
-    shadowRadius: 16,
-    elevation: 10,
-    borderWidth: 2,
-    borderColor: 'rgba(225, 29, 72, 0.4)',
+    shadowColor: '#24C789',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 6,
   },
   startButtonText: {
     color: '#FFFFFF',
-    fontSize: 22,
-    fontWeight: '900',
-    letterSpacing: 4,
-    textTransform: 'uppercase',
+    fontSize: 18,
+    fontWeight: 'bold',
+    letterSpacing: 2,
   }
 });

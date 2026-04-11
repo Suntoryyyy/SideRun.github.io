@@ -112,6 +112,15 @@ const FloatingEmoji = ({ emoji, onComplete }) => {
 
 import { useRunTracking } from '../hooks/useRunTracking';
 
+
+const formatDuration = (totalSeconds) => {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  if (h > 0) return `${h}:${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
+  return `${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
+};
+
 export default function RunScreen({ route, navigation }) {
   const { mode = 'solo' } = route?.params || {};
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
@@ -191,7 +200,7 @@ export default function RunScreen({ route, navigation }) {
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
         >
-          <Ionicons name="arrow-back" size={28} color="#FFF" />
+          <Ionicons name="arrow-back" size={28} color="#333" />
         </TouchableOpacity>
 
         {Platform.OS === 'web' ? (
@@ -228,7 +237,7 @@ export default function RunScreen({ route, navigation }) {
             {runData.coordinates.length > 1 && (
               <Polyline
                 coordinates={runData.coordinates}
-                strokeColor="#E11D48"
+                strokeColor="#24C789"
                 strokeWidth={4}
               />
             )}

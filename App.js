@@ -2,7 +2,7 @@ import 'react-native-gesture-handler';
 import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createStackNavigator, TransitionPresets } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, ActivityIndicator, Platform } from 'react-native';
@@ -164,7 +164,7 @@ export default function App() {
   return (
     <NavigationContainer>
       <StatusBar style="auto" />
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenOptions={{ headerShown: false, ...TransitionPresets.SlideFromRightIOS }}>
         {!isLoggedIn ? (
           <>
             <Stack.Screen name="Login">
