@@ -2,19 +2,25 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import CustomAlert from '../components/CustomAlert';
 
 export default function RegisterScreen({ navigation, setLoggedIn }) {
   const [phone, setPhone] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '', type: 'error' });
+
+  const showAlert = (title, message, type = 'error') => {
+    setAlertConfig({ visible: true, title, message, type });
+  };
 
   const handleRegister = async () => {
     const trimmedPhone = phone.trim();
     const trimmedUsername = username.trim();
 
     if (!trimmedPhone || !trimmedUsername || !password) {
-      Alert.alert('Error', 'Please fill all fields');
+      showAlert('Error', 'Please fill all fields');
       return;
     }
 
@@ -30,20 +36,19 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
       );
 
       if (users[trimmedPhone]) {
-        Alert.alert('Registration Failed', 'This phone number is already registered.');
+        showAlert('Registration Failed', 'This phone number is already registered.');
         setIsLoading(false);
       } else if (isUsernameTaken) {
-        Alert.alert('Registration Failed', 'This username is already taken. Please choose another one.');
+        showAlert('Registration Failed', 'This username is already taken. Please choose another one.');
         setIsLoading(false);
       } else {
         users[trimmedPhone] = { phone: trimmedPhone, username: trimmedUsername, password };
         await AsyncStorage.setItem('users', JSON.stringify(users));
         await AsyncStorage.setItem('currentUser', JSON.stringify({ phone: trimmedPhone, username: trimmedUsername }));
-        Alert.alert('Success', 'Account created successfully!');
-        setLoggedIn(true);
+        showAlert('Success', 'Account created successfully!', 'success');
       }
     } catch (e) {
-      Alert.alert('Error', 'An error occurred during registration');
+      showAlert('Error', 'An error occurred during registration');
       setIsLoading(false);
     }
   };
@@ -112,6 +117,16 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
           </View>
         </View>
       </ScrollView>
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={() => {
+          setAlertConfig({ ...alertConfig, visible: false });
+          if (alertConfig.type === 'success') setLoggedIn(true);
+        }}
+      />
     </KeyboardAvoidingView>
   );
 }

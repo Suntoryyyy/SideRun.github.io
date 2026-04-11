@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import CustomAlert from '../components/CustomAlert';
 
 export default function LoginScreen({ navigation, setLoggedIn }) {
   const [phone, setPhone] = useState('');
@@ -9,6 +10,11 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true); // Default to true
   const [isLoading, setIsLoading] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '', type: 'error' });
+
+  const showAlert = (title, message, type = 'error') => {
+    setAlertConfig({ visible: true, title, message, type });
+  };
 
   useEffect(() => {
     // Check if there's a saved auto-login preference we should load
@@ -29,7 +35,7 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
     const trimmedPhone = phone.trim();
 
     if (!trimmedPhone || !password) {
-      Alert.alert('Error', 'Please enter your phone number and password');
+      showAlert('Error', 'Please enter your phone number and password');
       return;
     }
 
@@ -56,15 +62,15 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
           }
           setLoggedIn(true);
         } else {
-          Alert.alert('Login Failed', 'The password you entered is incorrect.');
+          showAlert('Login Failed', 'The password you entered is incorrect.');
           setIsLoading(false);
         }
       } else {
-        Alert.alert('Login Failed', 'This phone number is not registered.');
+        showAlert('Login Failed', 'This phone number is not registered.');
         setIsLoading(false);
       }
     } catch (e) {
-      Alert.alert('Error', 'An error occurred during login');
+      showAlert('Error', 'An error occurred during login');
       setIsLoading(false);
     }
   };
@@ -141,6 +147,13 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
 
         </View>
       </ScrollView>
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={() => setAlertConfig({ ...alertConfig, visible: false })}
+      />
     </KeyboardAvoidingView>
   );
 }
