@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -8,6 +8,7 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true); // Default to true
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     // Check if there's a saved auto-login preference we should load
@@ -32,57 +33,40 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
       return;
     }
 
+    setIsLoading(true);
+
     try {
+      await new Promise(resolve => setTimeout(resolve, 800)); // Show loading animation
       const usersData = await AsyncStorage.getItem('users');
       const users = usersData ? JSON.parse(usersData) : {};
 
-      if (users[trimmedPhone] && users[trimmedPhone].password === password) {
-        const userInfo = JSON.stringify({ phone: trimmedPhone, username: users[trimmedPhone].username });
-        if (rememberMe) {
-          await AsyncStorage.setItem('rememberedPhone', trimmedPhone);
-          await AsyncStorage.setItem('currentUser', userInfo);
-        } else {
-          await AsyncStorage.removeItem('rememberedPhone');
-          if (Platform.OS === 'web') {
-            sessionStorage.setItem('currentUser', userInfo);
-            // Don't save to AsyncStorage so it's wiped when tab closes
-          } else {
-            // For native, no sessionStorage, so we just use AsyncStorage for the current session
+      if (users[trimmedPhone]) {
+        if (users[trimmedPhone].password === password) {
+          const userInfo = JSON.stringify({ phone: trimmedPhone, username: users[trimmedPhone].username });
+          if (rememberMe) {
+            await AsyncStorage.setItem('rememberedPhone', trimmedPhone);
             await AsyncStorage.setItem('currentUser', userInfo);
+          } else {
+            await AsyncStorage.removeItem('rememberedPhone');
+            if (Platform.OS === 'web') {
+              sessionStorage.setItem('currentUser', userInfo);
+            } else {
+              await AsyncStorage.setItem('currentUser', userInfo);
+            }
           }
+          setLoggedIn(true);
+        } else {
+          Alert.alert('Login Failed', 'The password you entered is incorrect.');
+          setIsLoading(false);
         }
-        setLoggedIn(true);
       } else {
-        Alert.alert('Login Failed', 'Invalid phone number or password');
+        Alert.alert('Login Failed', 'This phone number is not registered.');
+        setIsLoading(false);
       }
     } catch (e) {
       Alert.alert('Error', 'An error occurred during login');
+      setIsLoading(false);
     }
-  };
-
-  const handleClearData = async () => {
-    Alert.alert(
-      'Clear All Data',
-      'Are you sure? This will delete all registered users and reset the database.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear Data',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await AsyncStorage.removeItem('users');
-              await AsyncStorage.removeItem('currentUser');
-              await AsyncStorage.removeItem('rememberedPhone');
-              if (Platform.OS === 'web') sessionStorage.removeItem('currentUser');
-              Alert.alert('Success', 'All registration data has been cleared.');
-            } catch (e) {
-              Alert.alert('Error', 'Failed to clear data');
-            }
-          }
-        }
-      ]
-    );
   };
 
   return (
@@ -139,8 +123,12 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
             <Text style={styles.checkboxLabel}>Remember Me</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            <Text style={styles.loginButtonText}>LOG IN</Text>
+          <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={isLoading}>
+            {isLoading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.loginButtonText}>LOG IN</Text>
+            )}
           </TouchableOpacity>
 
           <View style={styles.footer}>
@@ -150,9 +138,7 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.devClearButton} onPress={handleClearData}>
-            <Text style={styles.devClearText}>Wipe All User Data (Dev Tool)</Text>
-          </TouchableOpacity>
+
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -265,15 +251,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
-  devClearButton: {
-    marginTop: 60,
-    alignSelf: 'center',
-    padding: 10,
-  },
-  devClearText: {
-    color: '#FF3B30',
-    fontSize: 12,
-    fontWeight: 'bold',
-    opacity: 0.6,
-  },
+
+
 });

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -7,6 +7,7 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
   const [phone, setPhone] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleRegister = async () => {
     const trimmedPhone = phone.trim();
@@ -17,7 +18,10 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
       return;
     }
 
+    setIsLoading(true);
+
     try {
+      await new Promise(resolve => setTimeout(resolve, 800)); // Show loading animation
       const usersData = await AsyncStorage.getItem('users');
       const users = usersData ? JSON.parse(usersData) : {};
 
@@ -27,8 +31,10 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
 
       if (users[trimmedPhone]) {
         Alert.alert('Registration Failed', 'This phone number is already registered.');
+        setIsLoading(false);
       } else if (isUsernameTaken) {
         Alert.alert('Registration Failed', 'This username is already taken. Please choose another one.');
+        setIsLoading(false);
       } else {
         users[trimmedPhone] = { phone: trimmedPhone, username: trimmedUsername, password };
         await AsyncStorage.setItem('users', JSON.stringify(users));
@@ -38,6 +44,7 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
       }
     } catch (e) {
       Alert.alert('Error', 'An error occurred during registration');
+      setIsLoading(false);
     }
   };
 
@@ -89,8 +96,12 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
             onChangeText={setPassword}
           />
 
-          <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
-            <Text style={styles.registerButtonText}>SIGN UP</Text>
+          <TouchableOpacity style={styles.registerButton} onPress={handleRegister} disabled={isLoading}>
+            {isLoading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.registerButtonText}>SIGN UP</Text>
+            )}
           </TouchableOpacity>
 
           <View style={styles.footer}>
