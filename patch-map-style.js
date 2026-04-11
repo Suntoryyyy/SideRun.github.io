@@ -1,4 +1,7 @@
-[
+const fs = require('fs');
+
+// We need the map itself to match the dark KEEP UI aesthetic
+const darkMapStyle = [
   {
     "elementType": "geometry",
     "stylers": [
@@ -230,4 +233,13 @@
       }
     ]
   }
-]
+];
+
+fs.writeFileSync('screens/MapStyle.json', JSON.stringify(darkMapStyle, null, 2));
+
+// Update the polyline in JSX to match the Neon color
+let jsxCode = fs.readFileSync('screens/RunScreen.js', 'utf8');
+jsxCode = jsxCode.replace('strokeColor="#FF9500"', 'strokeColor="#E11D48"');
+fs.writeFileSync('screens/RunScreen.js', jsxCode);
+
+console.log('MapStyle updated to Deep Dark KEEP aesthetic');

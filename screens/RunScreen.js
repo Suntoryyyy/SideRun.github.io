@@ -191,7 +191,7 @@ export default function RunScreen({ route, navigation }) {
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
         >
-          <Ionicons name="arrow-back" size={28} color="#333" />
+          <Ionicons name="arrow-back" size={28} color="#FFF" />
         </TouchableOpacity>
 
         {Platform.OS === 'web' ? (
@@ -228,7 +228,7 @@ export default function RunScreen({ route, navigation }) {
             {runData.coordinates.length > 1 && (
               <Polyline
                 coordinates={runData.coordinates}
-                strokeColor="#FF9500"
+                strokeColor="#E11D48"
                 strokeWidth={4}
               />
             )}
