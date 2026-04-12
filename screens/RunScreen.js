@@ -24,12 +24,13 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 // Conditionally import MapView for native platforms only
-let MapView, Polyline, Marker;
+let MapView, Polyline, Marker, PROVIDER_GOOGLE;
 if (Platform.OS !== 'web') {
   const Maps = require('react-native-maps');
   MapView = Maps.default;
   Polyline = Maps.Polyline;
   Marker = Maps.Marker;
+  PROVIDER_GOOGLE = Maps.PROVIDER_GOOGLE;
 }
 
 const { width, height } = Dimensions.get('window');
@@ -141,6 +142,8 @@ export default function RunScreen({ route, navigation }) {
     pauseRun,
     resumeRun,
     stopRun,
+    isFinished,
+    closeRun,
   } = useRunTracking(visibilityScope, userAvatar, navigation, mode);
 
   const togglePanel = () => {
@@ -229,6 +232,7 @@ export default function RunScreen({ route, navigation }) {
           // Native map view
           <MapView
             style={styles.map}
+            provider={PROVIDER_GOOGLE}
             region={region}
             showsUserLocation={false}
             followsUserLocation={true}
@@ -317,8 +321,20 @@ export default function RunScreen({ route, navigation }) {
           </View>
         )}
 
+
         <View style={styles.controlsContainer}>
-          {!isRunning ? (
+          {isFinished ? (
+            <View style={styles.activeControls}>
+              <View style={[styles.statBox, {marginRight: 20}]}>
+                <Text style={styles.statValue}>Done!</Text>
+                <Text style={styles.statLabel}>Completed</Text>
+              </View>
+              <TouchableOpacity style={styles.circleStartButton} onPress={closeRun}>
+                <Text style={styles.circleStartText}>DONE</Text>
+              </TouchableOpacity>
+            </View>
+          ) : !isRunning ? (
+
             <View style={styles.preRunControls}>
               <View style={styles.scopeSelectorContainer}>
                 {['public', 'friends', 'private'].map((scope) => (

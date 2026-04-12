@@ -4,8 +4,8 @@ import * as Location from 'expo-location';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { databases, account } from '../services/appwrite';
-import { ID } from 'appwrite';
+import { supabase } from '../services/supabase';
+
 import CustomAlert from '../components/CustomAlert';
 
 export default function RegisterScreen({ navigation, setLoggedIn }) {
@@ -62,50 +62,60 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
       }
 
 
-      // 2. ENFORCED CLOUD AUTH
+      // 2. MEMFIRE CLOUD AUTH (Supabase SDK)
       const email = `${trimmedPhone}@siderun.app`;
       
-      // Ensure password is at least 8 chars for Appwrite
-      if (password.length < 8) {
-        showAlert('Registration Failed', 'Password must be at least 8 characters long for cloud security.');
+      // Ensure password is at least 6 chars for Supabase
+      if (password.length < 6) {
+        showAlert('Registration Failed', 'Password must be at least 6 characters long for cloud security.');
         setIsLoading(false);
         return;
       }
 
       try {
-        await account.create(ID.unique(), email, password, trimmedUsername);
-        console.log("SUCCESS: User Auth created in Appwrite!");
-      } catch (authError) {
-        console.warn("APPWRITE AUTH ERROR:", authError);
-        showAlert('Cloud Error', authError.message || 'Failed to create user on cloud.');
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        await account.createEmailPasswordSession(email, password);
-        console.log("SUCCESS: Session started in Appwrite!");
-      } catch (sessionError) {
-        console.warn("APPWRITE SESSION ERROR:", sessionError);
-      }
-
-      try {
-        await databases.createDocument(
-          '69da562e0023693b307a', // Database ID
-          'users',               // Table/Collection ID
-          ID.unique(),
-          {
-            phone: trimmedPhone,
-            username: trimmedUsername,
-            password: password
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: email,
+          password: password,
+          options: {
+            data: {
+              username: trimmedUsername,
+              phone: trimmedPhone
+            }
           }
-        );
-        console.log("SUCCESS: User beamed to Appwrite Cloud DB!");
-      } catch (cloudError) {
-        console.warn("CLOUD DB SYNC ERROR:", cloudError);
+        });
+
+        if (authError) {
+          console.warn("MEMFIRE AUTH ERROR:", authError);
+          showAlert('Cloud Error', authError.message || 'Failed to create user on cloud.');
+          setIsLoading(false);
+          return;
+        }
+        console.log("SUCCESS: User Auth created in MemFire!");
+      } catch (e) {
+        console.warn("Exception during Auth:", e);
+        showAlert('Cloud Error', 'Something went completely wrong trying to connect to MemFire.');
+        setIsLoading(false);
+        return;
       }
 
-      // 3. FINAL LOCAL SAVE
+      // 3. MEMFIRE DATABASE SYNC
+      try {
+        const { error: dbError } = await supabase
+          .from('users')
+          .insert([
+            { phone: trimmedPhone, username: trimmedUsername, password: password }
+          ]);
+          
+        if (dbError) {
+          console.warn("MEMFIRE DB SYNC ERROR:", dbError);
+        } else {
+          console.log("SUCCESS: User beamed to MemFire Cloud DB!");
+        }
+      } catch (cloudError) {
+        console.warn("MEMFIRE GENERAL DB ERROR:", cloudError);
+      }
+
+      // 4. FINAL LOCAL SAVE
       users[trimmedPhone] = { phone: trimmedPhone, username: trimmedUsername, password };
       await AsyncStorage.setItem('users', JSON.stringify(users));
       await AsyncStorage.setItem('currentUser', JSON.stringify({ phone: trimmedPhone, username: trimmedUsername }));

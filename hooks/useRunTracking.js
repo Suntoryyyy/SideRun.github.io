@@ -9,6 +9,7 @@ import { formatDuration } from '../utils/timeUtils';
 export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [isFinished, setIsFinished] = useState(false);
   const [durationInSeconds, setDurationInSeconds] = useState(0);
   const [runData, setRunData] = useState({ distance: 0, calories: 0, coordinates: [] });
   const [currentLocation, setCurrentLocation] = useState(null);
@@ -49,7 +50,7 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
       if (location) {
         const { latitude, longitude } = location.coords;
         setCurrentLocation({ latitude, longitude });
-        setRegion({ latitude, longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 });
+        setRegion({ latitude, longitude, latitudeDelta: 0.025, longitudeDelta: 0.025 });
       }
     } catch (error) {
       console.error('Error getting location:', error);
@@ -177,11 +178,16 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
       userStats.weeklyRuns += 1;
       await AsyncStorage.setItem('userStats', JSON.stringify(userStats));
 
-      Alert.alert('Run Completed!', `Distance: ${runData.distance.toFixed(2)} km\nDuration: ${formatDuration(durationInSeconds)}`);
-      navigation.goBack();
+      // Removed Alert to show summary on screen
+      setIsFinished(true);
     } catch (error) {
       console.error('Error saving run:', error);
     }
+  };
+
+  const closeRun = () => {
+    setIsFinished(false);
+    navigation.goBack();
   };
 
   return {
@@ -196,5 +202,7 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
     pauseRun,
     resumeRun,
     stopRun,
+    isFinished,
+    closeRun,
   };
 }

@@ -5,6 +5,7 @@ import { createDrawerNavigator } from '@react-navigation/drawer';
 import { createStackNavigator, TransitionPresets } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from './services/supabase';
 import { View, ActivityIndicator, Platform } from 'react-native';
 import * as Font from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
@@ -146,6 +147,10 @@ export default function App() {
   };
 
   const handleLogout = async () => {
+    try {
+      await account.deleteSession('current');
+    } catch (e) {}
+
     await AsyncStorage.removeItem('currentUser');
     if (Platform.OS === 'web') {
       sessionStorage.removeItem('currentUser');

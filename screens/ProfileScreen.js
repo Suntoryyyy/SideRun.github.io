@@ -132,6 +132,15 @@ export default function ProfileScreen({ navigation, handleLogout }) {
   };
 
   const onLogoutPress = async () => {
+    if (Platform.OS === 'web') {
+      const confirmLogout = window.confirm('Are you sure you want to log out?');
+      if (confirmLogout) {
+        if (handleLogout) handleLogout();
+        else AsyncStorage.removeItem('currentUser').then(() => window.location.reload());
+      }
+      return;
+    }
+
     Alert.alert('Log Out', 'Are you sure you want to log out?', [
       { text: 'Cancel', style: 'cancel' },
       {

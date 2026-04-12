@@ -4,7 +4,7 @@ import { BlurView } from 'expo-blur';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { account } from '../services/appwrite';
+import { supabase } from '../services/supabase';
 import CustomAlert from '../components/CustomAlert';
 
 export default function LoginScreen({ navigation, setLoggedIn }) {
