@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { BlurView } from 'expo-blur';
+import * as Location from 'expo-location';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { databases } from '../services/appwrite';
+import { databases, account } from '../services/appwrite';
 import { ID } from 'appwrite';
 import CustomAlert from '../components/CustomAlert';
 
@@ -12,6 +14,19 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '', type: 'error' });
+  const [region, setRegion] = useState({ latitude: 37.7749, longitude: -122.4194 });
+
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      let location = await Location.getCurrentPositionAsync({});
+      setRegion({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+    })();
+  }, []);
 
   const showAlert = (title, message, type = 'error') => {
     setAlertConfig({ visible: true, title, message, type });
@@ -46,7 +61,31 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
         return;
       }
 
-      // 2. CLOUD DATABASE SYNC (The massive upgrade!)
+
+      // 2. CLOUD AUTH SYNC (Creates the real user in Appwrite Users panel)
+      const email = `${trimmedPhone}@siderun.app`;
+      try {
+        await account.create(
+          ID.unique(),
+          email,
+          password,
+          trimmedUsername
+        );
+        console.log("SUCCESS: User Auth created in Appwrite!");
+      } catch (authError) {
+        console.warn("APPWRITE AUTH ERROR:", authError);
+      }
+
+
+      try {
+        await account.createEmailPasswordSession(email, password);
+        console.log("SUCCESS: Session started in Appwrite!");
+      } catch (sessionError) {
+        console.warn("APPWRITE SESSION ERROR:", sessionError);
+      }
+
+      // 3. CLOUD DATABASE SYNC (The massive upgrade!)
+
       try {
         await databases.createDocument(
           '69da562e0023693b307a', // Database ID
@@ -82,7 +121,24 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
+      {/* Background Map */}
+      {Platform.OS === 'web' ? (
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: -1 }}>
+          <iframe
+            width="100%"
+            height="100%"
+            frameBorder="0"
+            scrolling="no"
+            src={`https://www.openstreetmap.org/export/embed.html?bbox=${region.longitude - 0.05},${region.latitude - 0.05},${region.longitude + 0.05},${region.latitude + 0.05}&layer=mapnik`}
+            style={{ border: 'none', filter: 'brightness(0.9) grayscale(0.8)' }}
+          />
+        </div>
+      ) : (
+        <View style={StyleSheet.absoluteFillObject} backgroundColor="#EAEAEA" />
+      )}
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        <BlurView intensity={85} tint="light" style={styles.glassCard}>
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
@@ -140,6 +196,7 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
             </TouchableOpacity>
           </View>
         </View>
+        </BlurView>
       </ScrollView>
       <CustomAlert
         visible={alertConfig.visible}
@@ -158,7 +215,20 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
+  },
+  glassCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+    borderRadius: 30,
+    padding: 30,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.9)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 5,
   },
   scrollContent: {
     flexGrow: 1,
@@ -203,7 +273,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   input: {
-    backgroundColor: '#F4F5F7',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 1)',
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
