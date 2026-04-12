@@ -10,6 +10,7 @@ import {
   Platform,
   UIManager,
   LayoutAnimation,
+  PanResponder,
   Image,
   Animated
 } from 'react-native';
@@ -146,10 +147,53 @@ export default function RunScreen({ route, navigation }) {
     closeRun,
   } = useRunTracking(visibilityScope, userAvatar, navigation, mode);
 
+  
+  const panY = useRef(new Animated.Value(0)).current;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        // Only respond if moving vertically more than horizontally
+        return Math.abs(gestureState.dy) > Math.abs(gestureState.dx) && Math.abs(gestureState.dy) > 5;
+      },
+      onPanResponderMove: Animated.event([null, { dy: panY }], { useNativeDriver: false }),
+      onPanResponderRelease: (evt, gestureState) => {
+        if (gestureState.dy > 50) {
+          // Dragged down
+          Animated.spring(panY, {
+            toValue: 200, // Move it down
+            useNativeDriver: false,
+          }).start(() => setIsPanelCollapsed(true));
+        } else if (gestureState.dy < -50) {
+          // Dragged up
+          Animated.spring(panY, {
+            toValue: 0,
+            useNativeDriver: false,
+          }).start(() => setIsPanelCollapsed(false));
+        } else {
+          // Revert to original state
+          Animated.spring(panY, {
+            toValue: isPanelCollapsed ? 200 : 0,
+            useNativeDriver: false,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  // React to programmatic toggle (clicking the bar)
+  useEffect(() => {
+    Animated.spring(panY, {
+      toValue: isPanelCollapsed ? 200 : 0,
+      useNativeDriver: false,
+    }).start();
+  }, [isPanelCollapsed]);
+
   const togglePanel = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setIsPanelCollapsed(!isPanelCollapsed);
   };
+
 
   useEffect(() => {
     loadUserAvatar();
@@ -282,7 +326,7 @@ export default function RunScreen({ route, navigation }) {
         ))}
       </View>
 
-      <View style={[styles.dashboardContainer, isPanelCollapsed && styles.dashboardCollapsed]}>
+      <Animated.View style={[styles.dashboardContainer, { transform: [{ translateY: panY }] }]} {...panResponder.panHandlers}>
         <TouchableOpacity 
           style={styles.dragHandleContainer} 
           activeOpacity={0.8} 
@@ -376,7 +420,7 @@ export default function RunScreen({ route, navigation }) {
             </TouchableOpacity>
           )}
         </View>
-      </View>
+      </Animated.View>
     </View>
   );
 }
