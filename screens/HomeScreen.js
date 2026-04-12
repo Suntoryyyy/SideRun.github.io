@@ -1,9 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, ScrollView, Dimensions, Image, Animated } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, ScrollView, Dimensions, Image, Animated, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { BlurView } from 'expo-blur';
+import * as Location from 'expo-location';
+import MapStyle from './MapStyle.json';
+
+let MapView, PROVIDER_GOOGLE;
+if (Platform.OS !== 'web') {
+  const Maps = require('react-native-maps');
+  MapView = Maps.default;
+  PROVIDER_GOOGLE = Maps.PROVIDER_GOOGLE;
+}
 
 const { width } = Dimensions.get('window');
 
@@ -11,7 +21,29 @@ export default function HomeScreen({ navigation }) {
   const isFocused = useIsFocused();
   const startButtonScale = useRef(new Animated.Value(1)).current;
   const [username, setUsername] = useState('Runner');
-  const [avatar, setAvatar] = useState(''); // no default fallback here to prefer the greeting without it if missing
+  const [avatar, setAvatar] = useState('');
+  const [region, setRegion] = useState({ latitude: 37.7749, longitude: -122.4194, latitudeDelta: 0.05, longitudeDelta: 0.05 });
+
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      let location = await Location.getCurrentPositionAsync({});
+      setRegion({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      });
+    })();
+  }, []);
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 18) return 'Good Afternoon';
+    return 'Good Evening';
+  };
 
   useEffect(() => {
     if (isFocused) {
@@ -21,14 +53,12 @@ export default function HomeScreen({ navigation }) {
 
   const loadUserData = async () => {
     try {
-      const userString = await AsyncStorage.getItem('currentUser');
-      if (userString) {
-        const user = JSON.parse(userString);
-        if (user.username) setUsername(user.username);
-        if (user.avatar) setAvatar(user.avatar);
-      }
+      const storedUsername = await AsyncStorage.getItem('username');
+      const storedAvatar = await AsyncStorage.getItem('avatar');
+      if (storedUsername) setUsername(storedUsername);
+      if (storedAvatar) setAvatar(storedAvatar);
     } catch (e) {
-      console.error(e);
+      console.log('Error loading user data:', e);
     }
   };
 
@@ -50,44 +80,69 @@ export default function HomeScreen({ navigation }) {
     }).start();
   };
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning,';
-    if (hour < 18) return 'Good Afternoon,';
-    return 'Good Evening,';
-  };
-
   return (
     <View style={styles.container}>
+      {/* Background Live Map */}
+      {Platform.OS === 'web' ? (
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: -1 }}>
+          <iframe
+            width="100%"
+            height="100%"
+            frameBorder="0"
+            scrolling="no"
+            src={`https://www.openstreetmap.org/export/embed.html?bbox=${region.longitude - 0.025},${region.latitude - 0.025},${region.longitude + 0.025},${region.latitude + 0.025}&layer=mapnik`}
+            style={{ border: 'none', filter: 'brightness(0.9) grayscale(0.8)' }}
+          />
+        </div>
+      ) : (
+        MapView && (
+          <MapView
+            style={StyleSheet.absoluteFillObject}
+            provider={PROVIDER_GOOGLE}
+            region={region}
+            customMapStyle={MapStyle}
+            showsUserLocation={false}
+            pitchEnabled={false}
+            rotateEnabled={false}
+            scrollEnabled={false}
+            zoomEnabled={false}
+          />
+        )
+      )}
+
+      {/* Main Content Overlay */}
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         
-        {/* Header Section */}
+        {/* Dribbble-Style Greeting Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.menuButton} onPress={() => navigation.openDrawer()}>
-            <Ionicons name="menu" size={28} color="#222222" />
+            <BlurView intensity={60} tint="light" style={styles.iconCircle}>
+              <Ionicons name="menu" size={24} color="#111" />
+            </BlurView>
           </TouchableOpacity>
           <View style={styles.headerTop}>
+            <View style={styles.greetingContainer}>
+              <Text style={styles.greeting}>{getGreeting()}</Text>
+              <Text style={styles.userName}>{username}</Text>
+            </View>
             <View style={styles.userInfoContainer}>
               {avatar && (avatar.startsWith('file:') || avatar.startsWith('http') || avatar.startsWith('data:')) ? (
                 <Image source={{ uri: avatar }} style={styles.homeAvatarImage} />
-              ) : null}
-              <View>
-                <Text style={styles.greeting}>{getGreeting()}</Text>
-                <Text style={styles.userName}>
-                  {avatar && !(avatar.startsWith('file:') || avatar.startsWith('http') || avatar.startsWith('data:')) ? `${avatar} ` : ''}
-                  {username}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.brandBadge}>
-              <Text style={styles.brandText}>siderun</Text>
+              ) : (
+                <BlurView intensity={60} tint="light" style={styles.iconCircle}>
+                  <Ionicons name="person" size={24} color="#111" />
+                </BlurView>
+              )}
             </View>
           </View>
         </View>
 
-        {/* Weekly Stats Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>This Week's Activity</Text>
+        {/* Weekly Stats Card - Glassmorphism */}
+        <BlurView intensity={75} tint="light" style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>This Week's Activity</Text>
+            <Ionicons name="stats-chart" size={20} color="#24C789" />
+          </View>
           <View style={styles.statsRow}>
             <View style={styles.statWrap}>
               <Text style={styles.statValue}>12.4</Text>
@@ -97,11 +152,6 @@ export default function HomeScreen({ navigation }) {
             <View style={styles.statWrap}>
               <Text style={styles.statValue}>3</Text>
               <Text style={styles.statLabel}>Runs</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.statWrap}>
-              <Text style={styles.statValue}>840</Text>
-              <Text style={styles.statLabel}>Calories</Text>
             </View>
           </View>
           
@@ -114,94 +164,50 @@ export default function HomeScreen({ navigation }) {
               <View style={[styles.progressBarFill, { width: '62%' }]} />
             </View>
           </View>
-        </View>
+        </BlurView>
 
         {/* Live Weather Preview */}
         <TouchableOpacity 
-          style={styles.weatherCard} 
-          activeOpacity={0.9} 
+          activeOpacity={0.8} 
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             navigation.navigate('Weather');
           }}
         >
-          <View style={styles.weatherIconContainer}>
-            <Ionicons name="partly-sunny" size={32} color="#24C789" />
-          </View>
-          <View style={styles.weatherMeta}>
-             <Text style={styles.weatherTemp}>18°C · Perfect Conditions</Text>
-             <Text style={styles.weatherDesc}>Low wind, great time for a run</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={24} color="#CCC" />
+          <BlurView intensity={75} tint="light" style={styles.weatherCard}>
+            <View style={styles.weatherIconContainer}>
+              <Ionicons name="partly-sunny" size={32} color="#24C789" />
+            </View>
+            <View style={styles.weatherMeta}>
+               <Text style={styles.weatherTemp}>18°C · Perfect Conditions</Text>
+               <Text style={styles.weatherDesc}>Low wind, great time for a run</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#555" />
+          </BlurView>
         </TouchableOpacity>
 
-        {/* Friend Running Push */}
-        <TouchableOpacity 
-          style={styles.friendPushCard} 
-          activeOpacity={0.9} 
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            navigation.navigate('Run', { mode: 'shared' });
-          }}
-        >
-          <View style={styles.friendPushAvatar}>
-            <Text style={styles.friendPushAvatarText}>🏃</Text>
-          </View>
-          <View style={styles.friendPushMeta}>
-             <Text style={styles.friendPushName}>Alex is running nearby!</Text>
-             <Text style={styles.friendPushAction}>Tap to join their live map</Text>
-          </View>
-          <Ionicons name="map-outline" size={24} color="#FF9500" />
-        </TouchableOpacity>
-
-        {/* Quick Actions Grid */}
-        <Text style={styles.sectionTitle}>Explore</Text>
-        <View style={styles.gridContainer}>
-          <TouchableOpacity style={styles.gridBox} onPress={() => navigation.navigate('Friends')}>
-            <Text style={styles.gridEmoji}>🤝</Text>
-            <Text style={styles.gridText}>Friends & Feed</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.gridBox} onPress={() => navigation.navigate('Badges')}>
-            <Text style={styles.gridEmoji}>🏅</Text>
-            <Text style={styles.gridText}>My Badges</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Recent Runs Section */}
-        <View style={styles.recentSectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Runs</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('RunHistory')}>
+        {/* Recent Run - Mini Card */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Run</Text>
+          <TouchableOpacity>
             <Text style={styles.seeAllText}>See All</Text>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity activeOpacity={0.8} style={styles.recentRunCard} onPress={() => navigation.navigate('RunHistory')}>
-          <View style={styles.runIconBox}>
-            <Ionicons name="footsteps" size={24} color="#24C789" />
-          </View>
-          <View style={styles.runInfo}>
-            <Text style={styles.runTitle}>Morning City Run</Text>
-            <Text style={styles.runDate}>Today, 07:30 AM</Text>
-          </View>
-          <View style={styles.runStats}>
-            <Text style={styles.runDistance}>5.2 km</Text>
-            <Text style={styles.runTime}>28:14</Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity activeOpacity={0.8} style={styles.recentRunCard} onPress={() => navigation.navigate('RunHistory')}>
-          <View style={styles.runIconBox}>
-            <Ionicons name="footsteps" size={24} color="#A0A0A0" />
-          </View>
-          <View style={styles.runInfo}>
-            <Text style={styles.runTitle}>Evening Jog</Text>
-            <Text style={styles.runDate}>Yesterday, 18:45</Text>
-          </View>
-          <View style={styles.runStats}>
-            <Text style={styles.runDistance}>7.1 km</Text>
-            <Text style={styles.runTime}>41:02</Text>
-          </View>
+        <TouchableOpacity activeOpacity={0.8}>
+          <BlurView intensity={80} tint="light" style={styles.recentRunCard}>
+            <View style={styles.runIconBg}>
+              <Ionicons name="location" size={20} color="#FFF" />
+            </View>
+            <View style={styles.runInfo}>
+              <Text style={styles.runTitle}>Evening Jog</Text>
+              <Text style={styles.runDate}>Yesterday, 18:45</Text>
+            </View>
+            <View style={styles.runStats}>
+              <Text style={styles.runDistance}>7.1 km</Text>
+              <Text style={styles.runTime}>41:02</Text>
+            </View>
+          </BlurView>
         </TouchableOpacity>
 
       </ScrollView>
@@ -216,8 +222,9 @@ export default function HomeScreen({ navigation }) {
             navigation.navigate('Run');
           }}
         >
-          <Animated.View style={[styles.startButton, { transform: [{ scale: startButtonScale }] }]}>
-            <Text style={styles.startButtonText}>START</Text>
+          <Animated.View style={[styles.startActionBtn, { transform: [{ scale: startButtonScale }] }]}>
+            <Ionicons name="play" size={32} color="#FFF" style={styles.playIcon} />
+            <Text style={styles.startActionText}>START RUN</Text>
           </Animated.View>
         </TouchableWithoutFeedback>
       </View>
@@ -228,107 +235,113 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F4F5F7',
+    backgroundColor: '#EAEAEA',
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 140, // Space for the floating button
+    padding: 24,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 140,
   },
   header: {
+    marginBottom: 32,
     marginTop: 10,
-    marginBottom: 24,
   },
   menuButton: {
-    marginBottom: 16,
+    marginBottom: 20,
     alignSelf: 'flex-start',
+  },
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
   },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  greetingContainer: {
+    flex: 1,
+  },
+  greeting: {
+    fontSize: 16,
+    color: '#444',
+    marginBottom: 4,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  userName: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#111',
+    letterSpacing: -1,
+  },
   userInfoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   homeAvatarImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    marginRight: 10,
-  },
-  brandBadge: {
-    backgroundColor: '#24C789',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    opacity: 0.9,
-  },
-  brandText: {
-    color: '#FFF',
-    fontWeight: '900',
-    fontStyle: 'italic',
-    fontSize: 14,
-    letterSpacing: 0.5,
-  },
-  greeting: {
-    fontSize: 16,
-    color: '#888888',
-    marginBottom: 4,
-    fontWeight: '500',
-  },
-  userName: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#222222',
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 2,
+    borderColor: '#24C789',
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
-    marginBottom: 30,
-  },
-  cardTitle: {
-    fontSize: 14,
-    color: '#666666',
-    fontWeight: '600',
+    borderRadius: 28,
+    padding: 24,
     marginBottom: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'rgba(255, 255, 255, 0.65)',
   },
-  statsRow: {
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 20,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    marginBottom: 24,
   },
   statWrap: {
     alignItems: 'center',
-    flex: 1,
   },
   statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#222222',
-    marginBottom: 4,
+    fontSize: 42,
+    fontWeight: '900',
+    color: '#111',
+    letterSpacing: -1,
   },
   statLabel: {
-    fontSize: 12,
-    color: '#999999',
-    fontWeight: '500',
+    fontSize: 14,
+    color: '#555',
+    fontWeight: '600',
+    marginTop: 4,
   },
   divider: {
     width: 1,
-    height: 30,
-    backgroundColor: '#EEEEEE',
+    height: 40,
+    backgroundColor: 'rgba(0,0,0,0.1)',
   },
   progressContainer: {
-    marginTop: 20,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    marginTop: 10,
   },
   progressTextRow: {
     flexDirection: 'row',
@@ -337,17 +350,17 @@ const styles = StyleSheet.create({
   },
   progressTextLabel: {
     fontSize: 13,
-    color: '#666',
-    fontWeight: '500',
+    color: '#555',
+    fontWeight: '600',
   },
   progressPercent: {
     fontSize: 13,
     color: '#24C789',
-    fontWeight: 'bold',
+    fontWeight: '800',
   },
   progressBarBg: {
     height: 8,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: 'rgba(0,0,0,0.06)',
     borderRadius: 4,
     overflow: 'hidden',
   },
@@ -357,23 +370,21 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   weatherCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 30,
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 32,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'rgba(255, 255, 255, 0.65)',
   },
   weatherIconContainer: {
-    width: 50,
-    height: 50,
-    backgroundColor: '#E8F8F2',
-    borderRadius: 25,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(36, 199, 137, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -383,92 +394,50 @@ const styles = StyleSheet.create({
   },
   weatherTemp: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#222',
-  },
-  weatherTip: {
-    fontSize: 13,
-    color: '#777',
-    marginTop: 4,
-    lineHeight: 18,
+    fontWeight: '800',
+    color: '#111',
+    marginBottom: 4,
   },
   weatherDesc: {
     fontSize: 13,
-    color: '#777',
-    marginTop: 4,
-    lineHeight: 18,
+    color: '#666',
+    fontWeight: '500',
   },
-  friendPushCard: {
-    backgroundColor: '#FFF4E5',
-    borderRadius: 20,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#FFE0B2',
-  },
-  friendPushAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FFD180',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  friendPushAvatarText: {
-    fontSize: 24,
-  },
-  friendPushMeta: {
-    flex: 1,
-  },
-  friendPushName: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: '#E65100',
-    marginBottom: 2,
-  },
-  friendPushAction: {
-    color: '#FF9800',
-    fontSize: 13,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#222222',
-    marginBottom: 16,
-  },
-  recentSectionHeader: {
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 10,
+    alignItems: 'flex-end',
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#111',
+    letterSpacing: -0.5,
   },
   seeAllText: {
     fontSize: 14,
     color: '#24C789',
-    fontWeight: '600',
-    marginBottom: 16,
+    fontWeight: '700',
+    marginBottom: 4,
   },
   recentRunCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 24,
+    padding: 20,
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+    overflow: 'hidden',
   },
-  runIconBox: {
-    width: 48,
-    height: 48,
-    backgroundColor: '#F7F7F7',
-    borderRadius: 14,
+  runIconBg: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#111',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -477,87 +446,59 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   runTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#222',
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#111',
     marginBottom: 4,
   },
   runDate: {
     fontSize: 13,
-    color: '#888',
+    color: '#666',
+    fontWeight: '500',
   },
   runStats: {
     alignItems: 'flex-end',
   },
   runDistance: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '900',
     color: '#24C789',
+    marginBottom: 4,
   },
   runTime: {
     fontSize: 13,
-    color: '#888',
-    marginTop: 2,
-  },
-  gridContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  gridBox: {
-    width: (width - 56) / 2, // 20 padding each side + 16 gap
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 110,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  gridBoxEmpty: {
-    backgroundColor: 'transparent',
-    elevation: 0,
-    shadowOpacity: 0,
-  },
-  gridEmoji: {
-    fontSize: 32,
-    marginBottom: 10,
-  },
-  gridText: {
-    fontSize: 13,
+    color: '#666',
     fontWeight: '600',
-    color: '#444',
   },
   startActionContainer: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 40,
     left: 0,
     right: 0,
+    alignItems: 'center',
     paddingHorizontal: 20,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 30,
-    paddingTop: 10,
-    backgroundColor: 'transparent', 
   },
-  startButton: {
+  startActionBtn: {
     backgroundColor: '#24C789',
-    height: 60,
-    borderRadius: 30,
+    width: '100%',
+    height: 64,
+    borderRadius: 32,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#24C789',
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  startButtonText: {
+  playIcon: {
+    marginRight: 8,
+  },
+  startActionText: {
     color: '#FFFFFF',
     fontSize: 18,
-    fontWeight: 'bold',
-    letterSpacing: 2,
-  }
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
 });
