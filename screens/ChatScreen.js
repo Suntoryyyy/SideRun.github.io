@@ -49,7 +49,7 @@ export default function ChatScreen({ route, navigation }) {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={28} color="#007AFF" />
+          <Ionicons name="chevron-back" size={28} color="#24C789" />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={styles.headerAvatar}>{friendAvatar}</Text>
@@ -79,13 +79,13 @@ export default function ChatScreen({ route, navigation }) {
             style={styles.textInput}
             value={message}
             onChangeText={setMessage}
-            placeholder="iMessage"
+            placeholder="Message..."
             placeholderTextColor="#8E8E93"
             multiline
           />
           {message.trim().length > 0 ? (
             <TouchableOpacity style={styles.sendBtn} onPress={sendMessage}>
-              <Ionicons name="arrow-up-circle" size={32} color="#007AFF" />
+              <Ionicons name="arrow-up-circle" size={32} color="#24C789" />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity style={styles.micBtn}>
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#E5E5EA',
-    backgroundColor: '#F9F9F9',
+    backgroundColor: '#FFFFFF',
   },
   backBtn: {
     padding: 5,
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   myBubbleContent: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#24C789',
     borderBottomRightRadius: 4,
   },
   friendBubbleContent: {
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#E5E5EA',
-    backgroundColor: '#F9F9F9',
+    backgroundColor: '#FFFFFF',
   },
   attachBtn: {
     padding: 6,

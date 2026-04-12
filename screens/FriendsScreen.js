@@ -267,21 +267,7 @@ export default function FriendsScreen({ navigation }) {
               </Text>
             </View>
           </View>
-          <View style={styles.friendActions}>
-            <TouchableOpacity
-              style={styles.cheerButton}
-              onPress={() => sendCheer(friend.name)}
-            >
-              <Text style={styles.cheerButtonText}>🎉 Cheer</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.removeButton}
-              onPress={() => removeFriend(friend.id)}
-            >
-              <Text style={styles.removeButtonText}>Remove</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        </TouchableOpacity>
       ))}
 
       {friends.length === 0 && !addFriendMode && (
