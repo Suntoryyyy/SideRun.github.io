@@ -150,6 +150,13 @@ export default function RunScreen({ route, navigation }) {
   
   const panY = useRef(new Animated.Value(0)).current;
 
+    const contentOpacity = panY.interpolate({
+    inputRange: [0, Math.max((height * 0.75) - 260, 1)],
+    outputRange: [1, 0],
+    extrapolate: 'clamp'
+  });
+
+
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (evt, gestureState) => {
@@ -161,7 +168,7 @@ export default function RunScreen({ route, navigation }) {
         if (gestureState.dy > 50) {
           // Dragged down
           Animated.spring(panY, {
-            toValue: 200, // Move it down
+            toValue: (height * 0.75) - 200, // Move it down to Keep-style minimized bar
             useNativeDriver: false,
           }).start(() => setIsPanelCollapsed(true));
         } else if (gestureState.dy < -50) {
@@ -173,7 +180,7 @@ export default function RunScreen({ route, navigation }) {
         } else {
           // Revert to original state
           Animated.spring(panY, {
-            toValue: isPanelCollapsed ? 200 : 0,
+            toValue: isPanelCollapsed ? (height * 0.75) - 200 : 0,
             useNativeDriver: false,
           }).start();
         }
@@ -184,7 +191,7 @@ export default function RunScreen({ route, navigation }) {
   // React to programmatic toggle (clicking the bar)
   useEffect(() => {
     Animated.spring(panY, {
-      toValue: isPanelCollapsed ? 200 : 0,
+      toValue: isPanelCollapsed ? (height * 0.75) - 200 : 0,
       useNativeDriver: false,
     }).start();
   }, [isPanelCollapsed]);
@@ -380,7 +387,7 @@ export default function RunScreen({ route, navigation }) {
           ) : !isRunning ? (
 
             <View style={styles.preRunControls}>
-              <View style={styles.scopeSelectorContainer}>
+              <Animated.View style={[styles.scopeSelectorContainer, { opacity: contentOpacity }]}>
                 {['public', 'friends', 'private'].map((scope) => (
                   <TouchableOpacity
                     key={scope}
@@ -392,7 +399,7 @@ export default function RunScreen({ route, navigation }) {
                     </Text>
                   </TouchableOpacity>
                 ))}
-              </View>
+              </Animated.View>
               <TouchableOpacity style={styles.circleStartButton} onPress={startRun}>
                 <Text style={styles.circleStartText}>GO</Text>
               </TouchableOpacity>

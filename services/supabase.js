@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 
 // MemFire Cloud credentials (Supabase SDK)
 // Replace these with your actual Memfire Cloud Project URL and anon key from your dashboard
-const memfireUrl = 'https://YOUR_MEMFIRE_PROJECT.supabase.co'\; // e.g., https://xxx.memfire.com
+const memfireUrl = 'https://YOUR_MEMFIRE_PROJECT.supabase.co'; // e.g., https://xxx.memfire.com
 const memfireAnonKey = 'YOUR_MEMFIRE_ANON_KEY';
 
 export const supabase = createClient(memfireUrl, memfireAnonKey, {

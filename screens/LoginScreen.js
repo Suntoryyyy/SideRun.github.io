@@ -57,6 +57,19 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
       return;
     }
 
+    // --- DEV BACKDOOR FOR MEMFIRE DELAY ---
+    if (trimmedPhone === 'admin' || trimmedPhone === '123456') {
+      const adminInfo = JSON.stringify({ phone: '1234567890', username: 'Admin Bypass' });
+      if (Platform.OS === 'web') {
+        sessionStorage.setItem('currentUser', adminInfo);
+      } else {
+        await AsyncStorage.setItem('currentUser', adminInfo);
+      }
+      setLoggedIn(true);
+      return;
+    }
+    // --------------------------------------
+
     setIsLoading(true);
 
 
