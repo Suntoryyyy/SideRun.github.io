@@ -168,20 +168,26 @@ export default function RunScreen({ route, navigation }) {
         if (gestureState.dy > 50) {
           // Dragged down
           Animated.spring(panY, {
-            toValue: (height * 0.75) - 300, // Move it down to Keep-style minimized bar
+            toValue: (height * 0.75) - 300,
             useNativeDriver: false,
+            tension: 65,
+            friction: 10
           }).start(() => setIsPanelCollapsed(true));
         } else if (gestureState.dy < -50) {
           // Dragged up
           Animated.spring(panY, {
             toValue: 0,
             useNativeDriver: false,
+            tension: 65,
+            friction: 10
           }).start(() => setIsPanelCollapsed(false));
         } else {
           // Revert to original state
           Animated.spring(panY, {
             toValue: isPanelCollapsed ? (height * 0.75) - 300 : 0,
             useNativeDriver: false,
+            tension: 65,
+            friction: 10
           }).start();
         }
       },
@@ -193,6 +199,8 @@ export default function RunScreen({ route, navigation }) {
     Animated.spring(panY, {
       toValue: isPanelCollapsed ? (height * 0.75) - 300 : 0,
       useNativeDriver: false,
+      tension: 65,
+      friction: 10
     }).start();
   }, [isPanelCollapsed]);
 

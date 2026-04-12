@@ -8,6 +8,9 @@ import {
   Alert,
   TextInput,
   Image,
+  Modal,
+  Animated,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import styles from '../styles/FriendsScreenStyles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -21,7 +24,9 @@ export default function FriendsScreen({ navigation }) {
   const [feed, setFeed] = useState([]);
   const [addFriendMode, setAddFriendMode] = useState(false);
   const [newFriendName, setNewFriendName] = useState('');
-  const [activeTab, setActiveTab] = useState('friends'); // 'friends', 'leaderboard', 'feed'
+  const [activeTab, setActiveTab] = useState('friends');
+  const [selectedFriend, setSelectedFriend] = useState(null);
+  const slideAnim = React.useRef(new Animated.Value(300)).current;
 
   useEffect(() => {
     loadFriendsData();
@@ -240,7 +245,7 @@ export default function FriendsScreen({ navigation }) {
       )}
 
       {friends.map((friend) => (
-        <View key={friend.id} style={styles.friendCard}>
+        <TouchableOpacity key={friend.id} style={styles.friendCard} onPress={() => openFriendProfile(friend)} activeOpacity={0.7}>
           <View style={styles.friendInfo}>
             <View style={styles.friendMain}>
               {friend.avatar && (friend.avatar.startsWith('file:') || friend.avatar.startsWith('http') || friend.avatar.startsWith('data:')) ? (
@@ -312,6 +317,81 @@ export default function FriendsScreen({ navigation }) {
   };
 
 
+
+  const openFriendProfile = (friend) => {
+    setSelectedFriend(friend);
+    Animated.spring(slideAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      tension: 60,
+      friction: 10,
+    }).start();
+  };
+
+  const closeFriendProfile = () => {
+    Animated.timing(slideAnim, {
+      toValue: 300,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => setSelectedFriend(null));
+  };
+
+  const renderFriendModal = () => {
+    if (!selectedFriend) return null;
+    return (
+      <Modal transparent visible={!!selectedFriend} animationType="fade" onRequestClose={closeFriendProfile}>
+        <TouchableWithoutFeedback onPress={closeFriendProfile}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <Animated.View style={[styles.profileSheet, { transform: [{ translateY: slideAnim }] }]}>
+                <View style={styles.sheetHandle} />
+                
+                <View style={styles.sheetHeader}>
+                  <Text style={styles.sheetAvatar}>{selectedFriend.avatar}</Text>
+                  <Text style={styles.sheetName}>{selectedFriend.name}</Text>
+                  <Text style={styles.sheetPhone}>{selectedFriend.phone || 'Runner'}</Text>
+                </View>
+
+                <View style={styles.sheetStats}>
+                  <View style={styles.sheetStatBox}>
+                    <Text style={styles.sheetStatVal}>{selectedFriend.weeklyDistance} km</Text>
+                    <Text style={styles.sheetStatLbl}>This Week</Text>
+                  </View>
+                  <View style={styles.sheetStatBox}>
+                    <Text style={styles.sheetStatVal}>{selectedFriend.totalRuns}</Text>
+                    <Text style={styles.sheetStatLbl}>Total Runs</Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity 
+                  style={styles.chatBtn} 
+                  onPress={() => {
+                    closeFriendProfile();
+                    navigation.navigate('Chat', { friendName: selectedFriend.name, friendAvatar: selectedFriend.avatar });
+                  }}
+                >
+                  <Ionicons name="chatbubble-outline" size={24} color="#FFF" />
+                  <Text style={styles.chatBtnText}>Message</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.removeFriendBtn} 
+                  onPress={() => {
+                    closeFriendProfile();
+                    setTimeout(() => removeFriend(selectedFriend.id), 300);
+                  }}
+                >
+                  <Text style={styles.removeFriendBtnText}>Remove Friend</Text>
+                </TouchableOpacity>
+
+              </Animated.View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -356,6 +436,7 @@ export default function FriendsScreen({ navigation }) {
 
         {activeTab === 'friends' ? renderFriendsTab() : (activeTab === 'feed' ? <ActivityFeed feed={feed} onLike={handleLike} onComment={handleComment} /> : <Leaderboard leaderboard={leaderboard} />)}
       </ScrollView>
+      {renderFriendModal()}
     </View>
   );
 }

@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 // Import screen components
 import HomeScreen from './screens/HomeScreen';
 import FriendsScreen from './screens/FriendsScreen';
+import ChatScreen from './screens/ChatScreen';
 import RunScreen from './screens/RunScreen';
 import WeatherScreen from './screens/WeatherScreen';
 import BadgesScreen from './screens/BadgesScreen';
