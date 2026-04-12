@@ -237,14 +237,13 @@ const styles = StyleSheet.create({
     paddingTop: 60,
   },
   header: {
-    marginBottom: 40,
-    position: 'relative',
+    marginBottom: 30,
   },
   backButton: {
-    position: 'absolute',
-    top: -40,
-    left: -10,
-    zIndex: 10,
+    marginBottom: 20,
+    alignSelf: 'flex-start',
+    padding: 8,
+    marginLeft: -8,
   },
   title: {
     fontSize: 36,
