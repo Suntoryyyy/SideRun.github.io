@@ -181,9 +181,12 @@ export default function App() {
             </Stack.Screen>
           </>
         ) : (
-          <Stack.Screen name="Main">
-            {props => <DrawerNavigator {...props} handleLogout={handleLogout} />}
-          </Stack.Screen>
+          <>
+            <Stack.Screen name="Main">
+              {props => <DrawerNavigator {...props} handleLogout={handleLogout} />}
+            </Stack.Screen>
+            <Stack.Screen name="Chat" component={ChatScreen} />
+          </>
         )}
       </Stack.Navigator>
     </NavigationContainer>
