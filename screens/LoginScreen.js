@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
+import { BlurView } from 'expo-blur';
+import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { account } from '../services/appwrite';
 import CustomAlert from '../components/CustomAlert';
 
 export default function LoginScreen({ navigation, setLoggedIn }) {
@@ -11,6 +14,19 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
   const [rememberMe, setRememberMe] = useState(true); // Default to true
   const [isLoading, setIsLoading] = useState(false);
   const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '', type: 'error' });
+  const [region, setRegion] = useState({ latitude: 37.7749, longitude: -122.4194 });
+
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      let location = await Location.getCurrentPositionAsync({});
+      setRegion({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+    })();
+  }, []);
 
   const showAlert = (title, message, type = 'error') => {
     setAlertConfig({ visible: true, title, message, type });
@@ -31,6 +47,8 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
     loadRememberedUser();
   }, []);
 
+
+
   const handleLogin = async () => {
     const trimmedPhone = phone.trim();
 
@@ -41,32 +59,59 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
 
     setIsLoading(true);
 
+
     try {
       await new Promise(resolve => setTimeout(resolve, 800)); // Show loading animation
+      
+      const email = `${trimmedPhone}@siderun.app`;
+      let userAuthenticated = false;
+      let CloudUsername = "";
+
+      // 1. TRY APPWRITE FIRST
+      try {
+        const session = await account.createEmailPasswordSession(email, password);
+        const accountDetails = await account.get();
+        CloudUsername = accountDetails.name || 'Runner';
+        userAuthenticated = true;
+        console.log("SUCCESS: Appwrite session started & validated.");
+      } catch (authError) {
+        console.warn("Appwrite auth failed:", authError);
+      }
+
+      // 2. CHECK LOCAL STORAGE
       const usersData = await AsyncStorage.getItem('users');
       const users = usersData ? JSON.parse(usersData) : {};
-
-      if (users[trimmedPhone]) {
-        if (users[trimmedPhone].password === password) {
-          const userInfo = JSON.stringify({ phone: trimmedPhone, username: users[trimmedPhone].username });
-          if (rememberMe) {
-            await AsyncStorage.setItem('rememberedPhone', trimmedPhone);
-            await AsyncStorage.setItem('currentUser', userInfo);
-          } else {
-            await AsyncStorage.removeItem('rememberedPhone');
-            if (Platform.OS === 'web') {
-              sessionStorage.setItem('currentUser', userInfo);
-            } else {
-              await AsyncStorage.setItem('currentUser', userInfo);
-            }
-          }
-          setLoggedIn(true);
-        } else {
-          showAlert('Login Failed', 'The password you entered is incorrect.');
-          setIsLoading(false);
+      
+      // 3. FINAL DECISION
+      if (userAuthenticated || (users[trimmedPhone] && users[trimmedPhone].password === password)) {
+        // Recover username from Cloud if local is missing
+        const finalUsername = userAuthenticated ? CloudUsername : users[trimmedPhone].username;
+        const userInfo = JSON.stringify({ phone: trimmedPhone, username: finalUsername });
+        
+        // Cache them locally if they only existed on cloud
+        if (userAuthenticated && !users[trimmedPhone]) {
+            users[trimmedPhone] = { phone: trimmedPhone, username: finalUsername, password: password };
+            await AsyncStorage.setItem('users', JSON.stringify(users));
         }
+
+        if (rememberMe) {
+          await AsyncStorage.setItem('rememberedPhone', trimmedPhone);
+          await AsyncStorage.setItem('currentUser', userInfo);
+        } else {
+          await AsyncStorage.removeItem('rememberedPhone');
+          if (Platform.OS === 'web') {
+            sessionStorage.setItem('currentUser', userInfo);
+          } else {
+            await AsyncStorage.setItem('currentUser', userInfo);
+          }
+        }
+        setLoggedIn(true);
       } else {
-        showAlert('Login Failed', 'This phone number is not registered.');
+        if (!users[trimmedPhone] && !userAuthenticated) {
+            showAlert('Login Failed', 'This phone number is not registered.');
+        } else {
+            showAlert('Login Failed', 'The password you entered is incorrect.');
+        }
         setIsLoading(false);
       }
     } catch (e) {
@@ -80,11 +125,32 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
+      {/* Background Map */}
+      {Platform.OS === 'web' ? (
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: -1 }}>
+          <iframe
+            width="100%"
+            height="100%"
+            frameBorder="0"
+            scrolling="no"
+            src={`https://www.openstreetmap.org/export/embed.html?bbox=${region.longitude - 0.05},${region.latitude - 0.05},${region.longitude + 0.05},${region.latitude + 0.05}&layer=mapnik`}
+            style={{ border: 'none', filter: 'brightness(0.9) grayscale(0.8)' }}
+          />
+        </div>
+      ) : (
+        <View style={StyleSheet.absoluteFillObject} backgroundColor="#EAEAEA" />
+      )}
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        <BlurView intensity={85} tint="light" style={styles.glassCard}>
         <View style={styles.header}>
-          <Text style={styles.title}>WELCOME BACK</Text>
+          <View style={styles.logoContainer}>
+            <Ionicons name="footsteps" size={48} color="#24C789" />
+            <Text style={styles.logoText}>SIDERUN</Text>
+          </View>
+          <Text style={styles.title}>Back to the Track.</Text>
           <Text style={styles.subtitle}>
-            Log in to <Text style={styles.brandText}>SideRun</Text> to track your progress
+            Sign in to continue your fitness journey and connect with friends.
           </Text>
         </View>
 
@@ -145,7 +211,10 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
           </View>
 
 
+
+
         </View>
+        </BlurView>
       </ScrollView>
       <CustomAlert
         visible={alertConfig.visible}
@@ -161,7 +230,20 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
+  },
+  glassCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+    borderRadius: 30,
+    padding: 30,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.9)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 5,
   },
   scrollContent: {
     flexGrow: 1,
@@ -171,17 +253,32 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 40,
   },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  logoText: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#24C789',
+    marginLeft: 8,
+    letterSpacing: 1,
+    fontStyle: 'italic',
+  },
   title: {
-    fontSize: 36,
-    fontWeight: '900', // Extra bold for a sporty feel
-    color: '#111111',
+    fontSize: 42,
+    fontWeight: '900',
+    color: '#111',
     marginBottom: 12,
-    letterSpacing: -0.5,
+    letterSpacing: -1,
+    lineHeight: 48,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#888888',
-    lineHeight: 24,
+    fontSize: 18,
+    color: '#555',
+    lineHeight: 26,
+    fontWeight: '500',
   },
   brandText: {
     color: '#24C789',
@@ -198,7 +295,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   input: {
-    backgroundColor: '#F4F5F7',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 1)',
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
@@ -208,7 +307,9 @@ const styles = StyleSheet.create({
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F4F5F7',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 1)',
     borderRadius: 12,
     marginBottom: 20,
   },
@@ -264,6 +365,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
-
-
+  clearDataButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 40,
+    padding: 10,
+    opacity: 0.7,
+  },
+  clearDataText: {
+    color: '#FF3B30',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
 });

@@ -62,20 +62,25 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
       }
 
 
-      // 2. CLOUD AUTH SYNC (Creates the real user in Appwrite Users panel)
+      // 2. ENFORCED CLOUD AUTH
       const email = `${trimmedPhone}@siderun.app`;
+      
+      // Ensure password is at least 8 chars for Appwrite
+      if (password.length < 8) {
+        showAlert('Registration Failed', 'Password must be at least 8 characters long for cloud security.');
+        setIsLoading(false);
+        return;
+      }
+
       try {
-        await account.create(
-          ID.unique(),
-          email,
-          password,
-          trimmedUsername
-        );
+        await account.create(ID.unique(), email, password, trimmedUsername);
         console.log("SUCCESS: User Auth created in Appwrite!");
       } catch (authError) {
         console.warn("APPWRITE AUTH ERROR:", authError);
+        showAlert('Cloud Error', authError.message || 'Failed to create user on cloud.');
+        setIsLoading(false);
+        return;
       }
-
 
       try {
         await account.createEmailPasswordSession(email, password);
@@ -84,23 +89,20 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
         console.warn("APPWRITE SESSION ERROR:", sessionError);
       }
 
-      // 3. CLOUD DATABASE SYNC (The massive upgrade!)
-
       try {
         await databases.createDocument(
           '69da562e0023693b307a', // Database ID
           'users',               // Table/Collection ID
-          ID.unique(),           // Auto-generate Document ID
+          ID.unique(),
           {
             phone: trimmedPhone,
             username: trimmedUsername,
             password: password
           }
         );
-        console.log("SUCCESS: User beamed to Appwrite Cloud!");
+        console.log("SUCCESS: User beamed to Appwrite Cloud DB!");
       } catch (cloudError) {
-        console.warn("CLOUD SYNC ERROR: Could not reach Appwrite.", cloudError);
-        // We let the app continue even if the cloud fails, so they can still run locally!
+        console.warn("CLOUD DB SYNC ERROR:", cloudError);
       }
 
       // 3. FINAL LOCAL SAVE
