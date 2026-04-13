@@ -1,10 +1,8 @@
 const fs = require('fs');
 
 let rs = fs.readFileSync('screens/RegisterScreen.js', 'utf-8');
-const rsStart = rs.indexOf('const handleRegister = async () => {');
-const rsEnd = rs.indexOf('} catch (e) {', rsStart);
-if (rsStart !== -1 && rsEnd !== -1) {
-  rs = rs.substring(0, rsStart) + `const handleRegister = async () => {
+// remove local check and inject memfire real auth
+rs = rs.replace(/const handleRegister = async \(\) => \{[\s\S]*?\} catch \(e\) \{/g, `const handleRegister = async () => {
     const trimmedPhone = phone.trim();
     const trimmedUsername = username.trim();
 
@@ -12,10 +10,11 @@ if (rsStart !== -1 && rsEnd !== -1) {
       showAlert('Error', 'Please fill all fields');
       return;
     }
+
     setIsLoading(true);
 
     try {
-      // 1. SUPABASE (MemFire) WORKAROUND: Phone masking
+      // Create a pseudo-email for Supabase Auth using the phone number
       const pseudoEmail = \`\${trimmedPhone}@siderun.app\`;
       
       const { data, error } = await supabase.auth.signUp({
@@ -25,18 +24,25 @@ if (rsStart !== -1 && rsEnd !== -1) {
 
       if (error) {
         setIsLoading(false);
-        showAlert('Registration Failed', error.message || 'Error from MemFire');
+        showAlert('Registration Failed', error.message || 'Could not register user in MemFire');
         return;
       }
 
+      // Store user profile details in public 'users' table
       if (data.user) {
         const { error: dbError } = await supabase
           .from('users')
           .insert([
             { id: data.user.id, phone: trimmedPhone, username: trimmedUsername, weeklyDistance: 0, totalRuns: 0 }
           ]);
+          
+        if (dbError) {
+          console.error("MemFire DB Error:", dbError);
+          // Optional: handle profile creation error here
+        }
       }
 
+      // Save locally to bypass any loading on reload
       const currentUser = JSON.stringify({ phone: trimmedPhone, username: trimmedUsername, id: data?.user?.id });
       if (Platform.OS === 'web') {
         sessionStorage.setItem('currentUser', currentUser);
@@ -47,36 +53,12 @@ if (rsStart !== -1 && rsEnd !== -1) {
       setIsLoading(false);
       setLoggedIn(true);
 
-    ` + rs.substring(rsEnd);
-  fs.writeFileSync('screens/RegisterScreen.js', rs);
-}
+    } catch (e) {`);
+
+fs.writeFileSync('screens/RegisterScreen.js', rs);
 
 let ls = fs.readFileSync('screens/LoginScreen.js', 'utf-8');
-const lsStart = ls.indexOf('const handleLogin = async () => {');
-const lsEnd = ls.indexOf('} catch (e) {', lsStart);
-if (lsStart !== -1 && lsEnd !== -1) {
-  ls = ls.substring(0, lsStart) + `const handleLogin = async () => {
-    const trimmedPhone = phone.trim();
-
-    if (!trimmedPhone || !password) {
-      showAlert('Error', 'Please enter your phone number and password');
-      return;
-    }
-
-    if (trimmedPhone === 'admin' || trimmedPhone === '123456') {
-      const adminInfo = JSON.stringify({ phone: '1234567890', username: 'Admin Bypass' });
-      if (Platform.OS === 'web') {
-        sessionStorage.setItem('currentUser', adminInfo);
-      } else {
-        await AsyncStorage.setItem('currentUser', adminInfo);
-      }
-      setLoggedIn(true);
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
+ls = ls.replace(/try \{[\s\S]*?\} catch \(e\) \{/g, `try {
       const pseudoEmail = \`\${trimmedPhone}@siderun.app\`;
       
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -86,10 +68,15 @@ if (lsStart !== -1 && lsEnd !== -1) {
 
       if (error) {
         setIsLoading(false);
-        showAlert('Login Failed', error.message);
+        if (error.message.includes('Invalid login credentials')) {
+          showAlert('Login Failed', 'Incorrect phone number or password. Please try again or create an account.');
+        } else {
+          showAlert('Login Failed', error.message);
+        }
         return;
       }
 
+      // Fetch user profile from the database
       let username = 'Runner';
       if (data.user) {
         const { data: profile } = await supabase
@@ -98,11 +85,13 @@ if (lsStart !== -1 && lsEnd !== -1) {
           .eq('id', data.user.id)
           .single();
           
-        if (profile && profile.username) username = profile.username;
+        if (profile && profile.username) {
+          username = profile.username;
+        }
       }
 
       const userInfo = JSON.stringify({ phone: trimmedPhone, username, id: data?.user?.id });
-      
+
       if (rememberMe) {
         await AsyncStorage.setItem('rememberedPhone', trimmedPhone);
       } else {
@@ -117,7 +106,7 @@ if (lsStart !== -1 && lsEnd !== -1) {
 
       setIsLoading(false);
       setLoggedIn(true);
+    } catch (e) {`);
 
-    ` + ls.substring(lsEnd);
-  fs.writeFileSync('screens/LoginScreen.js', ls);
-}
+fs.writeFileSync('screens/LoginScreen.js', ls);
+

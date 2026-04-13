@@ -43,7 +43,6 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
     setIsLoading(true);
 
     try {
-      // 1. SUPABASE (MemFire) WORKAROUND: Phone masking
       const pseudoEmail = `${trimmedPhone}@siderun.app`;
       
       const { data, error } = await supabase.auth.signUp({
@@ -58,7 +57,7 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
       }
 
       if (data.user) {
-        const { error: dbError } = await supabase
+        await supabase
           .from('users')
           .insert([
             { id: data.user.id, phone: trimmedPhone, username: trimmedUsername, weeklyDistance: 0, totalRuns: 0 }
@@ -74,37 +73,6 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
 
       setIsLoading(false);
       setLoggedIn(true);
-
-    } catch (e) {
-        console.warn("Exception during Auth:", e);
-        showAlert('Cloud Error', 'Something went completely wrong trying to connect to MemFire.');
-        setIsLoading(false);
-        return;
-      }
-
-      // 3. MEMFIRE DATABASE SYNC
-      try {
-        const { error: dbError } = await supabase
-          .from('users')
-          .insert([
-            { phone: trimmedPhone, username: trimmedUsername, password: password }
-          ]);
-          
-        if (dbError) {
-          console.warn("MEMFIRE DB SYNC ERROR:", dbError);
-        } else {
-          console.log("SUCCESS: User beamed to MemFire Cloud DB!");
-        }
-      } catch (cloudError) {
-        console.warn("MEMFIRE GENERAL DB ERROR:", cloudError);
-      }
-
-      // 4. FINAL LOCAL SAVE
-      users[trimmedPhone] = { phone: trimmedPhone, username: trimmedUsername, password };
-      await AsyncStorage.setItem('users', JSON.stringify(users));
-      await AsyncStorage.setItem('currentUser', JSON.stringify({ phone: trimmedPhone, username: trimmedUsername }));
-      
-      showAlert('Success', 'Account created successfully!', 'success');
 
     } catch (e) {
       showAlert('Error', 'An error occurred during registration');

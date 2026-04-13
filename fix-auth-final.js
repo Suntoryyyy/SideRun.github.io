@@ -1,10 +1,8 @@
 const fs = require('fs');
 
 let rs = fs.readFileSync('screens/RegisterScreen.js', 'utf-8');
-const rsStart = rs.indexOf('const handleRegister = async () => {');
-const rsEnd = rs.indexOf('} catch (e) {', rsStart);
-if (rsStart !== -1 && rsEnd !== -1) {
-  rs = rs.substring(0, rsStart) + `const handleRegister = async () => {
+
+rs = rs.replace(/const handleRegister = async \(\) => \{[\s\S]*?    \};/g, `const handleRegister = async () => {
     const trimmedPhone = phone.trim();
     const trimmedUsername = username.trim();
 
@@ -15,7 +13,6 @@ if (rsStart !== -1 && rsEnd !== -1) {
     setIsLoading(true);
 
     try {
-      // 1. SUPABASE (MemFire) WORKAROUND: Phone masking
       const pseudoEmail = \`\${trimmedPhone}@siderun.app\`;
       
       const { data, error } = await supabase.auth.signUp({
@@ -47,15 +44,16 @@ if (rsStart !== -1 && rsEnd !== -1) {
       setIsLoading(false);
       setLoggedIn(true);
 
-    ` + rs.substring(rsEnd);
-  fs.writeFileSync('screens/RegisterScreen.js', rs);
-}
+    } catch (e) {
+      showAlert('Error', 'An error occurred during registration');
+      setIsLoading(false);
+    }
+  };`);
+fs.writeFileSync('screens/RegisterScreen.js', rs);
 
+// Update Login
 let ls = fs.readFileSync('screens/LoginScreen.js', 'utf-8');
-const lsStart = ls.indexOf('const handleLogin = async () => {');
-const lsEnd = ls.indexOf('} catch (e) {', lsStart);
-if (lsStart !== -1 && lsEnd !== -1) {
-  ls = ls.substring(0, lsStart) + `const handleLogin = async () => {
+ls = ls.replace(/const handleLogin = async \(\) => \{[\s\S]*?    \};/g, `const handleLogin = async () => {
     const trimmedPhone = phone.trim();
 
     if (!trimmedPhone || !password) {
@@ -117,7 +115,11 @@ if (lsStart !== -1 && lsEnd !== -1) {
 
       setIsLoading(false);
       setLoggedIn(true);
+    } catch (e) {
+      showAlert('Error', 'An error occurred during login');
+      setIsLoading(false);
+    }
+  };`);
 
-    ` + ls.substring(lsEnd);
-  fs.writeFileSync('screens/LoginScreen.js', ls);
-}
+fs.writeFileSync('screens/LoginScreen.js', ls);
+

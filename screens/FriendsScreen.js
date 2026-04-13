@@ -14,7 +14,9 @@ import {
 } from 'react-native';
 import styles from '../styles/FriendsScreenStyles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '../services/supabase';
 import ActivityFeed from '../components/ActivityFeed';
 import Leaderboard from '../components/Leaderboard';
 
@@ -314,6 +316,39 @@ export default function FriendsScreen({ navigation }) {
     }).start();
   };
 
+  const sendLiveCheer = async (emoji, message) => {
+    if (!selectedFriend) return;
+    
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    let myId = 'Unknown';
+    try {
+      const c = await AsyncStorage.getItem('currentUser');
+      if (c) {
+        const cu = JSON.parse(c);
+        myId = cu.id || cu.phone || cu.username;
+      }
+    } catch(e){}
+
+    // Trigger Supabase Realtime
+    const { error } = await supabase
+      .from('live_cheers')
+      .insert([
+        {
+          sender_id: myId,
+          receiver_id: selectedFriend.id || selectedFriend.phone || selectedFriend.name,
+          emoji,
+          message
+        }
+      ]);
+    
+    if (error) {
+      console.warn("Failed to send cheer:", error);
+    } else {
+      closeFriendProfile();
+    }
+  };
+
   const closeFriendProfile = () => {
     Animated.timing(slideAnim, {
       toValue: 300,
@@ -348,6 +383,26 @@ export default function FriendsScreen({ navigation }) {
                     <Text style={styles.sheetStatLbl}>Total Runs</Text>
                   </View>
                 </View>
+
+                {selectedFriend.isOnline && (
+                  <View style={{ width: '100%', marginBottom: 20 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '600', color: '#333', marginBottom: 10 }}>Send Live Cheer</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <TouchableOpacity onPress={() => sendLiveCheer('🔥', 'Fire! Keep the pace!')} style={styles.cheerQuickBtn}>
+                        <Text style={{ fontSize: 32 }}>🔥</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => sendLiveCheer('👏', 'Awesome job!')} style={styles.cheerQuickBtn}>
+                        <Text style={{ fontSize: 32 }}>👏</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => sendLiveCheer('🚀', 'Speed up! You got this!')} style={styles.cheerQuickBtn}>
+                        <Text style={{ fontSize: 32 }}>🚀</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => sendLiveCheer('💦', 'Stay hydrated!')} style={styles.cheerQuickBtn}>
+                        <Text style={{ fontSize: 32 }}>💦</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
 
                 <TouchableOpacity 
                   style={styles.chatBtn} 
