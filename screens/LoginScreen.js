@@ -100,7 +100,6 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
       return;
     }
 
-    // --- DEV BACKDOOR FOR MEMFIRE DELAY ---
     if (trimmedPhone === 'admin' || trimmedPhone === '123456') {
       const adminInfo = JSON.stringify({ phone: '1234567890', username: 'Admin Bypass' });
       if (Platform.OS === 'web') {
@@ -111,10 +110,8 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
       setLoggedIn(true);
       return;
     }
-    // --------------------------------------
 
     setIsLoading(true);
-
 
     try {
       const pseudoEmail = `${trimmedPhone}@siderun.app`;
@@ -126,15 +123,10 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
 
       if (error) {
         setIsLoading(false);
-        if (error.message.includes('Invalid login credentials')) {
-          showAlert('Login Failed', 'Incorrect phone number or password. Please try again or create an account.');
-        } else {
-          showAlert('Login Failed', error.message);
-        }
+        showAlert('Login Failed', error.message);
         return;
       }
 
-      // Fetch user profile from the database
       let username = 'Runner';
       if (data.user) {
         const { data: profile } = await supabase
@@ -143,13 +135,11 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
           .eq('id', data.user.id)
           .single();
           
-        if (profile && profile.username) {
-          username = profile.username;
-        }
+        if (profile && profile.username) username = profile.username;
       }
 
       const userInfo = JSON.stringify({ phone: trimmedPhone, username, id: data?.user?.id });
-
+      
       if (rememberMe) {
         await AsyncStorage.setItem('rememberedPhone', trimmedPhone);
       } else {
@@ -164,6 +154,7 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
 
       setIsLoading(false);
       setLoggedIn(true);
+
     } catch (e) {
       showAlert('Error', 'An error occurred during login');
       setIsLoading(false);

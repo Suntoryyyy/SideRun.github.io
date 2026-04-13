@@ -40,11 +40,10 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
       showAlert('Error', 'Please fill all fields');
       return;
     }
-
     setIsLoading(true);
 
     try {
-      // Create a pseudo-email for Supabase Auth using the phone number
+      // 1. SUPABASE (MemFire) WORKAROUND: Phone masking
       const pseudoEmail = `${trimmedPhone}@siderun.app`;
       
       const { data, error } = await supabase.auth.signUp({
@@ -54,25 +53,18 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
 
       if (error) {
         setIsLoading(false);
-        showAlert('Registration Failed', error.message || 'Could not register user in MemFire');
+        showAlert('Registration Failed', error.message || 'Error from MemFire');
         return;
       }
 
-      // Store user profile details in public 'users' table
       if (data.user) {
         const { error: dbError } = await supabase
           .from('users')
           .insert([
             { id: data.user.id, phone: trimmedPhone, username: trimmedUsername, weeklyDistance: 0, totalRuns: 0 }
           ]);
-          
-        if (dbError) {
-          console.error("MemFire DB Error:", dbError);
-          // Optional: handle profile creation error here
-        }
       }
 
-      // Save locally to bypass any loading on reload
       const currentUser = JSON.stringify({ phone: trimmedPhone, username: trimmedUsername, id: data?.user?.id });
       if (Platform.OS === 'web') {
         sessionStorage.setItem('currentUser', currentUser);
