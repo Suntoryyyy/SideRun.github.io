@@ -57,11 +57,18 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
       }
 
       if (data.user) {
-        await supabase
+        const { error: insertError } = await supabase
           .from('users')
           .insert([
             { id: data.user.id, phone: trimmedPhone, username: trimmedUsername, weeklyDistance: 0, totalRuns: 0 }
           ]);
+
+        if (insertError) {
+          console.error("Database Insert Error:", insertError);
+          setIsLoading(false);
+          showAlert('Database Error', `Auth succeeded, but couldn't save profile: ${insertError.message}. Please check that 'id' in your users table is of type UUID!`);
+          return;
+        }
       }
 
       const currentUser = JSON.stringify({ phone: trimmedPhone, username: trimmedUsername, id: data?.user?.id });
