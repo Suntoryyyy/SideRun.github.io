@@ -1,4 +1,6 @@
-import { StyleSheet } from "react-native";
+const fs = require('fs');
+
+const styles = `import { StyleSheet } from "react-native";
 
 export default StyleSheet.create({
   container: {
@@ -362,3 +364,6 @@ export default StyleSheet.create({
     fontWeight: '700',
   },
 });
+`;
+fs.writeFileSync('styles/FriendsScreenStyles.js', styles);
+console.log('Fixed styles.');

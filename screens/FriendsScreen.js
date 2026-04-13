@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BlurView } from 'expo-blur';
 import {
   View,
   Text,
@@ -18,6 +19,7 @@ import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../services/supabase';
 import ActivityFeed from '../components/ActivityFeed';
+import CustomAlert from '../components/CustomAlert';
 import Leaderboard from '../components/Leaderboard';
 
 export default function FriendsScreen({ navigation }) {
@@ -29,6 +31,9 @@ export default function FriendsScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState('friends');
   const [selectedFriend, setSelectedFriend] = useState(null);
   const slideAnim = React.useRef(new Animated.Value(300)).current;
+  const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '', type: 'error' });
+
+  const showAlert = (title, message, type = 'error') => setAlertConfig({ visible: true, title, message, type });
 
   useEffect(() => {
     loadFriendsData();
@@ -129,7 +134,7 @@ export default function FriendsScreen({ navigation }) {
 
   const addFriend = async () => {
     if (!newFriendName.trim()) {
-      Alert.alert('Error', 'Please enter a friend name or phone number');
+      showAlert('Error', 'Please enter a friend name or phone number', 'error');
       return;
     }
 
@@ -137,26 +142,37 @@ export default function FriendsScreen({ navigation }) {
       const searchKey = newFriendName.trim();
       
       // Search user from Supabase Database
-      const { data: foundUsers, error } = await supabase
+      // Try exact phone first
+      let { data: foundUsers, error } = await supabase
         .from('users')
         .select('*')
-        .or(`phone.eq.${searchKey},username.ilike.${searchKey}`);
+        .eq('phone', searchKey);
 
-      if (error) {
+      // If no phone match, try username
+      if (!foundUsers || foundUsers.length === 0) {
+        const { data: nameUsers, error: nameErr } = await supabase
+          .from('users')
+          .select('*')
+          .ilike('username', `%${searchKey}%`);
+        
+        if (!nameErr && nameUsers) foundUsers = nameUsers;
+      }
+
+      if (error && !foundUsers) {
         console.error('Supabase search error:', error);
-        Alert.alert('Error', 'Failed to search for user. Please try again later.');
+        showAlert('Error', 'Failed to search for user. Please try again later.', 'error');
         return;
       }
 
       if (!foundUsers || foundUsers.length === 0) {
-        Alert.alert('Not Found', 'Could not find a user with that username or phone number.');
+        showAlert('Not Found', 'Could not find a user with that username or phone number.', 'error');
         return;
       }
 
       const foundUser = foundUsers[0];
 
       if (foundUser.allowStrangersAdd === false) {
-        Alert.alert('Private Profile', 'This user does not allow friend requests from strangers.');
+        showAlert('Private Profile', 'This user does not allow friend requests from strangers.', 'error');
         return;
       }
 
@@ -166,7 +182,7 @@ export default function FriendsScreen({ navigation }) {
       );
 
       if (isAlreadyFriend) {
-        Alert.alert('Already Friends', 'You are already friends with this user.');
+        showAlert('Already Friends', 'You are already friends with this user.', 'info');
         return;
       }
 
@@ -189,10 +205,10 @@ export default function FriendsScreen({ navigation }) {
 
       setNewFriendName('');
       setAddFriendMode(false);
-      Alert.alert('Success', `${friendName} has been added as a friend!`);
+      showAlert('Success', `${friendName} has been added as a friend!`, 'success');
     } catch (e) {
       console.error(e);
-      Alert.alert('Error', 'Failed to add friend');
+      showAlert('Error', 'Failed to add friend', 'error');
     }
   };
 
@@ -435,6 +451,22 @@ export default function FriendsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      {/* Background Map - Same as Register for visual cohesion */}
+      {Platform.OS === 'web' ? (
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: -1 }}>
+          <iframe
+            width="100%"
+            height="100%"
+            frameBorder="0"
+            scrolling="no"
+            src={`https://www.openstreetmap.org/export/embed.html?bbox=-122.46,37.72,-122.38,37.82&layer=mapnik`}
+            style={{ border: 'none', filter: 'brightness(0.9) grayscale(0.8)' }}
+          />
+        </div>
+      ) : (
+        <View style={StyleSheet.absoluteFillObject} backgroundColor="#EAEAEA" />
+      )}
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <TouchableOpacity
@@ -478,6 +510,13 @@ export default function FriendsScreen({ navigation }) {
         {activeTab === 'friends' ? renderFriendsTab() : (activeTab === 'feed' ? <ActivityFeed feed={feed} onLike={handleLike} onComment={handleComment} /> : <Leaderboard leaderboard={leaderboard} />)}
       </ScrollView>
       {renderFriendModal()}
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={() => setAlertConfig({...alertConfig, visible: false})}
+      />
     </View>
   );
 }
