@@ -134,26 +134,26 @@ export default function FriendsScreen({ navigation }) {
     }
 
     try {
-      const usersData = await AsyncStorage.getItem('users');
-      const users = usersData ? JSON.parse(usersData) : {};
-      
       const searchKey = newFriendName.trim();
-      let foundUser = null;
+      
+      // Search user from Supabase Database
+      const { data: foundUsers, error } = await supabase
+        .from('users')
+        .select('*')
+        .or(`phone.eq.${searchKey},username.ilike.${searchKey}`);
 
-      // search by phone
-      if (users[searchKey]) {
-        foundUser = users[searchKey];
-      } else {
-        // search by username
-        foundUser = Object.values(users).find(
-          user => user.username && user.username.toLowerCase() === searchKey.toLowerCase()
-        );
+      if (error) {
+        console.error('Supabase search error:', error);
+        Alert.alert('Error', 'Failed to search for user. Please try again later.');
+        return;
       }
 
-      if (!foundUser) {
+      if (!foundUsers || foundUsers.length === 0) {
         Alert.alert('Not Found', 'Could not find a user with that username or phone number.');
         return;
       }
+
+      const foundUser = foundUsers[0];
 
       if (foundUser.allowStrangersAdd === false) {
         Alert.alert('Private Profile', 'This user does not allow friend requests from strangers.');
@@ -173,11 +173,11 @@ export default function FriendsScreen({ navigation }) {
       const friendName = foundUser.username;
 
       const newFriend = {
-        id: Date.now(),
+        id: foundUser.id || Date.now(),
         name: foundUser.username,
         phone: foundUser.phone,
-        weeklyDistance: 0,
-        totalRuns: 0,
+        weeklyDistance: foundUser.weeklyDistance || 0,
+        totalRuns: foundUser.totalRuns || 0,
         isOnline: false,
         lastRun: 'Never',
         avatar: foundUser.avatar || '👤',
