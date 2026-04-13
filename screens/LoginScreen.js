@@ -36,11 +36,54 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
     // Check if there's a saved auto-login preference we should load
     const loadRememberedUser = async () => {
       try {
-        const savedPhone = await AsyncStorage.getItem('rememberedPhone');
-        if (savedPhone) {
-          setPhone(savedPhone);
+      const pseudoEmail = `${trimmedPhone}@siderun.app`;
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: pseudoEmail,
+        password: password,
+      });
+
+      if (error) {
+        setIsLoading(false);
+        if (error.message.includes('Invalid login credentials')) {
+          showAlert('Login Failed', 'Incorrect phone number or password. Please try again or create an account.');
+        } else {
+          showAlert('Login Failed', error.message);
         }
-      } catch (e) {
+        return;
+      }
+
+      // Fetch user profile from the database
+      let username = 'Runner';
+      if (data.user) {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('username')
+          .eq('id', data.user.id)
+          .single();
+          
+        if (profile && profile.username) {
+          username = profile.username;
+        }
+      }
+
+      const userInfo = JSON.stringify({ phone: trimmedPhone, username, id: data?.user?.id });
+
+      if (rememberMe) {
+        await AsyncStorage.setItem('rememberedPhone', trimmedPhone);
+      } else {
+        await AsyncStorage.removeItem('rememberedPhone');
+      }
+
+      if (Platform.OS === 'web') {
+        sessionStorage.setItem('currentUser', userInfo);
+      } else {
+        await AsyncStorage.setItem('currentUser', userInfo);
+      }
+
+      setIsLoading(false);
+      setLoggedIn(true);
+    } catch (e) {
         // Ignore
       }
     };
@@ -74,59 +117,53 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
 
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 800)); // Show loading animation
+      const pseudoEmail = `${trimmedPhone}@siderun.app`;
       
-      const email = `${trimmedPhone}@siderun.app`;
-      let userAuthenticated = false;
-      let CloudUsername = "";
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: pseudoEmail,
+        password: password,
+      });
 
-      // 1. TRY APPWRITE FIRST
-      try {
-        const session = await account.createEmailPasswordSession(email, password);
-        const accountDetails = await account.get();
-        CloudUsername = accountDetails.name || 'Runner';
-        userAuthenticated = true;
-        console.log("SUCCESS: Appwrite session started & validated.");
-      } catch (authError) {
-        console.warn("Appwrite auth failed:", authError);
-      }
-
-      // 2. CHECK LOCAL STORAGE
-      const usersData = await AsyncStorage.getItem('users');
-      const users = usersData ? JSON.parse(usersData) : {};
-      
-      // 3. FINAL DECISION
-      if (userAuthenticated || (users[trimmedPhone] && users[trimmedPhone].password === password)) {
-        // Recover username from Cloud if local is missing
-        const finalUsername = userAuthenticated ? CloudUsername : users[trimmedPhone].username;
-        const userInfo = JSON.stringify({ phone: trimmedPhone, username: finalUsername });
-        
-        // Cache them locally if they only existed on cloud
-        if (userAuthenticated && !users[trimmedPhone]) {
-            users[trimmedPhone] = { phone: trimmedPhone, username: finalUsername, password: password };
-            await AsyncStorage.setItem('users', JSON.stringify(users));
-        }
-
-        if (rememberMe) {
-          await AsyncStorage.setItem('rememberedPhone', trimmedPhone);
-          await AsyncStorage.setItem('currentUser', userInfo);
-        } else {
-          await AsyncStorage.removeItem('rememberedPhone');
-          if (Platform.OS === 'web') {
-            sessionStorage.setItem('currentUser', userInfo);
-          } else {
-            await AsyncStorage.setItem('currentUser', userInfo);
-          }
-        }
-        setLoggedIn(true);
-      } else {
-        if (!users[trimmedPhone] && !userAuthenticated) {
-            showAlert('Login Failed', 'This phone number is not registered.');
-        } else {
-            showAlert('Login Failed', 'The password you entered is incorrect.');
-        }
+      if (error) {
         setIsLoading(false);
+        if (error.message.includes('Invalid login credentials')) {
+          showAlert('Login Failed', 'Incorrect phone number or password. Please try again or create an account.');
+        } else {
+          showAlert('Login Failed', error.message);
+        }
+        return;
       }
+
+      // Fetch user profile from the database
+      let username = 'Runner';
+      if (data.user) {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('username')
+          .eq('id', data.user.id)
+          .single();
+          
+        if (profile && profile.username) {
+          username = profile.username;
+        }
+      }
+
+      const userInfo = JSON.stringify({ phone: trimmedPhone, username, id: data?.user?.id });
+
+      if (rememberMe) {
+        await AsyncStorage.setItem('rememberedPhone', trimmedPhone);
+      } else {
+        await AsyncStorage.removeItem('rememberedPhone');
+      }
+
+      if (Platform.OS === 'web') {
+        sessionStorage.setItem('currentUser', userInfo);
+      } else {
+        await AsyncStorage.setItem('currentUser', userInfo);
+      }
+
+      setIsLoading(false);
+      setLoggedIn(true);
     } catch (e) {
       showAlert('Error', 'An error occurred during login');
       setIsLoading(false);

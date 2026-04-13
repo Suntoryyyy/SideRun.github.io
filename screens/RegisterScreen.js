@@ -44,54 +44,46 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
     setIsLoading(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 800)); // Show loading animation
+      // Create a pseudo-email for Supabase Auth using the phone number
+      const pseudoEmail = `${trimmedPhone}@siderun.app`;
       
-      // 1. LOCAL FALLBACK & CHECK (Keep the original fast logic)
-      const usersData = await AsyncStorage.getItem('users');
-      const users = usersData ? JSON.parse(usersData) : {};
-      const isUsernameTaken = Object.values(users).some(user => user.username.toLowerCase() === trimmedUsername.toLowerCase());
+      const { data, error } = await supabase.auth.signUp({
+        email: pseudoEmail,
+        password: password,
+      });
 
-      if (users[trimmedPhone]) {
-        showAlert('Registration Failed', 'This phone number is already registered.');
+      if (error) {
         setIsLoading(false);
-        return;
-      } else if (isUsernameTaken) {
-        showAlert('Registration Failed', 'This username is already taken. Please choose another one.');
-        setIsLoading(false);
+        showAlert('Registration Failed', error.message || 'Could not register user in MemFire');
         return;
       }
 
-
-      // 2. MEMFIRE CLOUD AUTH (Supabase SDK)
-      const email = `${trimmedPhone}@siderun.app`;
-      
-      // Ensure password is at least 6 chars for Supabase
-      if (password.length < 6) {
-        showAlert('Registration Failed', 'Password must be at least 6 characters long for cloud security.');
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: email,
-          password: password,
-          options: {
-            data: {
-              username: trimmedUsername,
-              phone: trimmedPhone
-            }
-          }
-        });
-
-        if (authError) {
-          console.warn("MEMFIRE AUTH ERROR:", authError);
-          showAlert('Cloud Error', authError.message || 'Failed to create user on cloud.');
-          setIsLoading(false);
-          return;
+      // Store user profile details in public 'users' table
+      if (data.user) {
+        const { error: dbError } = await supabase
+          .from('users')
+          .insert([
+            { id: data.user.id, phone: trimmedPhone, username: trimmedUsername, weeklyDistance: 0, totalRuns: 0 }
+          ]);
+          
+        if (dbError) {
+          console.error("MemFire DB Error:", dbError);
+          // Optional: handle profile creation error here
         }
-        console.log("SUCCESS: User Auth created in MemFire!");
-      } catch (e) {
+      }
+
+      // Save locally to bypass any loading on reload
+      const currentUser = JSON.stringify({ phone: trimmedPhone, username: trimmedUsername, id: data?.user?.id });
+      if (Platform.OS === 'web') {
+        sessionStorage.setItem('currentUser', currentUser);
+      } else {
+        await AsyncStorage.setItem('currentUser', currentUser);
+      }
+
+      setIsLoading(false);
+      setLoggedIn(true);
+
+    } catch (e) {
         console.warn("Exception during Auth:", e);
         showAlert('Cloud Error', 'Something went completely wrong trying to connect to MemFire.');
         setIsLoading(false);
