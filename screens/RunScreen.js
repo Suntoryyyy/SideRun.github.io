@@ -19,55 +19,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as Speech from 'expo-speech';
+import { Audio } from 'expo-av';
 import { supabase } from '../services/supabase';
 import MapStyle from './MapStyle.json';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
-
-const FloatingEmoji = ({ emoji, index }) => {
-  const animY = useRef(new Animated.Value(0)).current;
-  const animOpacity = useRef(new Animated.Value(1)).current;
-  const shiftX = (Math.random() - 0.5) * 100; // random slight x offset
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(animY, {
-        toValue: -400,
-        duration: 3000,
-        useNativeDriver: true,
-      }),
-      Animated.timing(animOpacity, {
-        toValue: 0,
-        duration: 3000,
-        delay: 500,
-        useNativeDriver: true,
-      })
-    ]).start();
-  }, []);
-
-  return (
-    <Animated.Text
-      style={{
-        position: 'absolute',
-        bottom: 250 + (index * 10),
-        alignSelf: 'center',
-        left: '40%',
-        marginLeft: shiftX,
-        fontSize: 70,
-        transform: [{ translateY: animY }],
-        opacity: animOpacity,
-        zIndex: 999,
-        textShadowColor: 'rgba(0,0,0,0.2)',
-        textShadowOffset: {width: 0, height: 2},
-        textShadowRadius: 4,
-      }}
-    >
-      {emoji}
-    </Animated.Text>
-  );
-};
 
 // Conditionally import MapView for native platforms only
 let MapView, Polyline, Marker, PROVIDER_GOOGLE;
@@ -177,6 +135,65 @@ export default function RunScreen({ route, navigation }) {
   const [visibilityScope, setVisibilityScope] = useState('friends');
 
   const [liveEmojis, setLiveEmojis] = useState([]);
+  const cheerQueue = useRef([]);
+  const isPlayingCheer = useRef(false);
+
+  // Background Audio Ducking Init
+  useEffect(() => {
+    Audio.setAudioModeAsync({
+      allowsRecordingIOS: false,
+      staysActiveInBackground: true,
+      interruptionModeIOS: 1, // DO_NOT_MIX (lowers background volume)
+      playsInSilentModeIOS: true,
+      shouldDuckAndroid: true,
+      interruptionModeAndroid: 1,
+      playThroughEarpieceAndroid: false
+    });
+  }, []);
+
+  const processCheerQueue = async () => {
+    if (isPlayingCheer.current || cheerQueue.current.length === 0) return;
+    isPlayingCheer.current = true;
+
+    // Detect Combo (if multiple identical emojis arrive at once)
+    const currentCheer = cheerQueue.current.shift();
+    let comboCount = 1;
+    while(cheerQueue.current.length > 0 && cheerQueue.current[0].emoji === currentCheer.emoji) {
+      comboCount++;
+      cheerQueue.current.shift(); // absorb
+    }
+
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      
+      const messageToSpeak = comboCount > 2 
+        ? `${comboCount} times ${currentCheer.emoji}! ${currentCheer.message}`
+        : currentCheer.message;
+
+      if (messageToSpeak) {
+        Speech.speak(messageToSpeak, { 
+          rate: 0.95,
+          onStart: async () => {
+            // Audio ducking naturally handles background music lowering
+          },
+          onDone: () => {
+            isPlayingCheer.current = false;
+            setTimeout(processCheerQueue, 300); // Check if more in queue
+          },
+          onError: () => {
+            isPlayingCheer.current = false;
+            processCheerQueue();
+          }
+        });
+      } else {
+        isPlayingCheer.current = false;
+        processCheerQueue();
+      }
+    } catch(err) {
+      isPlayingCheer.current = false;
+      processCheerQueue();
+    }
+  };
 
   useEffect(() => {
     let cheerSub;
@@ -191,18 +208,17 @@ export default function RunScreen({ route, navigation }) {
              const newCheer = payload.new;
              // Check if it's meant for us (receiver_id matches our id or phone)
              if (newCheer.receiver_id === myId || newCheer.receiver_id === cu.phone || newCheer.receiver_id === cu.username) {
-               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-               
-               if (newCheer.message) {
-                 Speech.speak(`${newCheer.message}`, { rate: 0.95 });
-               }
-
                const cheerId = Date.now().toString() + Math.random();
-               setLiveEmojis(prev => [...prev, { id: cheerId, emoji: newCheer.emoji || '🔥' }]);
                
-               setTimeout(() => {
-                 setLiveEmojis(prev => prev.filter(c => c.id !== cheerId));
-               }, 3500);
+               // Render visual element immediately (max limit 15 to prevent lag)
+               setLiveEmojis(prev => {
+                 const limited = prev.length > 15 ? prev.slice(-14) : prev;
+                 return [...limited, { id: cheerId, emoji: newCheer.emoji || '🔥' }];
+               });
+
+               // Queue up audio to prevent overlapping speech
+               cheerQueue.current.push({ ...newCheer });
+               processCheerQueue();
              }
           })
           .subscribe();
@@ -418,7 +434,7 @@ export default function RunScreen({ route, navigation }) {
         )}
 
         {liveEmojis.map((c, i) => (
-          <FloatingEmoji key={c.id} emoji={c.emoji} index={i} />
+          <FloatingEmoji key={c.id} emoji={c.emoji} onComplete={() => setLiveEmojis(prev => prev.filter(e => e.id !== c.id))} />
         ))}
 
         {cheers.map((cheer, index) => (
