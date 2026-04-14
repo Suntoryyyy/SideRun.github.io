@@ -8,7 +8,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "predeploy": "expo export -p web -c && node -e \"require('fs').writeFileSync('dist/.nojekyll', '')\"",
+    "predeploy": "expo export -p web -c && node -e \"require('fs').writeFileSync('dist/.nojekyll', ''); let h=require('fs').readFileSync('dist/index.html','utf8'); h=h.replace('</head>','<meta http-equiv=\\\"Cache-Control\\\" content=\\\"no-cache, no-store, must-revalidate\\\" /><meta http-equiv=\\\"Pragma\\\" content=\\\"no-cache\\\" /><meta http-equiv=\\\"Expires\\\" content=\\\"0\\\" /></head>'); require('fs').writeFileSync('dist/index.html',h);\"",
     "deploy": "gh-pages -d dist --dotfiles"
   },
   "dependencies": {
