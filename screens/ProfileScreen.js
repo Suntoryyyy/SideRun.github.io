@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { supabase } from "../services/supabase";
 import ImageCropperModal from "./ImageCropperModal";
+import CustomAlert from '../components/CustomAlert';
 
 export default function ProfileScreen({ navigation, handleLogout }) {
   const [currentUser, setCurrentUser] = useState(null);
@@ -27,10 +28,15 @@ export default function ProfileScreen({ navigation, handleLogout }) {
   const [allowStrangersAdd, setAllowStrangersAdd] = useState(false);
 
   // Cropper State
+  const [alertConfig, setAlertConfig] = useState({ visible: false, title: "", message: "", type: "error" });
   const [cropModalVisible, setCropModalVisible] = useState(false);
   const [rawImageUri, setRawImageUri] = useState(null);
 
   const avatars = ["👤", "🏃‍♂️", "🏃‍♀️", "😎", "🌟", "🦄", "🐶", "🦊"];
+
+  const showAlert = (title, message, type = "error") => {
+    setAlertConfig({ visible: true, title, message, type });
+  };
 
   const pickImage = async () => {
     try {
@@ -110,12 +116,12 @@ export default function ProfileScreen({ navigation, handleLogout }) {
   };
 
   const handleSaveProfile = async () => {
-    if (!username.trim()) {
-      Alert.alert("Error", "Username cannot be empty");
-      return;
-    }
-
+    console.log("handleSaveProfile triggered. User:", username);
     try {
+      if (!username || typeof username !== "string" || !username.trim()) {
+        showAlert("Error", "Username cannot be empty");
+        return;
+      }
       const userString = await AsyncStorage.getItem("currentUser");
       const user = userString ? JSON.parse(userString) : {};
 
@@ -143,17 +149,17 @@ export default function ProfileScreen({ navigation, handleLogout }) {
 
         if (error) {
           console.error("Supabase Save Error:", error);
-          Alert.alert("Cloud Sync Error", error.message);
+          showAlert("Cloud Sync Error", error.message);
           return; // Stop local save if cloud fails
         }
       }
 
       setCurrentUser(updatedUser);
       setIsEditing(false);
-      Alert.alert("Success", "Profile updated successfully!");
+      showAlert("Success", "Profile updated successfully!", "success");
     } catch (e) {
       console.error(e);
-      Alert.alert("Error", "Failed to update profile");
+      showAlert("Error", "Failed to update profile");
     }
   };
 
@@ -196,7 +202,7 @@ export default function ProfileScreen({ navigation, handleLogout }) {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
@@ -339,6 +345,8 @@ export default function ProfileScreen({ navigation, handleLogout }) {
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <CustomAlert visible={alertConfig.visible} title={alertConfig.title} message={alertConfig.message} type={alertConfig.type} onClose={() => setAlertConfig({ ...alertConfig, visible: false })} />
 
       {Platform.OS === "web" && (
         <ImageCropperModal
