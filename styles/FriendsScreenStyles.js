@@ -361,4 +361,161 @@ export default StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+
+
+  // FEED STYLES
+  feedCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
+  },
+  feedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  feedAvatarImg: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 12,
+  },
+  feedAvatarEmoji: {
+    fontSize: 32,
+    width: 44,
+    height: 44,
+    textAlign: 'center',
+    lineHeight: 44,
+    backgroundColor: '#F4F5F7',
+    borderRadius: 22,
+    marginRight: 12,
+    overflow: 'hidden',
+  },
+  feedHeaderInfo: {
+    flex: 1,
+  },
+  feedName: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#222',
+  },
+  feedTime: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
+  },
+  feedMapPlaceholder: {
+    height: 140,
+    backgroundColor: '#F4F5F7',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  feedMapText: {
+    color: '#888',
+    marginTop: 8,
+    fontWeight: '600',
+  },
+  feedStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#F0F0F0',
+  },
+  feedStatBox: {
+    alignItems: 'center',
+  },
+  feedStatVal: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#222',
+  },
+  feedStatLabel: {
+    fontSize: 12,
+    color: '#888',
+  },
+  feedActions: {
+    flexDirection: 'row',
+    gap: 20,
+  },
+  feedActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  feedActionText: {
+    marginLeft: 6,
+    color: '#666',
+    fontWeight: '600',
+  },
+
+  // LEADERBOARD STYLES
+  leaderboardItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    padding: 16,
+    borderRadius: 20,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
+  },
+  rankContainer: {
+    width: 40,
+    alignItems: 'center',
+  },
+  rank: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#24C789',
+  },
+  leaderAvatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  leaderAvatar: {
+    fontSize: 32,
+    width: 44,
+    height: 44,
+    textAlign: 'center',
+    lineHeight: 44,
+    backgroundColor: '#F4F5F7',
+    borderRadius: 22,
+    marginRight: 12,
+    overflow: 'hidden',
+  },
+  leaderInfo: {
+    flex: 1,
+  },
+  leaderName: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#222',
+  },
+  leaderDistance: {
+    fontSize: 14,
+    color: '#888',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  medal: {
+    fontSize: 24,
+  }
 });
