@@ -113,9 +113,9 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
 
     watchId.current = await Location.watchPositionAsync(
       {
-        accuracy: Location.Accuracy.High,
-        timeInterval: 3000,
-        distanceInterval: 5,
+        accuracy: Location.Accuracy.BestForNavigation,
+        timeInterval: 2000,
+        distanceInterval: 1,
       },
       (location) => updateLocation(location),
     );
@@ -125,11 +125,19 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
     const { latitude, longitude } = location.coords;
     const newLocation = { latitude, longitude };
     setCurrentLocation(newLocation);
+    setRegion({
+      latitude,
+      longitude,
+      latitudeDelta: 0.005,
+      longitudeDelta: 0.005,
+    });
 
     const distFromLast = lastLocation.current
       ? getDistance(lastLocation.current, newLocation)
       : 0;
-    if (distFromLast > 0.005 && distFromLast < 1.0) {
+    
+    // Convert 0.005 km (5 meters) to something smaller for short distances
+    if (distFromLast > 0.001 && distFromLast < 1.0) {
       lastLocation.current = newLocation;
       setRunData((prev) => ({
         ...prev,
@@ -152,9 +160,9 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
     setIsPaused(false);
     watchId.current = await Location.watchPositionAsync(
       {
-        accuracy: Location.Accuracy.High,
-        timeInterval: 3000,
-        distanceInterval: 5,
+        accuracy: Location.Accuracy.BestForNavigation,
+        timeInterval: 2000,
+        distanceInterval: 1,
       },
       (location) => updateLocation(location),
     );

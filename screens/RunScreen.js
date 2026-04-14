@@ -371,9 +371,9 @@ export default function RunScreen({ route, navigation }) {
     setCheers((prev) => prev.filter((c) => c.id !== id));
   };
 
-  const currentPace =
-    runData.distance > 0
-      ? (durationInSeconds / 60 / runData.distance).toFixed(1)
+  const currentSpeed = 
+    runData.distance > 0 && durationInSeconds > 0
+      ? ((runData.distance * 1000) / durationInSeconds).toFixed(1)
       : "0.0";
 
   if (!region) {
@@ -538,9 +538,9 @@ export default function RunScreen({ route, navigation }) {
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>
-                {runData.distance.toFixed(2)}
+                {(runData.distance * 1000).toFixed(0)}
               </Text>
-              <Text style={styles.statLabel}>KILOMETERS</Text>
+              <Text style={styles.statLabel}>METERS</Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>
@@ -549,8 +549,8 @@ export default function RunScreen({ route, navigation }) {
               <Text style={styles.statLabel}>TIME</Text>
             </View>
             <View style={styles.statBox}>
-              <Text style={styles.statValue}>{currentPace}</Text>
-              <Text style={styles.statLabel}>PACE(M/KM)</Text>
+              <Text style={styles.statValue}>{currentSpeed}</Text>
+              <Text style={styles.statLabel}>SPEED (M/S)</Text>
             </View>
           </View>
 
