@@ -140,6 +140,8 @@ export default function RunScreen({ route, navigation }) {
   const [visibilityScope, setVisibilityScope] = useState("friends");
 
   const [liveEmojis, setLiveEmojis] = useState([]);
+  const [regionSet, setRegionSet] = useState(false);
+  const mapRef = useRef(null);
   const cheerQueue = useRef([]);
   const isPlayingCheer = useRef(false);
 
@@ -265,6 +267,25 @@ export default function RunScreen({ route, navigation }) {
     isFinished,
     closeRun,
   } = useRunTracking(visibilityScope, userAvatar, navigation, mode);
+
+  const recenterMap = () => {
+    if (mapRef.current && currentLocation) {
+      mapRef.current.animateCamera({
+        center: currentLocation,
+        pitch: 0,
+        heading: 0,
+        zoom: 16
+      });
+    }
+  };
+
+  useEffect(() => {
+    // Only automatically force region once when first located
+    if (currentLocation && !regionSet && mapRef.current) {
+      recenterMap();
+      setRegionSet(true);
+    }
+  }, [currentLocation, regionSet]);
 
   const panY = useRef(new Animated.Value(0)).current;
 
@@ -427,21 +448,23 @@ export default function RunScreen({ route, navigation }) {
           </div>
         ) : (
           // Native map view
-          <MapView
-            style={styles.map}
-            provider={PROVIDER_GOOGLE}
-            region={region}
-            showsUserLocation={false}
-            followsUserLocation={true}
-            customMapStyle={MapStyle}
-          >
-            {runData.coordinates.length > 1 && (
-              <Polyline
-                coordinates={runData.coordinates}
-                strokeColor="#24C789"
-                strokeWidth={4}
-              />
-            )}
+          <View style={styles.map}>
+            <MapView
+              ref={mapRef}
+              style={Object.assign({}, styles.map, { flex: 1 })}
+              provider={PROVIDER_GOOGLE}
+              initialRegion={region}
+              showsUserLocation={false}
+              followsUserLocation={false} // Detach forced follow
+              customMapStyle={MapStyle}
+            >
+              {runData.coordinates.length > 1 && (
+                <Polyline
+                  coordinates={runData.coordinates}
+                  strokeColor="#24C789"
+                  strokeWidth={4}
+                />
+              )}
             {currentLocation && (
               <Marker
                 coordinate={currentLocation}
@@ -497,6 +520,11 @@ export default function RunScreen({ route, navigation }) {
                 </Marker>
               ))}
           </MapView>
+          {/* Recenter Button */}
+          <TouchableOpacity style={styles.recenterButton} onPress={recenterMap}>
+            <Ionicons name="navigate" size={24} color="#000" />
+          </TouchableOpacity>
+        </View>
         )}
 
         {liveEmojis.map((c, i) => (

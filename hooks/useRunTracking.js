@@ -122,21 +122,21 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
   };
 
   const updateLocation = (location) => {
+    // 2. High-accuracy GPS filter setup
+    if (location.coords.accuracy > 15) {
+      console.log("Ignored poor accuracy location:", location.coords.accuracy);
+      return;
+    }
+
     const { latitude, longitude } = location.coords;
     const newLocation = { latitude, longitude };
     setCurrentLocation(newLocation);
-    setRegion({
-      latitude,
-      longitude,
-      latitudeDelta: 0.005,
-      longitudeDelta: 0.005,
-    });
-
+    
+    // Convert 0.005 km (5 meters) to something smaller for short distances
     const distFromLast = lastLocation.current
       ? getDistance(lastLocation.current, newLocation)
       : 0;
-    
-    // Convert 0.005 km (5 meters) to something smaller for short distances
+
     if (distFromLast > 0.001 && distFromLast < 1.0) {
       lastLocation.current = newLocation;
       setRunData((prev) => ({

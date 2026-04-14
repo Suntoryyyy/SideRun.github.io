@@ -116,13 +116,15 @@ export default function RunHistoryScreen({ navigation }) {
                 <Ionicons name="footsteps" size={24} color="#24C789" />
               </View>
               <View style={styles.runInfo}>
-                <Text style={styles.runTitle}>Distance: {run.distance} km</Text>
+                  <Text style={styles.runTitle}>Distance: {run.distance < 1 ? (run.distance * 1000).toFixed(0) + ' m' : run.distance + ' km'}</Text>
                 <Text style={styles.runDate}>
                   {run.date} • {run.duration}
                 </Text>
               </View>
               <View style={styles.runStats}>
-                <Text style={styles.runPace}>{run.pace}'pace</Text>
+                <Text style={styles.runPace}>
+                  {run.distance < 1 ? ((run.distance * 1000) / (run.pace * run.distance * 60)).toFixed(1) + ' m/s' : run.pace + ' /km'}
+                </Text>
                 <Text style={styles.runCalories}>{run.calories} kcal</Text>
               </View>
             </TouchableOpacity>
@@ -208,14 +210,14 @@ export default function RunHistoryScreen({ navigation }) {
                 <View style={styles.statBox}>
                   <Text style={styles.statLabel}>Distance</Text>
                   <Text style={styles.statValue}>
-                    {selectedRun.distance}{" "}
-                    <Text style={styles.statUnit}>km</Text>
+                    {selectedRun.distance < 1 ? (selectedRun.distance * 1000).toFixed(0) : selectedRun.distance}{" "}
+                    <Text style={styles.statUnit}>{selectedRun.distance < 1 ? 'm' : 'km'}</Text>
                   </Text>
                 </View>
                 <View style={styles.statBox}>
-                  <Text style={styles.statLabel}>Pace</Text>
+                  <Text style={styles.statLabel}>{selectedRun.distance < 1 ? "Speed" : "Pace"}</Text>
                   <Text style={styles.statValue}>
-                    {selectedRun.pace} <Text style={styles.statUnit}>/km</Text>
+                    {selectedRun.distance < 1 ? ((selectedRun.distance * 1000) / (selectedRun.pace * selectedRun.distance * 60)).toFixed(1) : selectedRun.pace} <Text style={styles.statUnit}>{selectedRun.distance < 1 ? 'm/s' : '/km'}</Text>
                   </Text>
                 </View>
                 <View style={styles.statBox}>

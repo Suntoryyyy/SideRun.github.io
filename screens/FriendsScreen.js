@@ -381,7 +381,7 @@ export default function FriendsScreen({ navigation }) {
               <View style={styles.friendDetails}>
                 <Text style={styles.friendName}>{friend.name}</Text>
                 <Text style={styles.friendStats}>
-                  {friend.weeklyDistance} km this week • {friend.totalRuns} runs
+                  {friend.weeklyDistance < 1 ? (friend.weeklyDistance * 1000).toFixed(0) + ' m' : (friend.weeklyDistance || 0).toFixed(2) + ' km'} this week • {friend.totalRuns} runs
                 </Text>
                 <Text style={styles.friendLastRun}>
                   Last run: {friend.lastRun}
@@ -533,7 +533,7 @@ export default function FriendsScreen({ navigation }) {
                 <View style={styles.sheetStats}>
                   <View style={styles.sheetStatBox}>
                     <Text style={styles.sheetStatVal}>
-                      {selectedFriend.weeklyDistance} km
+                      {selectedFriend.weeklyDistance < 1 ? (selectedFriend.weeklyDistance * 1000).toFixed(0) + ' m' : (selectedFriend.weeklyDistance || 0).toFixed(2) + ' km'}
                     </Text>
                     <Text style={styles.sheetStatLbl}>This Week</Text>
                   </View>

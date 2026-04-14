@@ -3,6 +3,22 @@ import { StyleSheet, Dimensions, Platform } from 'react-native';
 const { height } = Dimensions.get('window');
 
 export default StyleSheet.create({
+  recenterButton: {
+    position: "absolute",
+    right: 20,
+    bottom: 220,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "#FFF",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    elevation: 4,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F4F5F7',
