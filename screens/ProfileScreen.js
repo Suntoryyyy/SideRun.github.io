@@ -18,6 +18,7 @@ import * as ImagePicker from "expo-image-picker";
 import { supabase } from "../services/supabase";
 import ImageCropperModal from "./ImageCropperModal";
 import CustomAlert from '../components/CustomAlert';
+import NativeFilePicker from "./NativeFilePicker";
 
 export default function ProfileScreen({ navigation, handleLogout }) {
   const [currentUser, setCurrentUser] = useState(null);
@@ -234,12 +235,16 @@ export default function ProfileScreen({ navigation, handleLogout }) {
                   contentContainerStyle={styles.avatarSelectorContent}
                 >
                   {/* Image upload button */}
-                  <TouchableOpacity
+                  <NativeFilePicker
                     style={styles.avatarOption}
-                    onPress={pickImage}
+                    pickImage={pickImage}
+                    onWebPick={(uri) => {
+                      setRawImageUri(uri);
+                      setCropModalVisible(true);
+                    }}
                   >
                     <Ionicons name="camera" size={24} color="#666" />
-                  </TouchableOpacity>
+                  </NativeFilePicker>
 
                   {avatars.map((emoji, index) => (
                     <TouchableOpacity
@@ -390,7 +395,7 @@ const styles = StyleSheet.create({
   profileCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
-    padding: 20,
+    paddingVertical: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
@@ -425,7 +430,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, // align first item with normal padding
   },
   avatarScrollWrap: {
-    marginHorizontal: -20, // push out to card edges
+    width: "100%", // Take full width of profile card
   },
   avatarOption: {
     width: 50,
@@ -446,6 +451,7 @@ const styles = StyleSheet.create({
   },
   infoSection: {
     marginBottom: 20,
+    paddingHorizontal: 20,
   },
   label: {
     fontSize: 14,
