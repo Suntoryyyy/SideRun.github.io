@@ -74,9 +74,8 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
       const currentUser = JSON.stringify({ phone: trimmedPhone, username: trimmedUsername, id: data?.user?.id });
       if (Platform.OS === 'web') {
         sessionStorage.setItem('currentUser', currentUser);
-      } else {
-        await AsyncStorage.setItem('currentUser', currentUser);
       }
+      await AsyncStorage.setItem('currentUser', currentUser);
 
       setIsLoading(false);
       setLoggedIn(true);

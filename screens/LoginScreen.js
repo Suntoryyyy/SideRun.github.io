@@ -77,9 +77,8 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
 
       if (Platform.OS === 'web') {
         sessionStorage.setItem('currentUser', userInfo);
-      } else {
-        await AsyncStorage.setItem('currentUser', userInfo);
       }
+      await AsyncStorage.setItem('currentUser', userInfo);
 
       setIsLoading(false);
       setLoggedIn(true);
@@ -104,9 +103,8 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
       const adminInfo = JSON.stringify({ phone: '1234567890', username: 'Admin Bypass' });
       if (Platform.OS === 'web') {
         sessionStorage.setItem('currentUser', adminInfo);
-      } else {
-        await AsyncStorage.setItem('currentUser', adminInfo);
       }
+      await AsyncStorage.setItem('currentUser', adminInfo);
       setLoggedIn(true);
       return;
     }
@@ -148,9 +146,8 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
 
       if (Platform.OS === 'web') {
         sessionStorage.setItem('currentUser', userInfo);
-      } else {
-        await AsyncStorage.setItem('currentUser', userInfo);
       }
+      await AsyncStorage.setItem('currentUser', userInfo);
 
       setIsLoading(false);
       setLoggedIn(true);

@@ -1,62 +1,89 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
-import AvatarEditor from 'react-avatar-editor';
+import React, { useState, useCallback } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, Dimensions } from 'react-native';
+import Cropper from 'react-easy-crop';
 
-export default function ImageCropperModal({ visible, imageUri, onCancel, onSave }) {
-  const editorRef = useRef(null);
-  const [scale, setScale] = useState(1);
+// This file is strictly used on Web to provide a proper Cropping UI.
+// The native platforms utilize expo-image-picker's built-in crop editor natively.
 
-  const handleSave = () => {
-    if (editorRef.current) {
-      const canvasScaled = editorRef.current.getImageScaledToCanvas();
-      const base64Image = canvasScaled.toDataURL('image/jpeg');
-      onSave(base64Image);
+export default function ImageCropperModal({ visible, imageUri, onSave, onCancel }) {
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+
+  const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
+
+  const createImage = (url) =>
+    new Promise((resolve, reject) => {
+      const image = new Image();
+      image.addEventListener('load', () => resolve(image));
+      image.addEventListener('error', (error) => reject(error));
+      image.setAttribute('crossOrigin', 'anonymous');
+      image.src = url;
+    });
+
+  const getCroppedImg = async (imageSrc, pixelCrop) => {
+    const image = await createImage(imageSrc);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) return null;
+
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
+
+    ctx.drawImage(
+      image,
+      pixelCrop.x,
+      pixelCrop.y,
+      pixelCrop.width,
+      pixelCrop.height,
+      0,
+      0,
+      pixelCrop.width,
+      pixelCrop.height
+    );
+
+    return canvas.toDataURL('image/jpeg', 0.5);
+  };
+
+  const handleSave = async () => {
+    try {
+      const croppedImageBase64 = await getCroppedImg(imageUri, croppedAreaPixels);
+      onSave(croppedImageBase64);
+    } catch (e) {
+      console.error(e);
+      onCancel();
     }
   };
 
+  if (!visible || !imageUri) return null;
+
   return (
     <Modal visible={visible} transparent={true} animationType="fade">
-      <View style={styles.modalOverlay}>
-        <View style={styles.cropperContainer}>
-          <Text style={styles.title}>Crop Your Avatar</Text>
-          
-          {imageUri ? (
-            <View style={styles.editorWrapper}>
-              <AvatarEditor
-                ref={editorRef}
-                image={imageUri}
-                width={200}
-                height={200}
-                border={30}
-                borderRadius={100}
-                color={[0, 0, 0, 0.6]}
-                scale={scale}
-                rotate={0}
-              />
-            </View>
-          ) : null}
-
-          <View style={styles.sliderContainer}>
-            <Text style={styles.label}>Zoom</Text>
-            <input
-              type="range"
-              min="1"
-              max="3"
-              step="0.01"
-              value={scale}
-              onChange={(e) => setScale(parseFloat(e.target.value))}
-              style={{ width: '100%' }}
-            />
-          </View>
-
-          <View style={styles.buttonRow}>
-            <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-              <Text style={styles.saveButtonText}>Save</Text>
-            </TouchableOpacity>
-          </View>
+      <View style={styles.overlay}>
+        <View style={styles.cropContainer}>
+          <Cropper
+            image={imageUri}
+            crop={crop}
+            zoom={zoom}
+            aspect={1}
+            cropShape="round"
+            showGrid={false}
+            onCropChange={setCrop}
+            onCropComplete={onCropComplete}
+            onZoomChange={setZoom}
+          />
+        </View>
+        <View style={styles.controls}>
+          <TouchableOpacity style={styles.cancelBtn} onPress={onCancel}>
+            <Text style={styles.btnText}>Cancel</Text>
+          </TouchableOpacity>
+          <Text style={styles.instruction}>Drag and pinch to crop</Text>
+          <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
+            <Text style={styles.btnText}>Apply Crop</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -64,66 +91,45 @@ export default function ImageCropperModal({ visible, imageUri, onCancel, onSave 
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
+  overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: 'rgba(0,0,0,0.9)',
     justifyContent: 'center',
-    alignItems: 'center',
   },
-  cropperContainer: {
-    backgroundColor: '#FFF',
-    padding: 20,
-    borderRadius: 16,
-    alignItems: 'center',
-    width: '90%',
-    maxWidth: 400,
+  cropContainer: {
+    flex: 1,
+    position: 'relative',
+    marginTop: 40,
+    marginBottom: 100,
+    overflow: 'hidden',
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  editorWrapper: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  sliderContainer: {
-    width: '100%',
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  buttonRow: {
+  controls: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 100,
+    backgroundColor: '#222',
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  cancelButton: {
-    padding: 12,
-    flex: 1,
-    marginRight: 10,
-    backgroundColor: '#EAEAEA',
-    borderRadius: 8,
+    justifyContent: 'space-around',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
-  cancelButtonText: {
-    color: '#333',
-    fontWeight: 'bold',
+  instruction: {
+    color: '#aaa',
+    fontSize: 12,
   },
-  saveButton: {
-    padding: 12,
-    flex: 1,
-    marginLeft: 10,
+  cancelBtn: {
+    padding: 15,
+  },
+  saveBtn: {
+    padding: 15,
     backgroundColor: '#24C789',
     borderRadius: 8,
-    alignItems: 'center',
   },
-  saveButtonText: {
-    color: '#FFF',
+  btnText: {
+    color: '#fff',
     fontWeight: 'bold',
-  },
+  }
 });

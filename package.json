@@ -33,6 +33,7 @@
     "react": "19.2.0",
     "react-avatar-editor": "^15.1.0",
     "react-dom": "19.2.0",
+    "react-easy-crop": "^5.5.7",
     "react-native": "0.83.2",
     "react-native-gesture-handler": "^2.31.0",
     "react-native-maps": "^1.27.2",

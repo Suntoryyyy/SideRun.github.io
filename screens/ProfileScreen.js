@@ -36,21 +36,26 @@ export default function ProfileScreen({ navigation, handleLogout }) {
     try {
       let result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true, // Let Expo handle its default Web UI cropper if any
+        allowsEditing: Platform.OS !== "web", // Native allows built-in cropping directly
         aspect: [1, 1],
         quality: 0.3,
         base64: true,
       });
 
       if (!result.canceled) {
-        if (result.assets[0].base64) {
-          // Additional safety check: PostgREST limit is around 1MB payload.
-          // 0.3 quality coupled with automatic resizing should be small enough.
-          const base64Data = result.assets[0].base64;
-          const mimeType = result.assets[0].mimeType || "image/jpeg";
-          setAvatar(`data:${mimeType};base64,${base64Data}`);
+        if (Platform.OS === 'web') {
+           // For Web, pass the raw selected image to our react-easy-crop modal
+           setRawImageUri(result.assets[0].uri);
+           setCropModalVisible(true);
         } else {
-          setAvatar(result.assets[0].uri);
+          // Native uses built-in cropper, we can save base64 directly
+          if (result.assets[0].base64) {
+            const base64Data = result.assets[0].base64;
+            const mimeType = result.assets[0].mimeType || "image/jpeg";
+            setAvatar(`data:${mimeType};base64,${base64Data}`);
+          } else {
+            setAvatar(result.assets[0].uri);
+          }
         }
       }
     } catch (e) {
@@ -78,6 +83,21 @@ export default function ProfileScreen({ navigation, handleLogout }) {
       const userString = await AsyncStorage.getItem("currentUser");
       if (userString) {
         const user = JSON.parse(userString);
+        // Recover missing phone or ID from Supabase auth if it got wiped
+        if (!user.phone || !user.id) {
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData?.session?.user) {
+            const su = sessionData.session.user;
+            if (su.email && su.email.endsWith('@siderun.app')) {
+              if (!user.phone) user.phone = su.email.replace('@siderun.app', '');
+            }
+            if (!user.id) user.id = su.id;
+            
+                  if (Platform.OS === "web") sessionStorage.setItem("currentUser", JSON.stringify(user));
+      await AsyncStorage.setItem("currentUser", JSON.stringify(user));
+          }
+        }
+
         setCurrentUser(user);
         setUsername(user.username || "");
         setAvatar(user.avatar || "👤");
@@ -106,6 +126,7 @@ export default function ProfileScreen({ navigation, handleLogout }) {
         allowFriendsViewRecord,
         allowStrangersAdd,
       };
+            if (Platform.OS === "web") sessionStorage.setItem("currentUser", JSON.stringify(updatedUser));
       await AsyncStorage.setItem("currentUser", JSON.stringify(updatedUser));
 
       // Update Supabase DB directly
@@ -393,11 +414,10 @@ const styles = StyleSheet.create({
   },
   avatarSelectorContent: {
     paddingVertical: 10,
-    paddingHorizontal: 5,
+    paddingHorizontal: 20, // align first item with normal padding
   },
   avatarScrollWrap: {
-    width: "100%",
-    overflow: "hidden",
+    marginHorizontal: -20, // push out to card edges
   },
   avatarOption: {
     width: 50,
