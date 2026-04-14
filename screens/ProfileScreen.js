@@ -33,27 +33,28 @@ export default function ProfileScreen({ navigation, handleLogout }) {
   const avatars = ["👤", "🏃‍♂️", "🏃‍♀️", "😎", "🌟", "🦄", "🐶", "🦊"];
 
   const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: Platform.OS !== "web", // Native uses built-in, Web uses our custom web cropper
-      aspect: [1, 1],
-      quality: 0.5,
-      base64: true, // lower quality for base64 limits
-    });
+    try {
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true, // Let Expo handle its default Web UI cropper if any
+        aspect: [1, 1],
+        quality: 0.3,
+        base64: true,
+      });
 
-    if (!result.canceled) {
-      if (Platform.OS === "web") {
-        const rawUri = result.assets[0].uri;
-        setRawImageUri(rawUri);
-        setCropModalVisible(true);
-      } else {
-        // Native path sets it directly from built-in cropped output
+      if (!result.canceled) {
         if (result.assets[0].base64) {
-          setAvatar(`data:image/jpeg;base64,${result.assets[0].base64}`);
+          // Additional safety check: PostgREST limit is around 1MB payload.
+          // 0.3 quality coupled with automatic resizing should be small enough.
+          const base64Data = result.assets[0].base64;
+          const mimeType = result.assets[0].mimeType || "image/jpeg";
+          setAvatar(`data:${mimeType};base64,${base64Data}`);
         } else {
           setAvatar(result.assets[0].uri);
         }
       }
+    } catch (e) {
+      console.warn("Image Picker Error:", e);
     }
   };
 
@@ -198,32 +199,35 @@ export default function ProfileScreen({ navigation, handleLogout }) {
             )}
 
             {isEditing && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.avatarSelector}
-              >
-                {/* Image upload button */}
-                <TouchableOpacity
-                  style={styles.avatarOption}
-                  onPress={pickImage}
+              <View style={styles.avatarScrollWrap}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.avatarSelector}
+                  contentContainerStyle={styles.avatarSelectorContent}
                 >
-                  <Ionicons name="camera" size={24} color="#666" />
-                </TouchableOpacity>
-
-                {avatars.map((emoji, index) => (
+                  {/* Image upload button */}
                   <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.avatarOption,
-                      avatar === emoji && styles.avatarOptionSelected,
-                    ]}
-                    onPress={() => setAvatar(emoji)}
+                    style={styles.avatarOption}
+                    onPress={pickImage}
                   >
-                    <Text style={styles.avatarOptionText}>{emoji}</Text>
+                    <Ionicons name="camera" size={24} color="#666" />
                   </TouchableOpacity>
-                ))}
-              </ScrollView>
+
+                  {avatars.map((emoji, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.avatarOption,
+                        avatar === emoji && styles.avatarOptionSelected,
+                      ]}
+                      onPress={() => setAvatar(emoji)}
+                    >
+                      <Text style={styles.avatarOptionText}>{emoji}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
             )}
           </View>
 
@@ -386,7 +390,14 @@ const styles = StyleSheet.create({
   avatarSelector: {
     flexDirection: "row",
     marginTop: 10,
+  },
+  avatarSelectorContent: {
     paddingVertical: 10,
+    paddingHorizontal: 5,
+  },
+  avatarScrollWrap: {
+    width: "100%",
+    overflow: "hidden",
   },
   avatarOption: {
     width: 50,
