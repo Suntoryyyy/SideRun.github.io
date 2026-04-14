@@ -290,7 +290,7 @@ export default function RunScreen({ route, navigation }) {
   const panY = useRef(new Animated.Value(0)).current;
 
   const contentOpacity = panY.interpolate({
-    inputRange: [0, Math.max(height * 0.75 - 320, 1)],
+    inputRange: [0, Math.max(height * 0.75 - 220, 1)],
     outputRange: [1, 0],
     extrapolate: "clamp",
   });
@@ -311,7 +311,7 @@ export default function RunScreen({ route, navigation }) {
         if (gestureState.dy > 50) {
           // Dragged down
           Animated.spring(panY, {
-            toValue: height * 0.75 - 300,
+            toValue: height * 0.75 - 200,
             useNativeDriver: false,
             tension: 65,
             friction: 10,
@@ -327,7 +327,7 @@ export default function RunScreen({ route, navigation }) {
         } else {
           // Revert to original state
           Animated.spring(panY, {
-            toValue: isPanelCollapsed ? height * 0.75 - 300 : 0,
+            toValue: isPanelCollapsed ? height * 0.75 - 200 : 0,
             useNativeDriver: false,
             tension: 65,
             friction: 10,
@@ -340,7 +340,7 @@ export default function RunScreen({ route, navigation }) {
   // React to programmatic toggle (clicking the bar)
   useEffect(() => {
     Animated.spring(panY, {
-      toValue: isPanelCollapsed ? height * 0.75 - 300 : 0,
+      toValue: isPanelCollapsed ? height * 0.75 - 200 : 0,
       useNativeDriver: false,
       tension: 65,
       friction: 10,
