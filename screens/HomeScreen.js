@@ -1,33 +1,50 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, ScrollView, Dimensions, Image, Animated, Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useIsFocused } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import { BlurView } from 'expo-blur';
-import * as Location from 'expo-location';
-import MapStyle from './MapStyle.json';
+import React, { useState, useEffect, useRef } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  ScrollView,
+  Dimensions,
+  Image,
+  Animated,
+  Platform,
+} from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "../services/supabase";
+import { useIsFocused } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import { BlurView } from "expo-blur";
+import * as Location from "expo-location";
+import MapStyle from "./MapStyle.json";
 
 let MapView, PROVIDER_GOOGLE;
-if (Platform.OS !== 'web') {
-  const Maps = require('react-native-maps');
+if (Platform.OS !== "web") {
+  const Maps = require("react-native-maps");
   MapView = Maps.default;
   PROVIDER_GOOGLE = Maps.PROVIDER_GOOGLE;
 }
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 export default function HomeScreen({ navigation }) {
   const isFocused = useIsFocused();
   const startButtonScale = useRef(new Animated.Value(1)).current;
-  const [username, setUsername] = useState('Runner');
-  const [avatar, setAvatar] = useState('');
-  const [region, setRegion] = useState({ latitude: 37.7749, longitude: -122.4194, latitudeDelta: 0.05, longitudeDelta: 0.05 });
+  const [username, setUsername] = useState("Runner");
+  const [avatar, setAvatar] = useState("");
+  const [region, setRegion] = useState({
+    latitude: 37.7749,
+    longitude: -122.4194,
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
+  });
 
   useEffect(() => {
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') return;
+      if (status !== "granted") return;
       let location = await Location.getCurrentPositionAsync({});
       setRegion({
         latitude: location.coords.latitude,
@@ -40,9 +57,9 @@ export default function HomeScreen({ navigation }) {
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 18) return 'Good Afternoon';
-    return 'Good Evening';
+    if (hour < 12) return "Good Morning";
+    if (hour < 18) return "Good Afternoon";
+    return "Good Evening";
   };
 
   useEffect(() => {
@@ -53,12 +70,27 @@ export default function HomeScreen({ navigation }) {
 
   const loadUserData = async () => {
     try {
-      const storedUsername = await AsyncStorage.getItem('username');
-      const storedAvatar = await AsyncStorage.getItem('avatar');
-      if (storedUsername) setUsername(storedUsername);
-      if (storedAvatar) setAvatar(storedAvatar);
+      const cStr = await AsyncStorage.getItem("currentUser");
+      if (cStr) {
+        const c = JSON.parse(cStr);
+        if (c.username) setUsername(c.username);
+        if (c.avatar) setAvatar(c.avatar);
+
+        // Fetch up to date from DB just in case
+        if (c.id) {
+          const { data } = await supabase
+            .from("users")
+            .select("username, avatar")
+            .eq("id", c.id)
+            .single();
+          if (data) {
+            if (data.username) setUsername(data.username);
+            if (data.avatar) setAvatar(data.avatar);
+          }
+        }
+      }
     } catch (e) {
-      console.log('Error loading user data:', e);
+      console.log("Error loading user data:", e);
     }
   };
 
@@ -67,7 +99,7 @@ export default function HomeScreen({ navigation }) {
       toValue: 0.92,
       useNativeDriver: true,
       speed: 20,
-      bounciness: 10
+      bounciness: 10,
     }).start();
   };
 
@@ -76,22 +108,31 @@ export default function HomeScreen({ navigation }) {
       toValue: 1,
       useNativeDriver: true,
       speed: 20,
-      bounciness: 10
+      bounciness: 10,
     }).start();
   };
 
   return (
     <View style={styles.container}>
       {/* Background Live Map */}
-      {Platform.OS === 'web' ? (
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: -1 }}>
+      {Platform.OS === "web" ? (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: -1,
+          }}
+        >
           <iframe
             width="100%"
             height="100%"
             frameBorder="0"
             scrolling="no"
             src={`https://www.openstreetmap.org/export/embed.html?bbox=${region.longitude - 0.025},${region.latitude - 0.025},${region.longitude + 0.025},${region.latitude + 0.025}&layer=mapnik`}
-            style={{ border: 'none', filter: 'brightness(0.9) grayscale(0.8)' }}
+            style={{ border: "none", filter: "brightness(0.9) grayscale(0.8)" }}
           />
         </div>
       ) : (
@@ -111,11 +152,16 @@ export default function HomeScreen({ navigation }) {
       )}
 
       {/* Main Content Overlay */}
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Dribbble-Style Greeting Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.menuButton} onPress={() => navigation.openDrawer()}>
+          <TouchableOpacity
+            style={styles.menuButton}
+            onPress={() => navigation.openDrawer()}
+          >
             <BlurView intensity={60} tint="light" style={styles.iconCircle}>
               <Ionicons name="menu" size={24} color="#111" />
             </BlurView>
@@ -126,8 +172,14 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.userName}>{username}</Text>
             </View>
             <View style={styles.userInfoContainer}>
-              {avatar && (avatar.startsWith('file:') || avatar.startsWith('http') || avatar.startsWith('data:')) ? (
-                <Image source={{ uri: avatar }} style={styles.homeAvatarImage} />
+              {avatar &&
+              (avatar.startsWith("file:") ||
+                avatar.startsWith("http") ||
+                avatar.startsWith("data:")) ? (
+                <Image
+                  source={{ uri: avatar }}
+                  style={styles.homeAvatarImage}
+                />
               ) : (
                 <BlurView intensity={60} tint="light" style={styles.iconCircle}>
                   <Ionicons name="person" size={24} color="#111" />
@@ -154,24 +206,24 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.statLabel}>Runs</Text>
             </View>
           </View>
-          
+
           <View style={styles.progressContainer}>
             <View style={styles.progressTextRow}>
               <Text style={styles.progressTextLabel}>Weekly Goal: 20 km</Text>
               <Text style={styles.progressPercent}>62%</Text>
             </View>
             <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: '62%' }]} />
+              <View style={[styles.progressBarFill, { width: "62%" }]} />
             </View>
           </View>
         </BlurView>
 
         {/* Live Weather Preview */}
-        <TouchableOpacity 
-          activeOpacity={0.8} 
+        <TouchableOpacity
+          activeOpacity={0.8}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            navigation.navigate('Weather');
+            navigation.navigate("Weather");
           }}
         >
           <BlurView intensity={75} tint="light" style={styles.weatherCard}>
@@ -179,8 +231,10 @@ export default function HomeScreen({ navigation }) {
               <Ionicons name="partly-sunny" size={32} color="#24C789" />
             </View>
             <View style={styles.weatherMeta}>
-               <Text style={styles.weatherTemp}>18°C · Perfect Conditions</Text>
-               <Text style={styles.weatherDesc}>Low wind, great time for a run</Text>
+              <Text style={styles.weatherTemp}>18°C · Perfect Conditions</Text>
+              <Text style={styles.weatherDesc}>
+                Low wind, great time for a run
+              </Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#555" />
           </BlurView>
@@ -209,7 +263,6 @@ export default function HomeScreen({ navigation }) {
             </View>
           </BlurView>
         </TouchableOpacity>
-
       </ScrollView>
 
       {/* Floating Big Start Button Component */}
@@ -219,11 +272,21 @@ export default function HomeScreen({ navigation }) {
           onPressOut={handlePressOut}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-            navigation.navigate('Run');
+            navigation.navigate("Run");
           }}
         >
-          <Animated.View style={[styles.startActionBtn, { transform: [{ scale: startButtonScale }] }]}>
-            <Ionicons name="play" size={32} color="#FFF" style={styles.playIcon} />
+          <Animated.View
+            style={[
+              styles.startActionBtn,
+              { transform: [{ scale: startButtonScale }] },
+            ]}
+          >
+            <Ionicons
+              name="play"
+              size={32}
+              color="#FFF"
+              style={styles.playIcon}
+            />
             <Text style={styles.startActionText}>START RUN</Text>
           </Animated.View>
         </TouchableWithoutFeedback>
@@ -235,11 +298,11 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EAEAEA',
+    backgroundColor: "#EAEAEA",
   },
   scrollContent: {
     padding: 24,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingTop: Platform.OS === "ios" ? 60 : 40,
     paddingBottom: 140,
   },
   header: {
@@ -248,145 +311,145 @@ const styles = StyleSheet.create({
   },
   menuButton: {
     marginBottom: 20,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   iconCircle: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+    backgroundColor: "rgba(255, 255, 255, 0.4)",
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
+    borderColor: "rgba(255, 255, 255, 0.8)",
   },
   headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   greetingContainer: {
     flex: 1,
   },
   greeting: {
     fontSize: 16,
-    color: '#444',
+    color: "#444",
     marginBottom: 4,
-    fontWeight: '600',
+    fontWeight: "600",
     letterSpacing: 0.5,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   userName: {
     fontSize: 32,
-    fontWeight: '900',
-    color: '#111',
+    fontWeight: "900",
+    color: "#111",
     letterSpacing: -1,
   },
   userInfoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   homeAvatarImage: {
     width: 54,
     height: 54,
     borderRadius: 27,
     borderWidth: 2,
-    borderColor: '#24C789',
+    borderColor: "#24C789",
   },
   card: {
     borderRadius: 28,
     padding: 24,
     marginBottom: 20,
-    overflow: 'hidden',
+    overflow: "hidden",
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.9)',
-    backgroundColor: 'rgba(255, 255, 255, 0.65)',
+    borderColor: "rgba(255, 255, 255, 0.9)",
+    backgroundColor: "rgba(255, 255, 255, 0.65)",
   },
   cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 20,
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#111',
+    fontWeight: "800",
+    color: "#111",
   },
   statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
     marginBottom: 24,
   },
   statWrap: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   statValue: {
     fontSize: 42,
-    fontWeight: '900',
-    color: '#111',
+    fontWeight: "900",
+    color: "#111",
     letterSpacing: -1,
   },
   statLabel: {
     fontSize: 14,
-    color: '#555',
-    fontWeight: '600',
+    color: "#555",
+    fontWeight: "600",
     marginTop: 4,
   },
   divider: {
     width: 1,
     height: 40,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: "rgba(0,0,0,0.1)",
   },
   progressContainer: {
     marginTop: 10,
   },
   progressTextRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 8,
   },
   progressTextLabel: {
     fontSize: 13,
-    color: '#555',
-    fontWeight: '600',
+    color: "#555",
+    fontWeight: "600",
   },
   progressPercent: {
     fontSize: 13,
-    color: '#24C789',
-    fontWeight: '800',
+    color: "#24C789",
+    fontWeight: "800",
   },
   progressBarBg: {
     height: 8,
-    backgroundColor: 'rgba(0,0,0,0.06)',
+    backgroundColor: "rgba(0,0,0,0.06)",
     borderRadius: 4,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   progressBarFill: {
-    height: '100%',
-    backgroundColor: '#24C789',
+    height: "100%",
+    backgroundColor: "#24C789",
     borderRadius: 4,
   },
   weatherCard: {
     borderRadius: 24,
     padding: 20,
     marginBottom: 32,
-    flexDirection: 'row',
-    alignItems: 'center',
-    overflow: 'hidden',
+    flexDirection: "row",
+    alignItems: "center",
+    overflow: "hidden",
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.9)',
-    backgroundColor: 'rgba(255, 255, 255, 0.65)',
+    borderColor: "rgba(255, 255, 255, 0.9)",
+    backgroundColor: "rgba(255, 255, 255, 0.65)",
   },
   weatherIconContainer: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: 'rgba(36, 199, 137, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(36, 199, 137, 0.15)",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 16,
   },
   weatherMeta: {
@@ -394,52 +457,52 @@ const styles = StyleSheet.create({
   },
   weatherTemp: {
     fontSize: 15,
-    fontWeight: '800',
-    color: '#111',
+    fontWeight: "800",
+    color: "#111",
     marginBottom: 4,
   },
   weatherDesc: {
     fontSize: 13,
-    color: '#666',
-    fontWeight: '500',
+    color: "#666",
+    fontWeight: "500",
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
     marginBottom: 16,
     paddingHorizontal: 4,
   },
   sectionTitle: {
     fontSize: 22,
-    fontWeight: '900',
-    color: '#111',
+    fontWeight: "900",
+    color: "#111",
     letterSpacing: -0.5,
   },
   seeAllText: {
     fontSize: 14,
-    color: '#24C789',
-    fontWeight: '700',
+    color: "#24C789",
+    fontWeight: "700",
     marginBottom: 4,
   },
   recentRunCard: {
     borderRadius: 24,
     padding: 20,
     marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.9)',
-    backgroundColor: 'rgba(255, 255, 255, 0.75)',
-    overflow: 'hidden',
+    borderColor: "rgba(255, 255, 255, 0.9)",
+    backgroundColor: "rgba(255, 255, 255, 0.75)",
+    overflow: "hidden",
   },
   runIconBg: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#111',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#111",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 16,
   },
   runInfo: {
@@ -447,46 +510,46 @@ const styles = StyleSheet.create({
   },
   runTitle: {
     fontSize: 16,
-    fontWeight: '800',
-    color: '#111',
+    fontWeight: "800",
+    color: "#111",
     marginBottom: 4,
   },
   runDate: {
     fontSize: 13,
-    color: '#666',
-    fontWeight: '500',
+    color: "#666",
+    fontWeight: "500",
   },
   runStats: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   runDistance: {
     fontSize: 16,
-    fontWeight: '900',
-    color: '#24C789',
+    fontWeight: "900",
+    color: "#24C789",
     marginBottom: 4,
   },
   runTime: {
     fontSize: 13,
-    color: '#666',
-    fontWeight: '600',
+    color: "#666",
+    fontWeight: "600",
   },
   startActionContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 40,
     left: 0,
     right: 0,
-    alignItems: 'center',
+    alignItems: "center",
     paddingHorizontal: 20,
   },
   startActionBtn: {
-    backgroundColor: '#24C789',
-    width: '100%',
+    backgroundColor: "#24C789",
+    width: "100%",
     height: 64,
     borderRadius: 32,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#24C789',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#24C789",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 16,
@@ -496,9 +559,9 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   startActionText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: "900",
     letterSpacing: 1,
   },
 });

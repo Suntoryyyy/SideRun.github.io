@@ -1,19 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, Dimensions } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import MapStyle from './MapStyle.json';
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Platform,
+  Modal,
+  Dimensions,
+} from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "../services/supabase";
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import MapStyle from "./MapStyle.json";
 
 let MapView, Polyline, Marker;
-if (Platform.OS !== 'web') {
-  const Maps = require('react-native-maps');
+if (Platform.OS !== "web") {
+  const Maps = require("react-native-maps");
   MapView = Maps.default;
   Polyline = Maps.Polyline;
   Marker = Maps.Marker;
 }
 
-const { width, height } = Dimensions.get('window');
+const { width, height } = Dimensions.get("window");
 
 export default function RunHistoryScreen({ navigation }) {
   const [runs, setRuns] = useState([]);
@@ -26,12 +36,38 @@ export default function RunHistoryScreen({ navigation }) {
 
   const loadRuns = async () => {
     try {
-      const runsData = await AsyncStorage.getItem('recentRuns');
-      if (runsData) {
-        setRuns(JSON.parse(runsData));
+      const c = await AsyncStorage.getItem("currentUser");
+      if (c) {
+        const parsed = JSON.parse(c);
+        const { data, error } = await supabase
+          .from("runs")
+          .select("*")
+          .eq("user_id", parsed.id)
+          .order("created_at", { ascending: false })
+          .limit(20);
+
+        if (data && !error) {
+          // Map DB columns to old expected properties
+          const formattedRuns = data.map((r) => ({
+            id: r.id,
+            date: new Date(r.created_at).toLocaleDateString(),
+            time: new Date(r.created_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            distance: r.distance,
+            duration: r.duration_seconds
+              ? `${Math.floor(r.duration_seconds / 60)}:${r.duration_seconds % 60 < 10 ? "0" : ""}${r.duration_seconds % 60}`
+              : "0:00",
+            pace: r.pace,
+            calories: r.calories,
+            coordinates: [],
+          }));
+          setRuns(formattedRuns);
+        }
       }
     } catch (e) {
-      console.error('Failed to load runs', e);
+      console.error("Failed to load runs from Supabase", e);
     }
   };
 
@@ -64,12 +100,14 @@ export default function RunHistoryScreen({ navigation }) {
           <View style={styles.emptyContainer}>
             <Ionicons name="footsteps-outline" size={64} color="#ccc" />
             <Text style={styles.emptyText}>No runs yet!</Text>
-            <Text style={styles.emptySubText}>Head out and record your first run to see it here.</Text>
+            <Text style={styles.emptySubText}>
+              Head out and record your first run to see it here.
+            </Text>
           </View>
         ) : (
           runs.map((run, index) => (
-            <TouchableOpacity 
-              key={index} 
+            <TouchableOpacity
+              key={index}
               style={styles.runCard}
               activeOpacity={0.7}
               onPress={() => openRunDetails(run)}
@@ -79,7 +117,9 @@ export default function RunHistoryScreen({ navigation }) {
               </View>
               <View style={styles.runInfo}>
                 <Text style={styles.runTitle}>Distance: {run.distance} km</Text>
-                <Text style={styles.runDate}>{run.date} • {run.duration}</Text>
+                <Text style={styles.runDate}>
+                  {run.date} • {run.duration}
+                </Text>
               </View>
               <View style={styles.runStats}>
                 <Text style={styles.runPace}>{run.pace}'pace</Text>
@@ -100,7 +140,10 @@ export default function RunHistoryScreen({ navigation }) {
         {selectedRun && (
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={closeRunDetails} style={styles.closeButton}>
+              <TouchableOpacity
+                onPress={closeRunDetails}
+                style={styles.closeButton}
+              >
                 <Ionicons name="close" size={28} color="#333" />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>{selectedRun.date} Run</Text>
@@ -110,40 +153,53 @@ export default function RunHistoryScreen({ navigation }) {
             <ScrollView contentContainerStyle={styles.modalScroll}>
               {/* Map Track */}
               <View style={styles.mapContainer}>
-                {Platform.OS === 'web' ? (
+                {Platform.OS === "web" ? (
                   <View style={styles.webMapPlaceholder}>
                     <Ionicons name="map-outline" size={48} color="#999" />
                     <Text style={styles.webMapText}>
                       Track visible on mobile app
                     </Text>
                   </View>
+                ) : selectedRun.coordinates &&
+                  selectedRun.coordinates.length > 0 ? (
+                  <MapView
+                    style={styles.map}
+                    initialRegion={{
+                      latitude: selectedRun.coordinates[0].latitude,
+                      longitude: selectedRun.coordinates[0].longitude,
+                      latitudeDelta: 0.02,
+                      longitudeDelta: 0.02,
+                    }}
+                    scrollEnabled={false}
+                    zoomEnabled={false}
+                    customMapStyle={MapStyle}
+                  >
+                    <Polyline
+                      coordinates={selectedRun.coordinates}
+                      strokeColor="#FF9500"
+                      strokeWidth={5}
+                    />
+                    <Marker
+                      coordinate={selectedRun.coordinates[0]}
+                      title="Start"
+                      pinColor="green"
+                    />
+                    <Marker
+                      coordinate={
+                        selectedRun.coordinates[
+                          selectedRun.coordinates.length - 1
+                        ]
+                      }
+                      title="Finish"
+                      pinColor="red"
+                    />
+                  </MapView>
                 ) : (
-                  selectedRun.coordinates && selectedRun.coordinates.length > 0 ? (
-                    <MapView
-                      style={styles.map}
-                      initialRegion={{
-                        latitude: selectedRun.coordinates[0].latitude,
-                        longitude: selectedRun.coordinates[0].longitude,
-                        latitudeDelta: 0.02,
-                        longitudeDelta: 0.02,
-                      }}
-                      scrollEnabled={false}
-                      zoomEnabled={false}
-                      customMapStyle={MapStyle}
-                    >
-                      <Polyline
-                        coordinates={selectedRun.coordinates}
-                        strokeColor="#FF9500"
-                        strokeWidth={5}
-                      />
-                      <Marker coordinate={selectedRun.coordinates[0]} title="Start" pinColor="green" />
-                      <Marker coordinate={selectedRun.coordinates[selectedRun.coordinates.length - 1]} title="Finish" pinColor="red" />
-                    </MapView>
-                  ) : (
-                    <View style={styles.webMapPlaceholder}>
-                      <Text style={styles.webMapText}>No GPS data for this run</Text>
-                    </View>
-                  )
+                  <View style={styles.webMapPlaceholder}>
+                    <Text style={styles.webMapText}>
+                      No GPS data for this run
+                    </Text>
+                  </View>
                 )}
               </View>
 
@@ -151,11 +207,16 @@ export default function RunHistoryScreen({ navigation }) {
               <View style={styles.statsGrid}>
                 <View style={styles.statBox}>
                   <Text style={styles.statLabel}>Distance</Text>
-                  <Text style={styles.statValue}>{selectedRun.distance} <Text style={styles.statUnit}>km</Text></Text>
+                  <Text style={styles.statValue}>
+                    {selectedRun.distance}{" "}
+                    <Text style={styles.statUnit}>km</Text>
+                  </Text>
                 </View>
                 <View style={styles.statBox}>
                   <Text style={styles.statLabel}>Pace</Text>
-                  <Text style={styles.statValue}>{selectedRun.pace} <Text style={styles.statUnit}>/km</Text></Text>
+                  <Text style={styles.statValue}>
+                    {selectedRun.pace} <Text style={styles.statUnit}>/km</Text>
+                  </Text>
                 </View>
                 <View style={styles.statBox}>
                   <Text style={styles.statLabel}>Duration</Text>
@@ -163,7 +224,10 @@ export default function RunHistoryScreen({ navigation }) {
                 </View>
                 <View style={styles.statBox}>
                   <Text style={styles.statLabel}>Calories</Text>
-                  <Text style={styles.statValue}>{selectedRun.calories} <Text style={styles.statUnit}>kcal</Text></Text>
+                  <Text style={styles.statValue}>
+                    {selectedRun.calories}{" "}
+                    <Text style={styles.statUnit}>kcal</Text>
+                  </Text>
                 </View>
               </View>
 
@@ -171,27 +235,46 @@ export default function RunHistoryScreen({ navigation }) {
               <View style={styles.sectionContainer}>
                 <Text style={styles.sectionTitle}>Heart Rate Zones</Text>
                 <View style={styles.zoneRow}>
-                  <View style={[styles.zoneColor, { backgroundColor: '#FF3B30', width: '15%' }]} />
+                  <View
+                    style={[
+                      styles.zoneColor,
+                      { backgroundColor: "#FF3B30", width: "15%" },
+                    ]}
+                  />
                   <Text style={styles.zoneName}>Peak (160+)</Text>
                   <Text style={styles.zoneTime}>15%</Text>
                 </View>
                 <View style={styles.zoneRow}>
-                  <View style={[styles.zoneColor, { backgroundColor: '#FF9500', width: '45%' }]} />
+                  <View
+                    style={[
+                      styles.zoneColor,
+                      { backgroundColor: "#FF9500", width: "45%" },
+                    ]}
+                  />
                   <Text style={styles.zoneName}>Cardio (140-159)</Text>
                   <Text style={styles.zoneTime}>45%</Text>
                 </View>
                 <View style={styles.zoneRow}>
-                  <View style={[styles.zoneColor, { backgroundColor: '#FFCC00', width: '30%' }]} />
+                  <View
+                    style={[
+                      styles.zoneColor,
+                      { backgroundColor: "#FFCC00", width: "30%" },
+                    ]}
+                  />
                   <Text style={styles.zoneName}>Fat Burn (110-139)</Text>
                   <Text style={styles.zoneTime}>30%</Text>
                 </View>
                 <View style={styles.zoneRow}>
-                  <View style={[styles.zoneColor, { backgroundColor: '#34C759', width: '10%' }]} />
-                  <Text style={styles.zoneName}>Warm Up ({'<110'})</Text>
+                  <View
+                    style={[
+                      styles.zoneColor,
+                      { backgroundColor: "#34C759", width: "10%" },
+                    ]}
+                  />
+                  <Text style={styles.zoneName}>Warm Up ({"<110"})</Text>
                   <Text style={styles.zoneTime}>10%</Text>
                 </View>
               </View>
-
             </ScrollView>
           </View>
         )}
@@ -203,56 +286,56 @@ export default function RunHistoryScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F4F5F7',
+    backgroundColor: "#F4F5F7",
   },
   scrollContent: {
     padding: 20,
     paddingBottom: 40,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingTop: Platform.OS === "ios" ? 60 : 40,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 30,
-    position: 'relative',
+    position: "relative",
   },
   backButton: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     zIndex: 10,
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#222222',
+    fontWeight: "bold",
+    color: "#222222",
   },
   emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 60,
   },
   emptyText: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#666',
+    fontWeight: "bold",
+    color: "#666",
     marginTop: 16,
   },
   emptySubText: {
     fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
+    color: "#999",
+    textAlign: "center",
     marginTop: 8,
     paddingHorizontal: 30,
   },
   runCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     borderRadius: 16,
     padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 5,
@@ -262,9 +345,9 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#E8F8F2',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#E8F8F2",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 16,
   },
   runInfo: {
@@ -272,46 +355,46 @@ const styles = StyleSheet.create({
   },
   runTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#222',
+    fontWeight: "bold",
+    color: "#222",
     marginBottom: 4,
   },
   runDate: {
     fontSize: 13,
-    color: '#888',
+    color: "#888",
   },
   runStats: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   runPace: {
     fontSize: 15,
-    fontWeight: 'bold',
-    color: '#222',
+    fontWeight: "bold",
+    color: "#222",
   },
   runCalories: {
     fontSize: 13,
-    color: '#FF9500',
+    color: "#FF9500",
     marginTop: 2,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: "#FAFAFA",
   },
   modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: Platform.OS === 'ios' ? 60 : 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: Platform.OS === "ios" ? 60 : 20,
     paddingBottom: 20,
     paddingHorizontal: 20,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     borderBottomWidth: 1,
-    borderBottomColor: '#EEE',
+    borderBottomColor: "#EEE",
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#111',
+    fontWeight: "bold",
+    color: "#111",
   },
   closeButton: {
     padding: 5,
@@ -322,79 +405,79 @@ const styles = StyleSheet.create({
   mapContainer: {
     width: width,
     height: width * 0.7,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     marginBottom: 16,
   },
   map: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   webMapPlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#EAEAEA',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#EAEAEA",
+    justifyContent: "center",
+    alignItems: "center",
   },
   webMapText: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
     marginTop: 10,
   },
   statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     padding: 16,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     marginBottom: 16,
   },
   statBox: {
-    width: '50%',
+    width: "50%",
     padding: 12,
   },
   statLabel: {
     fontSize: 13,
-    color: '#666',
+    color: "#666",
     marginBottom: 4,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   statValue: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#222',
+    fontWeight: "bold",
+    color: "#222",
   },
   statUnit: {
     fontSize: 14,
-    fontWeight: 'normal',
-    color: '#888',
+    fontWeight: "normal",
+    color: "#888",
   },
   sectionContainer: {
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     padding: 20,
     marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#222',
+    fontWeight: "bold",
+    color: "#222",
     marginBottom: 15,
   },
   zoneRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 8,
   },
   zoneName: {
     flex: 1,
     fontSize: 15,
-    color: '#444',
+    color: "#444",
   },
   zoneTime: {
     fontSize: 15,
-    fontWeight: 'bold',
-    color: '#222',
+    fontWeight: "bold",
+    color: "#222",
     width: 60,
-    textAlign: 'right',
+    textAlign: "right",
   },
   zoneColor: {
     height: 12,
