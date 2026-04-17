@@ -598,54 +598,16 @@ const sendLiveCheer = async (emoji, message) => {
                 </View>
 
                 {selectedFriend.isOnline && (
-                  <View style={{ width: "100%", marginBottom: 20 }}>
-                    <Text
-                      style={{
-                        fontSize: 16,
-                        fontWeight: "600",
-                        color: "#333",
-                        marginBottom: 10,
-                      }}
-                    >
-                      Send Live Cheer
-                    </Text>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        marginBottom: 10,
-                      }}
-                    >
-                      <TouchableOpacity
-                        onPress={() =>
-                          sendLiveCheer("🔥", "Fire! Keep the pace!")
-                        }
-                        style={styles.cheerQuickBtn}
-                      >
-                        <Text style={{ fontSize: 32 }}>🔥</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => sendLiveCheer("👏", "Awesome job!")}
-                        style={styles.cheerQuickBtn}
-                      >
-                        <Text style={{ fontSize: 32 }}>👏</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() =>
-                          sendLiveCheer("🚀", "Speed up! You got this!")
-                        }
-                        style={styles.cheerQuickBtn}
-                      >
-                        <Text style={{ fontSize: 32 }}>🚀</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => sendLiveCheer("💦", "Stay hydrated!")}
-                        style={styles.cheerQuickBtn}
-                      >
-                        <Text style={{ fontSize: 32 }}>💦</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
+                  <TouchableOpacity
+                    style={[styles.chatBtn, { backgroundColor: "#FF9500", marginBottom: 15 }]}
+                    onPress={() => {
+                        closeFriendProfile();
+                        navigation.navigate("Run", { mode: "spectate", spectateFriend: selectedFriend });
+                    }}
+                  >
+                    <Ionicons name="eye-outline" size={24} color="#FFF" />
+                    <Text style={styles.chatBtnText}>Spectate Live Run</Text>
+                  </TouchableOpacity>
                 )}
 
                 <TouchableOpacity

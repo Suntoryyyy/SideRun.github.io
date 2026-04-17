@@ -132,7 +132,7 @@ const formatDuration = (totalSeconds) => {
 };
 
 export default function RunScreen({ route, navigation }) {
-  const { mode = "solo" } = route?.params || {};
+  const { mode = "solo", spectateFriend = null } = route?.params || {};
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
   const [friendsWatching, setFriendsWatching] = useState(2);
   const [userAvatar, setUserAvatar] = useState(null);
@@ -379,12 +379,41 @@ export default function RunScreen({ route, navigation }) {
     }
   };
 
-  const sendCheer = (specificEmoji = null) => {
+
+  const sendCheer = async (specificEmoji = null) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     const emojis = ["💪", "🔥", "🏃‍♂️", "🎉", "👍", "⚡️", "🚀"];
-    const emojiToUse =
-      specificEmoji || emojis[Math.floor(Math.random() * emojis.length)];
-    const newCheer = { id: Date.now() + Math.random(), emoji: emojiToUse };
+    const emojiToUse = specificEmoji || emojis[Math.floor(Math.random() * emojis.length)];
+    
+    // Render locally for instant feedback
+    const cheerId = Date.now().toString() + Math.random();
+    setLiveEmojis((prev) => {
+      const limited = prev.length > 15 ? prev.slice(-14) : prev;
+      return [...limited, { id: cheerId, emoji: emojiToUse }];
+    });
+
+    if (mode === "spectate" && spectateFriend) {
+      let myId = "Unknown";
+      try {
+        const c = await AsyncStorage.getItem("currentUser");
+        if (c) {
+          const cu = JSON.parse(c);
+          myId = cu.id || cu.phone || cu.username;
+        }
+      } catch (e) {}
+
+      // Only mock insertion, or try but don't crash
+      const { error } = await supabase.from("live_cheers").insert([
+        {
+          sender_id: myId,
+          receiver_id: spectateFriend.id || spectateFriend.phone || spectateFriend.name,
+          emoji: emojiToUse,
+          message: "Keep going!",
+        },
+      ]);
+      if (error) console.warn("Mock cheer sent:", error);
+    }
+  };
     setCheers((prev) => [...prev, newCheer]);
   };
 
@@ -563,6 +592,13 @@ export default function RunScreen({ route, navigation }) {
         </TouchableOpacity>
 
         <View style={styles.statsContainer}>
+          {mode === "spectate" && spectateFriend && (
+             <View style={{ alignItems: 'center', marginBottom: 10 }}>
+               <Text style={{ fontSize: 16, fontWeight: '700', color: '#FF9500' }}>
+                 🔴 Spectating: {spectateFriend.name} {spectateFriend.avatar}
+               </Text>
+             </View>
+          )}
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>
@@ -605,8 +641,23 @@ export default function RunScreen({ route, navigation }) {
           </Animated.View>
         </View>
 
-        <View style={styles.controlsContainer}>
-          {isFinished ? (
+<View style={styles.controlsContainer}>
+          {mode === "spectate" ? (
+            <View style={{flexDirection: "row", justifyContent: "space-between", width: "100%", paddingHorizontal: 20}}>
+              <TouchableOpacity onPress={() => sendCheer("🔥")} style={{backgroundColor: "#F0F0F0", width: 60, height: 60, borderRadius: 30, justifyContent: "center", alignItems: "center"}}>
+                <Text style={{fontSize: 28}}>🔥</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => sendCheer("👏")} style={{backgroundColor: "#F0F0F0", width: 60, height: 60, borderRadius: 30, justifyContent: "center", alignItems: "center"}}>
+                <Text style={{fontSize: 28}}>👏</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => sendCheer("🚀")} style={{backgroundColor: "#F0F0F0", width: 60, height: 60, borderRadius: 30, justifyContent: "center", alignItems: "center"}}>
+                <Text style={{fontSize: 28}}>🚀</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => sendCheer("💦")} style={{backgroundColor: "#F0F0F0", width: 60, height: 60, borderRadius: 30, justifyContent: "center", alignItems: "center"}}>
+                <Text style={{fontSize: 28}}>💦</Text>
+              </TouchableOpacity>
+            </View>
+          ) : isFinished ? (
             <View style={styles.activeControls}>
               <View style={[styles.statBox, { marginRight: 20 }]}>
                 <Text style={styles.statValue}>Done!</Text>
