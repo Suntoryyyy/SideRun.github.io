@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import * as Location from "expo-location";
+import * as TaskManager from 'expo-task-manager';
+
+const BACKGROUND_LOCATION_TASK = "BACKGROUND_LOCATION_TASK";
 import { Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../services/supabase";
@@ -207,6 +210,11 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
       watchId.current.remove();
       watchId.current = null;
     }
+    Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK).then(started => {
+      if (started) {
+        Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK).catch(e => console.log(e));
+      }
+    });
   };
 
   const resumeRun = async () => {

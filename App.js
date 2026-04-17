@@ -3,6 +3,23 @@ import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { createStackNavigator, TransitionPresets } from '@react-navigation/stack';
+import * as TaskManager from 'expo-task-manager';
+import * as Location from 'expo-location';
+
+const BACKGROUND_LOCATION_TASK = "BACKGROUND_LOCATION_TASK";
+
+TaskManager.defineTask(BACKGROUND_LOCATION_TASK, ({ data: { locations }, error }) => {
+  if (error) {
+    console.error(error);
+    return;
+  }
+  if (locations) {
+    // In a real app, you would sync this to AsyncStorage or Zustand here
+    // For now we just define the task so the OS keeps the app alive
+    console.log("Background location heartbeat:", locations.length);
+  }
+});
+
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './services/supabase';

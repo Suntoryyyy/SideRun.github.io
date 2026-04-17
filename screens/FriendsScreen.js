@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { BlurView } from "expo-blur";
 import {
+  FlatList,
   View,
   Text,
   StyleSheet,
