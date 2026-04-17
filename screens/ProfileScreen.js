@@ -148,10 +148,27 @@ export default function ProfileScreen({ navigation, handleLogout }) {
           })
           .eq("id", updatedUser.id);
 
-        if (error) {
+if (error) {
+          if (error.message.includes("does not exist")) {
+            // Fallback for missing columns in Supabase
+            const { error: fallbackError } = await supabase
+              .from("users")
+              .update({ username, avatar })
+              .eq("id", updatedUser.id);
+            
+            if (fallbackError) {
+              showAlert("Cloud Sync Error", fallbackError.message);
+              return;
+            } else {
+              showAlert("Partial Success", "Profile saved, but privacy settings require Supabase database columns 'allowFriendsViewRecord' and 'allowStrangersAdd' to be added.", "info");
+              setCurrentUser(updatedUser);
+              setIsEditing(false);
+              return;
+            }
+          }
           console.error("Supabase Save Error:", error);
           showAlert("Cloud Sync Error", error.message);
-          return; // Stop local save if cloud fails
+          return;
         }
       }
 
