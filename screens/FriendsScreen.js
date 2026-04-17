@@ -136,12 +136,12 @@ export default function FriendsScreen({ navigation }) {
       }
 
       if (!dbFailed && feedData.length > 0) {
-        setFeedItems(feedData);
-        setGlobalFeedCache(feedData); // For component use if passing down
+        setFeed(feedData);
+        // setGlobalFeedCache(feedData); // Not defined
         await AsyncStorage.setItem("globalFeed", JSON.stringify(feedData));
       } else {
         const existingFeed = await AsyncStorage.getItem("globalFeed");
-        if (existingFeed) setFeedItems(JSON.parse(existingFeed));
+        if (existingFeed) setFeed(JSON.parse(existingFeed));
       }
 
       // Leaderboard
@@ -663,7 +663,7 @@ export default function FriendsScreen({ navigation }) {
           >
             <Ionicons name="arrow-back" size={28} color="#111111" />
           </TouchableOpacity>
-          <Text style={styles.title}>Friends & Community</Text>
+          <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>FRIENDS</Text>
           <Text style={styles.subtitle}>Connect with fellow runners</Text>
         </View>
 

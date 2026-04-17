@@ -7,8 +7,15 @@ export default function ActivityFeed({ feed, onLike, onComment }) {
   return (
     <View style={styles.tabContent}>
       <Text style={styles.sectionTitle}>Friend Activity</Text>
-      {feed.map((item, index) => (
-        <View key={index} style={styles.feedCard}>
+      {feed.length === 0 ? (
+        <View style={styles.emptyFeedState}>
+          <Ionicons name="people-circle-outline" size={64} color="#DDD" />
+          <Text style={styles.emptyFeedText}>No recent activity</Text>
+          <Text style={{color: '#999', marginTop: 8, textAlign: 'center'}}>When you or your friends complete a run, it will appear here!</Text>
+        </View>
+      ) : (
+        feed.map((item, index) => (
+          <View key={index} style={styles.feedCard}>
           <View style={styles.feedHeader}>
             {item.avatar && (item.avatar.startsWith('data:') || item.avatar.startsWith('http') || item.avatar.startsWith('file:')) ? (
               <Image source={{ uri: item.avatar }} style={styles.feedAvatarImg} />
