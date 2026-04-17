@@ -143,6 +143,7 @@ export default function RunScreen({ route, navigation }) {
   const [regionSet, setRegionSet] = useState(false);
   const mapRef = useRef(null);
   const cheerQueue = useRef([]);
+  const myIdRef = useRef("Unknown");
   const isPlayingCheer = useRef(false);
 
   // Background Audio Ducking Init
@@ -208,10 +209,13 @@ export default function RunScreen({ route, navigation }) {
 
   useEffect(() => {
     let cheerSub;
+    let isMounted = true;
     AsyncStorage.getItem("currentUser").then((c) => {
+      if (!isMounted) return;
       if (c) {
         const cu = JSON.parse(c);
-        const myId = cu.id || cu.phone; // Fallback to phone if no ID
+        const myId = cu.id || cu.phone || cu.username; 
+        myIdRef.current = myId;
 
         cheerSub = supabase
           .channel("public:live_cheers")
@@ -249,6 +253,7 @@ export default function RunScreen({ route, navigation }) {
     });
 
     return () => {
+      isMounted = false;
       if (cheerSub) supabase.removeChannel(cheerSub);
     };
   }, []);
@@ -407,14 +412,7 @@ export default function RunScreen({ route, navigation }) {
     });
 
     if (mode === "spectate" && spectateFriend) {
-      let myId = "Unknown";
-      try {
-        const c = await AsyncStorage.getItem("currentUser");
-        if (c) {
-          const cu = JSON.parse(c);
-          myId = cu.id || cu.phone || cu.username;
-        }
-      } catch (e) {}
+      let myId = myIdRef.current;
 
       // Only mock insertion, or try but don't crash
       const { error } = await supabase.from("live_cheers").insert([

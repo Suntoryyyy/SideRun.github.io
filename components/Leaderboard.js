@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Image } from 'react-native';
+import { Image } from 'expo-image';
+import { View, Text } from 'react-native';
 import styles from '../styles/FriendsScreenStyles';
 
 export default function Leaderboard({ leaderboard }) {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Image } from 'expo-image';
 import {
   View,
   Text,
@@ -9,7 +10,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Image,
+ 
   Switch,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";

@@ -25,6 +25,7 @@
     "expo-blur": "~55.0.14",
     "expo-font": "^55.0.6",
     "expo-haptics": "~55.0.14",
+    "expo-image": "~55.0.8",
     "expo-image-picker": "~55.0.16",
     "expo-location": "^55.1.4",
     "expo-speech": "~55.0.13",

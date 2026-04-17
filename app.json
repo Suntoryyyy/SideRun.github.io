@@ -37,7 +37,8 @@
           "locationAlwaysPermission": "Allow SideRun to use your location in the background to track your runs.",
           "locationWhenInUsePermission": "Allow SideRun to use your location to track your runs."
         }
-      ]
+      ],
+      "expo-image"
     ]
   }
 }

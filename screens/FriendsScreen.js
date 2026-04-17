@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Image } from 'expo-image';
 import { BlurView } from "expo-blur";
 import {
   FlatList,
@@ -9,7 +10,7 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
-  Image,
+ 
   Modal,
   Animated,
   TouchableWithoutFeedback,
