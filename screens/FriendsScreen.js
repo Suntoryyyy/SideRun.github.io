@@ -511,41 +511,7 @@ const liveMockFriend = {
     }).start();
   };
 
-const sendLiveCheer = async (emoji, message) => {
-    if (!selectedFriend) return;
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-    let myId = "Unknown";
-    try {
-      const c = await AsyncStorage.getItem("currentUser");
-      if (c) {
-        const cu = JSON.parse(c);
-        myId = cu.id || cu.phone || cu.username;
-      }
-    } catch (e) {}
-
-    // Trigger Supabase Realtime
-    const { error } = await supabase.from("live_cheers").insert([
-      {
-        sender_id: myId,
-        receiver_id:
-          selectedFriend.id || selectedFriend.phone || selectedFriend.name,
-        emoji,
-        message,
-      },
-    ]);
-
-    if (error) {
-      console.warn("Failed to send cheer to DB (might missing table):", error);
-      // Still show success for UI demonstration
-      Alert.alert("Cheer Sent! " + emoji, `You cheered for ${selectedFriend.name}: "${message}"`);
-      closeFriendProfile();
-    } else {
-      Alert.alert("Cheer Sent! " + emoji, `You cheered for ${selectedFriend.name}: "${message}"`);
-      closeFriendProfile();
-    }
-  };
 
   const closeFriendProfile = () => {
     Animated.timing(slideAnim, {
@@ -583,6 +549,12 @@ const sendLiveCheer = async (emoji, message) => {
                   <Text style={styles.sheetPhone}>
                     {selectedFriend.phone || "Runner"}
                   </Text>
+                  <TouchableOpacity
+                    style={{ position: 'absolute', right: 20, top: 15, padding: 10 }}
+                    onPress={closeFriendProfile}
+                  >
+                    <Ionicons name="close" size={24} color="#666" />
+                  </TouchableOpacity>
                 </View>
 
                 <View style={styles.sheetStats}>

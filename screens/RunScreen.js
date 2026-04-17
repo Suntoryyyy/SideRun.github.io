@@ -380,7 +380,7 @@ export default function RunScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
-            <RunMapMemo 
+            <RunMapMemo mode={mode} spectateFriend={spectateFriend} 
         navigation={navigation}
         region={region}
         currentLocation={currentLocation}

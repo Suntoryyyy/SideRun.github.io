@@ -51,6 +51,8 @@ const RunMapMemo = React.memo(({
   currentLocation,
   runData,
   mapRef,
+  mode,
+  spectateFriend,
   userAvatar,
   visibilityScope,
   isRunning,
@@ -73,6 +75,7 @@ const RunMapMemo = React.memo(({
         >
           <BlurView intensity={80} tint="light" style={{ padding: 10, borderRadius: 20 }}>
           <Ionicons name="arrow-back" size={28} color="#333" />
+          </BlurView>
         </TouchableOpacity>
 
         {Platform.OS === "web" ? (
@@ -112,7 +115,7 @@ const RunMapMemo = React.memo(({
               style={Object.assign({}, styles.map, { flex: 1 })}
               provider={PROVIDER_GOOGLE}
               initialRegion={region}
-              showsUserLocation={true}
+              showsUserLocation={mode !== 'spectate'}
               followsUserLocation={false} // Detach forced follow
               customMapStyle={MapStyle}
             >
@@ -124,9 +127,27 @@ const RunMapMemo = React.memo(({
                 />
               )}
             
-            {visibilityScope !== "private" &&
-              isRunning &&
-              liveFriends.map((friend) => (
+            {mode === 'spectate' && currentLocation && spectateFriend && (
+                <Marker
+                  coordinate={{ latitude: currentLocation.latitude, longitude: currentLocation.longitude }}
+                  title={spectateFriend.name}
+                  anchor={{ x: 0.5, y: 0.5 }}
+                >
+                  <View style={{
+                    width: 40, height: 40, borderRadius: 20,
+                    backgroundColor: '#FFF', borderWidth: 2, borderColor: '#FF9500',
+                    justifyContent: 'center', alignItems: 'center',
+                    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5
+                  }}>
+                    {spectateFriend.avatar && (spectateFriend.avatar.startsWith("http") || spectateFriend.avatar.startsWith("file:")) ? (
+                      <Image source={{ uri: spectateFriend.avatar }} style={{ width: 36, height: 36, borderRadius: 18 }} />
+                    ) : (
+                      <Text style={{ fontSize: 18 }}>{spectateFriend.avatar || "🏃"}</Text>
+                    )}
+                  </View>
+                </Marker>
+              )}
+            {visibilityScope !== "private" && isRunning && liveFriends.map((friend) => (
                 <Marker
                   key={friend.id}
                   coordinate={{
@@ -173,12 +194,18 @@ const RunMapMemo = React.memo(({
             elevation: 4
           }}>
             <BlurView intensity={80} tint="light" style={{ ...StyleSheet.absoluteFillObject }} />
-            {userAvatar && (userAvatar.startsWith("file:") || userAvatar.startsWith("http") || userAvatar.startsWith("data:")) ? (
+            {mode === 'spectate' && spectateFriend ? (
+              spectateFriend.avatar && (spectateFriend.avatar.startsWith("file:") || spectateFriend.avatar.startsWith("http") || spectateFriend.avatar.startsWith("data:")) ? (
+                <Image source={{ uri: spectateFriend.avatar }} style={{ width: 24, height: 24, borderRadius: 12, marginRight: 8 }} />
+              ) : (
+                <Text style={{ fontSize: 18, marginRight: 8 }}>{spectateFriend.avatar || "👤"}</Text>
+              )
+            ) : userAvatar && (userAvatar.startsWith("file:") || userAvatar.startsWith("http") || userAvatar.startsWith("data:")) ? (
               <Image source={{ uri: userAvatar }} style={{ width: 24, height: 24, borderRadius: 12, marginRight: 8 }} />
             ) : (
               <Text style={{ fontSize: 18, marginRight: 8 }}>{userAvatar || "👤"}</Text>
             )}
-            <Text style={{ fontWeight: 'bold', color: '#24C789', fontSize: 14 }}>Tracking You</Text>
+            <Text style={{ fontWeight: 'bold', color: '#24C789', fontSize: 14 }}>{mode === 'spectate' ? 'Watching: ' + (spectateFriend?.name || 'Live') : 'Tracking You'}</Text>
           </View>
 
           {/* Recenter Button */}
