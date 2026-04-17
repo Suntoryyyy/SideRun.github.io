@@ -526,8 +526,8 @@ export default StyleSheet.create({
     marginTop: 2,
   },
   medal: {
-    fontSize: 24,
-  }
+      fontSize: 24,
+    },
 
   feedCard: {
     backgroundColor: '#FFFFFF',
