@@ -25,6 +25,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './services/supabase';
 import { View, ActivityIndicator, Platform } from 'react-native';
 import * as Font from 'expo-font';
+import useUserStore from './store/useUserStore';
 import { Ionicons } from '@expo/vector-icons';
 
 // Import screen components
@@ -100,7 +101,7 @@ function DrawerNavigator({ handleLogout }) {
           )
         }}
       >
-        {props => <ProfileScreen {...props} handleLogout={handleLogout} />}
+        {props => <ProfileScreen {...props} handleLogout={handleLogoutWrapper} />}
       </Drawer.Screen>
       <Drawer.Screen 
         name="Badges" 
@@ -121,8 +122,7 @@ function DrawerNavigator({ handleLogout }) {
 }
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const { initialize, isLoggedIn, isLoading, logout } = useUserStore();
 
   useEffect(() => {
     async function prepareApp() {
@@ -135,7 +135,7 @@ export default function App() {
         } else {
           await Font.loadAsync(Ionicons.font);
         }
-        await checkLoginStatus();
+        await initialize();
       } catch (e) {
         console.warn(e);
       } finally {
@@ -145,35 +145,13 @@ export default function App() {
     prepareApp();
   }, []);
 
-  const checkLoginStatus = async () => {
-    try {
-      let user = null;
-      // For web, check sessionStorage first (used when Remember Me is unchecked)
-      if (Platform.OS === 'web') {
-        user = sessionStorage.getItem('currentUser');
-      }
-      
-      // If not in sessionStorage, check permanent AsyncStorage
-      if (!user) {
-        user = await AsyncStorage.getItem('currentUser');
-      }
 
-      if (user) setIsLoggedIn(true);
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
-  const handleLogout = async () => {
+  const handleLogoutWrapper = async () => {
     try {
-      await account.deleteSession('current');
+      if (global.account) await global.account.deleteSession('current');
     } catch (e) {}
-
-    await AsyncStorage.removeItem('currentUser');
-    if (Platform.OS === 'web') {
-      sessionStorage.removeItem('currentUser');
-    }
-    setIsLoggedIn(false);
+    await logout();
   };
 
   if (isLoading) {
@@ -191,16 +169,16 @@ export default function App() {
         {!isLoggedIn ? (
           <>
             <Stack.Screen name="Login">
-              {props => <LoginScreen {...props} setLoggedIn={setIsLoggedIn} />}
+              {props => <LoginScreen {...props}  />}
             </Stack.Screen>
             <Stack.Screen name="Register">
-              {props => <RegisterScreen {...props} setLoggedIn={setIsLoggedIn} />}
+              {props => <RegisterScreen {...props}  />}
             </Stack.Screen>
           </>
         ) : (
           <>
             <Stack.Screen name="Main">
-              {props => <DrawerNavigator {...props} handleLogout={handleLogout} />}
+              {props => <DrawerNavigator {...props} handleLogout={handleLogoutWrapper} />}
             </Stack.Screen>
             <Stack.Screen name="Chat" component={ChatScreen} />
           </>

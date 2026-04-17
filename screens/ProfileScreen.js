@@ -13,6 +13,7 @@ import {
  
   Switch,
 } from "react-native";
+import useUserStore from '../store/useUserStore';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -22,7 +23,8 @@ import CustomAlert from '../components/CustomAlert';
 import NativeFilePicker from "./NativeFilePicker";
 
 export default function ProfileScreen({ navigation, handleLogout }) {
-  const [currentUser, setCurrentUser] = useState(null);
+  const currentUser = useUserStore((s) => s.user);
+  const updateProfile = useUserStore((s) => s.updateProfile);
   const [username, setUsername] = useState("");
   const [avatar, setAvatar] = useState("👤");
   const [isEditing, setIsEditing] = useState(false);

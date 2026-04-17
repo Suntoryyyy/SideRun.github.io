@@ -16,6 +16,7 @@ import {
   TouchableWithoutFeedback,
 } from "react-native";
 import styles from "../styles/FriendsScreenStyles";
+import useUserStore from '../store/useUserStore';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";

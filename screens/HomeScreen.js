@@ -11,6 +11,7 @@ import {
   Animated,
   Platform,
 } from "react-native";
+import useUserStore from '../store/useUserStore';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../services/supabase";
 import { useIsFocused } from "@react-navigation/native";

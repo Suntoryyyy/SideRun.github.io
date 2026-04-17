@@ -4,6 +4,7 @@ import * as TaskManager from 'expo-task-manager';
 
 const BACKGROUND_LOCATION_TASK = "BACKGROUND_LOCATION_TASK";
 import { Alert } from "react-native";
+import useUserStore from '../store/useUserStore';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../services/supabase";
 import * as Haptics from "expo-haptics";

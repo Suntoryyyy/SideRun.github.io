@@ -15,6 +15,7 @@ import {
   Animated,
 } from "react-native";
 import styles from "../styles/RunScreenStyles";
+import useUserStore from '../store/useUserStore';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -61,9 +62,10 @@ const formatDuration = (totalSeconds) => {
 
 export default function RunScreen({ route, navigation }) {
   const { mode = "solo", spectateFriend = null } = route?.params || {};
+  const user = useUserStore((s) => s.user);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
   const [friendsWatching, setFriendsWatching] = useState(2);
-  const [userAvatar, setUserAvatar] = useState(null);
+  const userAvatar = user?.avatar;
   const [cheers, setCheers] = useState([]);
   const [visibilityScope, setVisibilityScope] = useState("friends");
 
@@ -138,14 +140,11 @@ export default function RunScreen({ route, navigation }) {
   useEffect(() => {
     let cheerSub;
     let isMounted = true;
-    AsyncStorage.getItem("currentUser").then((c) => {
-      if (!isMounted) return;
-      if (c) {
-        const cu = JSON.parse(c);
-        const myId = cu.id || cu.phone || cu.username; 
-        myIdRef.current = myId;
+    if (user && isMounted) {
+      const myId = user.id || user.phone || user.username;
+      myIdRef.current = myId;
 
-        cheerSub = supabase
+      cheerSub = supabase
           .channel("public:live_cheers")
           .on(
             "postgres_changes",
