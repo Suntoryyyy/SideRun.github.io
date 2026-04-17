@@ -114,7 +114,7 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
   const getCurrentLocation = async () => {
     try {
       let location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
+        accuracy: Location.Accuracy.BestForNavigation,
       });
       if (!location) location = await Location.getLastKnownPositionAsync();
       if (location) {
@@ -171,7 +171,7 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
     watchId.current = await Location.watchPositionAsync(
       {
         accuracy: Location.Accuracy.BestForNavigation,
-        timeInterval: 2000,
+        timeInterval: 1000,
         distanceInterval: 1,
       },
       (location) => updateLocation(location),
@@ -180,7 +180,7 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
 
   const updateLocation = (location) => {
     // 2. High-accuracy GPS filter setup
-    if (location.coords.accuracy > 15) {
+    if (location.coords.accuracy > 30) {
       console.log("Ignored poor accuracy location:", location.coords.accuracy);
       return;
     }
@@ -223,7 +223,7 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
     watchId.current = await Location.watchPositionAsync(
       {
         accuracy: Location.Accuracy.BestForNavigation,
-        timeInterval: 2000,
+        timeInterval: 1000,
         distanceInterval: 1,
       },
       (location) => updateLocation(location),

@@ -1,24 +1,40 @@
 import React from 'react';
+import * as Haptics from 'expo-haptics';
 import { View, Text, TouchableOpacity, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import styles from '../../styles/RunScreenStyles';
+import * as ImagePicker from 'expo-image-picker';
 
 const SpectatorControls = ({ mode, isRunning, isPaused, isFinished, visibilityScope, setVisibilityScope, startRun, pauseRun, resumeRun, stopRun, closeRun, sendCheer, contentOpacity }) => {
   return (
     <View style={styles.controlsContainer}>
           {mode === "spectate" ? (
             <View style={{flexDirection: "row", justifyContent: "space-between", width: "100%", paddingHorizontal: 20}}>
-              <TouchableOpacity onPress={() => sendCheer("🔥")} style={{backgroundColor: "#F0F0F0", width: 60, height: 60, borderRadius: 30, justifyContent: "center", alignItems: "center"}}>
-                <Text style={{fontSize: 28}}>🔥</Text>
+              <TouchableOpacity onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); sendCheer("🔥"); }} style={{backgroundColor: "#F0F0F0", width: 50, height: 50, borderRadius: 25, justifyContent: "center", alignItems: "center"}}>
+                <Text style={{fontSize: 24}}>🔥</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => sendCheer("👏")} style={{backgroundColor: "#F0F0F0", width: 60, height: 60, borderRadius: 30, justifyContent: "center", alignItems: "center"}}>
-                <Text style={{fontSize: 28}}>👏</Text>
+              <TouchableOpacity onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); sendCheer("🚀"); }} style={{backgroundColor: "#F0F0F0", width: 50, height: 50, borderRadius: 25, justifyContent: "center", alignItems: "center"}}>
+                <Text style={{fontSize: 24}}>🚀</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => sendCheer("🚀")} style={{backgroundColor: "#F0F0F0", width: 60, height: 60, borderRadius: 30, justifyContent: "center", alignItems: "center"}}>
-                <Text style={{fontSize: 28}}>🚀</Text>
+              <TouchableOpacity onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); sendCheer("💦"); }} style={{backgroundColor: "#F0F0F0", width: 50, height: 50, borderRadius: 25, justifyContent: "center", alignItems: "center"}}>
+                <Text style={{fontSize: 24}}>💦</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => sendCheer("💦")} style={{backgroundColor: "#F0F0F0", width: 60, height: 60, borderRadius: 30, justifyContent: "center", alignItems: "center"}}>
-                <Text style={{fontSize: 28}}>💦</Text>
+              <TouchableOpacity 
+                onPress={async () => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  let result = await ImagePicker.launchImageLibraryAsync({
+                    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                    allowsEditing: true,
+                    aspect: [1, 1],
+                    quality: 0.1,
+                    base64: true,
+                  });
+                  if (!result.canceled && result.assets[0].base64) {
+                    sendCheer("data:image/jpeg;base64," + result.assets[0].base64);
+                  }
+                }} 
+                style={{backgroundColor: "#E8F8F2", width: 50, height: 50, borderRadius: 25, justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "#24C789" }}>
+                <Ionicons name="add" size={28} color="#24C789" />
               </TouchableOpacity>
             </View>
           ) : isFinished ? (
@@ -29,7 +45,7 @@ const SpectatorControls = ({ mode, isRunning, isPaused, isFinished, visibilitySc
               </View>
               <TouchableOpacity
                 style={styles.circleStartButton}
-                onPress={closeRun}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); closeRun(); }}
               >
                 <Text style={styles.circleStartText}>DONE</Text>
               </TouchableOpacity>

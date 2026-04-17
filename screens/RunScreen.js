@@ -1,3 +1,7 @@
+import axios from 'axios';
+import { Image } from 'expo-image';
+import * as Haptics from 'expo-haptics';
+import { BlurView } from 'expo-blur';
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -161,6 +165,7 @@ export default function RunScreen({ route, navigation }) {
                 const cheerId = Date.now().toString() + Math.random();
 
                 // Render visual element immediately (max limit 15 to prevent lag)
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setLiveEmojis((prev) => {
                   const limited = prev.length > 15 ? prev.slice(-14) : prev;
                   return [
@@ -399,6 +404,7 @@ export default function RunScreen({ route, navigation }) {
         ]}
         {...panResponder.panHandlers}
       >
+        <BlurView intensity={85} tint="light" style={StyleSheet.absoluteFillObject} />
         <TouchableOpacity
           style={styles.dragHandleContainer}
           activeOpacity={0.8}
@@ -419,7 +425,7 @@ export default function RunScreen({ route, navigation }) {
         />
 
 
-        <SpectatorControls
+                <SpectatorControls
           mode={mode}
           isRunning={isRunning}
           isPaused={isPaused}
@@ -434,47 +440,16 @@ export default function RunScreen({ route, navigation }) {
           sendCheer={sendCheer}
           contentOpacity={contentOpacity}
         />
-</Animated.View>
-              <TouchableOpacity
-                style={styles.circleStartButton}
-                onPress={startRun}
-              >
-                <Text style={styles.circleStartText}>GO</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.activeControls}>
-              {isPaused ? (
-                <TouchableOpacity
-                  style={styles.circleResumeButton}
-                  onPress={resumeRun}
-                >
-                  <Text style={styles.circleButtonText}>RESUME</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  style={styles.circlePauseButton}
-                  onPress={pauseRun}
-                >
-                  <Text style={styles.circleButtonText}>PAUSE</Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity
-                style={styles.circleStopButton}
-                onPress={stopRun}
-              >
-                <Text style={styles.circleButtonText}>FINISH</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {mode === "shared" && isRunning && (
-            <TouchableOpacity style={styles.cheerButton} onPress={sendCheer}>
-              <Text style={styles.cheerButtonText}>Send Cheer 🎉</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        
       </Animated.View>
+      {isFinished && (
+        <RunSummaryModal
+          durationInSeconds={durationInSeconds}
+          runData={runData}
+          currentSpeed={currentSpeed}
+          closeRun={closeRun}
+        />
+      )}
     </View>
   );
 }

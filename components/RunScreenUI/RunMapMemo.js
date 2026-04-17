@@ -1,5 +1,7 @@
 import { Animated } from 'react-native';
 import React from 'react';
+import * as Haptics from 'expo-haptics';
+import { BlurView } from 'expo-blur';
 import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Polyline, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -34,7 +36,11 @@ const FloatingEmoji = ({ emoji, onComplete }) => {
         },
       ]}
     >
-      <Text style={styles.floatingEmojiText}>{emoji}</Text>
+      {emoji && (emoji.startsWith('data:image') || emoji.startsWith('file:') || emoji.startsWith('http')) ? (
+        <Image source={{ uri: emoji }} style={{ width: 60, height: 60 }} contentFit="contain" />
+      ) : (
+        <Text style={styles.floatingEmojiText}>{emoji}</Text>
+      )}
     </Animated.View>
   );
 };
@@ -58,10 +64,14 @@ const RunMapMemo = React.memo(({
     <View style={styles.mapContainer}>
         {/* Floating Back Button */}
         <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          style={[styles.backButton, { padding: 0 }]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            navigation.goBack();
+          }}
           hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
         >
+          <BlurView intensity={80} tint="light" style={{ padding: 10, borderRadius: 20 }}>
           <Ionicons name="arrow-back" size={28} color="#333" />
         </TouchableOpacity>
 
@@ -102,7 +112,7 @@ const RunMapMemo = React.memo(({
               style={Object.assign({}, styles.map, { flex: 1 })}
               provider={PROVIDER_GOOGLE}
               initialRegion={region}
-              showsUserLocation={false}
+              showsUserLocation={true}
               followsUserLocation={false} // Detach forced follow
               customMapStyle={MapStyle}
             >
@@ -113,31 +123,7 @@ const RunMapMemo = React.memo(({
                   strokeWidth={4}
                 />
               )}
-            {currentLocation && (
-              <Marker
-                coordinate={currentLocation}
-                title="You are here"
-                anchor={{ x: 0.5, y: 0.5 }}
-              >
-                <View style={styles.avatarHaloOuter}>
-                  <View style={styles.avatarHaloInner}>
-                    {userAvatar &&
-                    (userAvatar.startsWith("file:") ||
-                      userAvatar.startsWith("http") ||
-                      userAvatar.startsWith("data:")) ? (
-                      <Image
-                        source={{ uri: userAvatar }}
-                        style={styles.mapAvatarImage}
-                      />
-                    ) : (
-                      <Text style={styles.mapAvatarEmoji}>
-                        {userAvatar || "👤"}
-                      </Text>
-                    )}
-                  </View>
-                </View>
-              </Marker>
-            )}
+            
             {visibilityScope !== "private" &&
               isRunning &&
               liveFriends.map((friend) => (
@@ -168,10 +154,44 @@ const RunMapMemo = React.memo(({
                 </Marker>
               ))}
           </MapView>
+                    {/* User Identity floating badge */}
+          <View style={{
+            position: 'absolute',
+            bottom: 40,
+            left: 20,
+            backgroundColor: 'transparent',
+            overflow: 'hidden',
+            borderRadius: 20,
+            paddingVertical: 5,
+            paddingHorizontal: 15,
+            flexDirection: 'row',
+            alignItems: 'center',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2,
+            shadowRadius: 4,
+            elevation: 4
+          }}>
+            <BlurView intensity={80} tint="light" style={{ ...StyleSheet.absoluteFillObject }} />
+            {userAvatar && (userAvatar.startsWith("file:") || userAvatar.startsWith("http") || userAvatar.startsWith("data:")) ? (
+              <Image source={{ uri: userAvatar }} style={{ width: 24, height: 24, borderRadius: 12, marginRight: 8 }} />
+            ) : (
+              <Text style={{ fontSize: 18, marginRight: 8 }}>{userAvatar || "👤"}</Text>
+            )}
+            <Text style={{ fontWeight: 'bold', color: '#24C789', fontSize: 14 }}>Tracking You</Text>
+          </View>
+
           {/* Recenter Button */}
-          <TouchableOpacity style={styles.recenterButton} onPress={recenterMap,
-  setLiveEmojis}>
+          <TouchableOpacity 
+          style={[styles.recenterButton, { padding: 0 }]} 
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            recenterMap();
+          }}
+        >
+          <BlurView intensity={80} tint="light" style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}>
             <Ionicons name="navigate" size={24} color="#000" />
+          </BlurView>
           </TouchableOpacity>
         </View>
         )}
