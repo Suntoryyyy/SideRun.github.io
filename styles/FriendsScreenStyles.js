@@ -287,7 +287,10 @@ export default StyleSheet.create({
     overflow: 'hidden',
   },
   sheetName: {
-    fontSize: 28,
+    fontSize: 22,
+    marginTop: 4,
+    maxWidth: "70%",
+    textAlign: "center",
     fontWeight: '900',
     color: '#111111',
     marginBottom: 4,
@@ -641,4 +644,15 @@ export default StyleSheet.create({
     marginTop: 16,
   },
 
+  emptyFeedState: {
+    alignItems: 'center',
+    marginTop: 60,
+    padding: 20,
+  },
+  emptyFeedText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#888',
+    marginTop: 16,
+  },
 });
