@@ -22,6 +22,9 @@ import * as Speech from "expo-speech";
 import { Audio } from "expo-av";
 import { supabase } from "../services/supabase";
 import MapStyle from "./MapStyle.json";
+import RunMapMemo from "../components/RunScreenUI/RunMapMemo";
+import MetricDashboard from "../components/RunScreenUI/MetricDashboard";
+import SpectatorControls from "../components/RunScreenUI/SpectatorControls";
 
 if (
   Platform.OS === "android" &&
@@ -43,82 +46,7 @@ if (Platform.OS !== "web") {
 const { width, height } = Dimensions.get("window");
 
 // --- FLOATING EMOJI COMPONENT ---
-const FloatingEmoji = ({ emoji, onComplete }) => {
-  const translateY = useRef(new Animated.Value(0)).current;
-  const opacity = useRef(new Animated.Value(1)).current;
-  const scale = useRef(new Animated.Value(0.5)).current;
-  const translateX = useRef(new Animated.Value(0)).current;
 
-  // Randomize the horizontal drift
-  const randomDrift = (Math.random() - 0.5) * 100;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: -300, // Float upwards
-        duration: 2500,
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateX, {
-        toValue: randomDrift, // Drift sideways
-        duration: 2500,
-        useNativeDriver: true,
-      }),
-      Animated.sequence([
-        Animated.spring(scale, {
-          toValue: 2, // Pop in
-          friction: 3,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scale, {
-          toValue: 1.5,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-      ]),
-      Animated.sequence([
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 0, // Fade out at the end
-          delay: 1800,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-      ]),
-    ]).start(() => {
-      if (onComplete) onComplete();
-    });
-  }, []);
-
-  return (
-    <Animated.View
-      style={{
-        position: "absolute",
-        bottom: 120, // Start just above the bottom panel
-        right: 40,
-        transform: [{ translateY }, { translateX }, { scale }],
-        opacity,
-        zIndex: 999,
-        elevation: 999,
-      }}
-    >
-      <Text
-        style={{
-          fontSize: 48,
-          textShadowColor: "rgba(0,0,0,0.3)",
-          textShadowOffset: { width: 0, height: 2 },
-          textShadowRadius: 4,
-        }}
-      >
-        {emoji}
-      </Text>
-    </Animated.View>
-  );
-};
 // ---------------------------------
 
 import { useRunTracking } from "../hooks/useRunTracking";
@@ -448,145 +376,22 @@ export default function RunScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.mapContainer}>
-        {/* Floating Back Button */}
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-        >
-          <Ionicons name="arrow-back" size={28} color="#333" />
-        </TouchableOpacity>
+            <RunMapMemo 
+        navigation={navigation}
+        region={region}
+        currentLocation={currentLocation}
+        runData={runData}
+        mapRef={mapRef}
+        userAvatar={userAvatar}
+        visibilityScope={visibilityScope}
+        isRunning={isRunning}
+        liveFriends={liveFriends}
+        liveEmojis={liveEmojis}
+        cheers={cheers}
+        recenterMap={recenterMap}
+        setLiveEmojis={setLiveEmojis}
+      />
 
-        {Platform.OS === "web" ? (
-          // Real OpenStreetMap embed for web fallback
-          <div
-            style={{
-              width: "100%",
-              height: "100%",
-              borderRadius: 8,
-              overflow: "hidden",
-            }}
-          >
-            <iframe
-              width="100%"
-              height="100%"
-              frameBorder="0"
-              scrolling="no"
-              marginHeight="0"
-              marginWidth="0"
-              src={`https://www.openstreetmap.org/export/embed.html?bbox=${region.longitude - 0.005},${region.latitude - 0.005},${region.longitude + 0.005},${region.latitude + 0.005}&layer=mapnik&marker=${currentLocation?.latitude || region.latitude},${currentLocation?.longitude || region.longitude}`}
-              style={{ border: "none" }}
-            />
-            <View style={styles.webMapOverlayCard}>
-              <Text style={styles.webMapOverlayText}>GPS Tracking Active</Text>
-              {runData.coordinates.length > 0 && (
-                <Text style={styles.webMapOverlayCoords}>
-                  Route: {runData.coordinates.length} pts logged
-                </Text>
-              )}
-            </View>
-          </div>
-        ) : (
-          // Native map view
-          <View style={styles.map}>
-            <MapView
-              ref={mapRef}
-              style={Object.assign({}, styles.map, { flex: 1 })}
-              provider={PROVIDER_GOOGLE}
-              initialRegion={region}
-              showsUserLocation={false}
-              followsUserLocation={false} // Detach forced follow
-              customMapStyle={MapStyle}
-            >
-              {runData.coordinates.length > 1 && (
-                <Polyline
-                  coordinates={runData.coordinates}
-                  strokeColor="#24C789"
-                  strokeWidth={4}
-                />
-              )}
-            {currentLocation && (
-              <Marker
-                coordinate={currentLocation}
-                title="You are here"
-                anchor={{ x: 0.5, y: 0.5 }}
-              >
-                <View style={styles.avatarHaloOuter}>
-                  <View style={styles.avatarHaloInner}>
-                    {userAvatar &&
-                    (userAvatar.startsWith("file:") ||
-                      userAvatar.startsWith("http") ||
-                      userAvatar.startsWith("data:")) ? (
-                      <Image
-                        source={{ uri: userAvatar }}
-                        style={styles.mapAvatarImage}
-                      />
-                    ) : (
-                      <Text style={styles.mapAvatarEmoji}>
-                        {userAvatar || "👤"}
-                      </Text>
-                    )}
-                  </View>
-                </View>
-              </Marker>
-            )}
-            {visibilityScope !== "private" &&
-              isRunning &&
-              liveFriends.map((friend) => (
-                <Marker
-                  key={friend.id}
-                  coordinate={{
-                    latitude: friend.latitude,
-                    longitude: friend.longitude,
-                  }}
-                  title={`${friend.name} is running`}
-                  anchor={{ x: 0.5, y: 0.5 }}
-                >
-                  <View
-                    style={[
-                      styles.avatarHaloOuter,
-                      { backgroundColor: "rgba(36, 199, 137, 0.2)" },
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.avatarHaloInner,
-                        { borderColor: "#24C789" },
-                      ]}
-                    >
-                      <Text style={styles.mapAvatarEmoji}>{friend.avatar}</Text>
-                    </View>
-                  </View>
-                </Marker>
-              ))}
-          </MapView>
-          {/* Recenter Button */}
-          <TouchableOpacity style={styles.recenterButton} onPress={recenterMap}>
-            <Ionicons name="navigate" size={24} color="#000" />
-          </TouchableOpacity>
-        </View>
-        )}
-
-        {liveEmojis.map((c, i) => (
-          <FloatingEmoji
-            key={c.id}
-            emoji={c.emoji}
-            onComplete={() =>
-              setLiveEmojis((prev) => prev.filter((e) => e.id !== c.id))
-            }
-          />
-        ))}
-
-        {cheers.map((cheer, index) => (
-          <View
-            key={index}
-            style={[styles.cheerBubble, { top: 50 + index * 60 }]}
-          >
-            <Text style={styles.cheerText}>{cheer.emoji}</Text>
-          </View>
-        ))}
-      </View>
 
       <Animated.View
         style={[
@@ -603,113 +408,34 @@ export default function RunScreen({ route, navigation }) {
           <View style={styles.dragHandle} />
         </TouchableOpacity>
 
-        <View style={styles.statsContainer}>
-          {mode === "spectate" && spectateFriend && (
-             <View style={{ alignItems: 'center', marginBottom: 10 }}>
-               <Text style={{ fontSize: 16, fontWeight: '700', color: '#FF9500' }}>
-                 🔴 Spectating: {spectateFriend.name} {spectateFriend.avatar}
-               </Text>
-             </View>
-          )}
-          <View style={styles.statsRow}>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>
-                {(runData.distance * 1000).toFixed(0)}
-              </Text>
-              <Text style={styles.statLabel}>METERS</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>
-                {formatDuration(durationInSeconds)}
-              </Text>
-              <Text style={styles.statLabel}>TIME</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{currentSpeed}</Text>
-              <Text style={styles.statLabel}>SPEED (M/S)</Text>
-            </View>
-          </View>
+              <MetricDashboard
+          mode={mode}
+          spectateFriend={spectateFriend}
+          runData={runData}
+          durationInSeconds={durationInSeconds}
+          currentSpeed={currentSpeed}
+          contentOpacity={contentOpacity}
+          friendsWatching={friendsWatching}
+          signalLost={signalLost}
+        />
 
-          <Animated.View
-            style={[
-              styles.statsRow,
-              { marginTop: 24, opacity: contentOpacity },
-            ]}
-          >
-            <View style={{ flex: 1 }} />
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>
-                {Math.round(runData.calories)}
-              </Text>
-              <Text style={styles.statLabel}>KCAL BURNED</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              {mode === "shared" && (
-                <Text style={styles.friendsText}>
-                  👥 {friendsWatching} friends
-                </Text>
-              )}
-            </View>
-          </Animated.View>
-        </View>
 
-<View style={styles.controlsContainer}>
-          {mode === "spectate" ? (
-            <View style={{flexDirection: "row", justifyContent: "space-between", width: "100%", paddingHorizontal: 20}}>
-              <TouchableOpacity onPress={() => sendCheer("🔥")} style={{backgroundColor: "#F0F0F0", width: 60, height: 60, borderRadius: 30, justifyContent: "center", alignItems: "center"}}>
-                <Text style={{fontSize: 28}}>🔥</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => sendCheer("👏")} style={{backgroundColor: "#F0F0F0", width: 60, height: 60, borderRadius: 30, justifyContent: "center", alignItems: "center"}}>
-                <Text style={{fontSize: 28}}>👏</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => sendCheer("🚀")} style={{backgroundColor: "#F0F0F0", width: 60, height: 60, borderRadius: 30, justifyContent: "center", alignItems: "center"}}>
-                <Text style={{fontSize: 28}}>🚀</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => sendCheer("💦")} style={{backgroundColor: "#F0F0F0", width: 60, height: 60, borderRadius: 30, justifyContent: "center", alignItems: "center"}}>
-                <Text style={{fontSize: 28}}>💦</Text>
-              </TouchableOpacity>
-            </View>
-          ) : isFinished ? (
-            <View style={styles.activeControls}>
-              <View style={[styles.statBox, { marginRight: 20 }]}>
-                <Text style={styles.statValue}>Done!</Text>
-                <Text style={styles.statLabel}>Completed</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.circleStartButton}
-                onPress={closeRun}
-              >
-                <Text style={styles.circleStartText}>DONE</Text>
-              </TouchableOpacity>
-            </View>
-          ) : !isRunning ? (
-            <View style={styles.preRunControls}>
-              <Animated.View
-                style={[
-                  styles.scopeSelectorContainer,
-                  { opacity: contentOpacity },
-                ]}
-              >
-                {["public", "friends", "private"].map((scope) => (
-                  <TouchableOpacity
-                    key={scope}
-                    style={[
-                      styles.scopeBtn,
-                      visibilityScope === scope && styles.scopeBtnActive,
-                    ]}
-                    onPress={() => setVisibilityScope(scope)}
-                  >
-                    <Text
-                      style={[
-                        styles.scopeBtnText,
-                        visibilityScope === scope && styles.scopeBtnTextActive,
-                      ]}
-                    >
-                      {scope.charAt(0).toUpperCase() + scope.slice(1)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </Animated.View>
+        <SpectatorControls
+          mode={mode}
+          isRunning={isRunning}
+          isPaused={isPaused}
+          isFinished={isFinished}
+          visibilityScope={visibilityScope}
+          setVisibilityScope={setVisibilityScope}
+          startRun={startRun}
+          pauseRun={pauseRun}
+          resumeRun={resumeRun}
+          stopRun={stopRun}
+          closeRun={closeRun}
+          sendCheer={sendCheer}
+          contentOpacity={contentOpacity}
+        />
+</Animated.View>
               <TouchableOpacity
                 style={styles.circleStartButton}
                 onPress={startRun}
