@@ -20,6 +20,8 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
   const [currentLocation, setCurrentLocation] = useState(null);
   const [region, setRegion] = useState(null);
   const [liveFriends, setLiveFriends] = useState([]);
+  const [signalLost, setSignalLost] = useState(false);
+  const lastUpdateTime = useRef(Date.now());
 
   const watchId = useRef(null);
   const lastLocation = useRef(null);
@@ -29,6 +31,15 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
       // Mock tracking a friend
       setIsRunning(true);
       const mockStartLat = 37.78825;
+      
+    const heartbeat = setInterval(() => {
+      if (Date.now() - lastUpdateTime.current > 10000) {
+        setSignalLost(true);
+      } else {
+        setSignalLost(false);
+      }
+    }, 5000);
+
       const mockStartLng = -122.4324;
       setCurrentLocation({ latitude: mockStartLat, longitude: mockStartLng });
       setRegion({
@@ -52,6 +63,7 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
             longitude: lastLoc.longitude + 0.0001
           };
           setCurrentLocation(newLoc);
+          lastUpdateTime.current = Date.now();
           return {
             ...prev,
             distance: prev.distance + 0.015,
@@ -60,7 +72,7 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
           };
         });
       }, 3000);
-      return () => clearInterval(interval);
+      return () => { clearInterval(interval); clearInterval(heartbeat); };
     }
   }, [mode]);
 
@@ -297,6 +309,7 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
   };
 
   return {
+    signalLost,
     isRunning,
     isPaused,
     durationInSeconds,

@@ -217,15 +217,16 @@ export default function RunScreen({ route, navigation }) {
           .channel("public:live_cheers")
           .on(
             "postgres_changes",
-            { event: "INSERT", schema: "public", table: "live_cheers" },
+            { 
+              event: "INSERT", 
+              schema: "public", 
+              table: "live_cheers",
+              filter: `receiver_id=in.(${[cu.id, cu.phone, cu.username].filter(Boolean).join(',')})`
+            },
             (payload) => {
               const newCheer = payload.new;
-              // Check if it's meant for us (receiver_id matches our id or phone)
-              if (
-                newCheer.receiver_id === myId ||
-                newCheer.receiver_id === cu.phone ||
-                newCheer.receiver_id === cu.username
-              ) {
+              // Filter already applied at server level, but keep this safe check
+              if (true) {
                 const cheerId = Date.now().toString() + Math.random();
 
                 // Render visual element immediately (max limit 15 to prevent lag)
@@ -266,6 +267,7 @@ export default function RunScreen({ route, navigation }) {
     stopRun,
     isFinished,
     closeRun,
+    signalLost,
   } = useRunTracking(visibilityScope, userAvatar, navigation, mode);
 
   const recenterMap = () => {
@@ -286,6 +288,18 @@ export default function RunScreen({ route, navigation }) {
       setRegionSet(true);
     }
   }, [currentLocation, regionSet]);
+
+  // Smooth MAP CAMERA for Spectate
+  useEffect(() => {
+    if (mode === "spectate" && currentLocation && mapRef.current && regionSet) {
+      mapRef.current.animateCamera({
+        center: currentLocation,
+        pitch: 0,
+        heading: 0,
+        zoom: 16
+      }, { duration: 1000 });
+    }
+  }, [currentLocation, mode, regionSet]);
 
   const panY = useRef(new Animated.Value(0)).current;
 
