@@ -141,7 +141,50 @@ export default function FriendsScreen({ navigation }) {
         await AsyncStorage.setItem("globalFeed", JSON.stringify(feedData));
       } else {
         const existingFeed = await AsyncStorage.getItem("globalFeed");
-        if (existingFeed) setFeed(JSON.parse(existingFeed));
+        if (existingFeed && JSON.parse(existingFeed).length > 0) {
+          setFeed(JSON.parse(existingFeed));
+        } else {
+          // Provide some mock data so the feed is not empty initially
+          const mockFeed = [
+            {
+              id: "mock1",
+              user: "Alice Johnson",
+              avatar: "👩‍💼",
+              time: "Just now",
+              distance: "5.2",
+              pace: "5'30\"",
+              duration: "28:36",
+              likes: 12,
+              comments: 2,
+              hasLiked: false,
+            },
+            {
+              id: "mock2",
+              user: "Bob Smith",
+              avatar: "👨‍🚀",
+              time: "2 hours ago",
+              distance: "10.0",
+              pace: "4'45\"",
+              duration: "47:30",
+              likes: 45,
+              comments: 8,
+              hasLiked: true,
+            },
+            {
+              id: "mock3",
+              user: "Diana Prince",
+              avatar: "🏃‍♀️",
+              time: "Yesterday",
+              distance: "21.1",
+              pace: "5'10\"",
+              duration: "1:49:02",
+              likes: 120,
+              comments: 15,
+              hasLiked: false,
+            }
+          ];
+          setFeed(mockFeed);
+        }
       }
 
       // Leaderboard
