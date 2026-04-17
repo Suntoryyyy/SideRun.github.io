@@ -144,6 +144,7 @@ export default function WeatherScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={{ position: 'absolute', top: -1000, left: 0, right: 0, height: 1000, backgroundColor: '#F4F5F7' }} />
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
@@ -259,12 +260,19 @@ const styles = StyleSheet.create({
     left: 20,
     top: 60,
     zIndex: 10,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   title: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '900',
     color: '#111111',
     marginBottom: 8,
+    marginTop: 4,
+    maxWidth: '70%',
+    textAlign: 'center',
     letterSpacing: -0.5,
     textTransform: 'uppercase',
   },

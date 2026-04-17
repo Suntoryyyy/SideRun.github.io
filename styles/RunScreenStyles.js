@@ -74,10 +74,10 @@ export default StyleSheet.create({
   },
   dashboardContainer: {
     position: 'absolute',
-    bottom: 0,
+    bottom: -400,
     left: 0,
     right: 0,
-    height: height * 0.75, // 3/4 screen expanded
+    height: height * 0.75 + 400, // 3/4 screen expanded
     backgroundColor: 'rgba(255, 255, 255, 0.70)', overflow: 'hidden',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
@@ -87,7 +87,7 @@ export default StyleSheet.create({
     shadowRadius: 15,
     elevation: 8,
     paddingTop: 12,
-    paddingBottom: 25,
+    paddingBottom: 425,
     justifyContent: 'space-between',
   },
   dashboardCollapsed: {
