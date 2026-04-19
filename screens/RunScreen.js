@@ -256,10 +256,10 @@ export default function RunScreen({ route, navigation }) {
         );
       },
       onPanResponderMove: (evt, gestureState) => {
-        // Clamp panY between 0 and max collapsed position
+        // Clamp panY to prevent over-scrolling beyond top
         const maxPanY = height * 0.75 - 200;
-        const clampedDy = Math.min(Math.max(gestureState.dy, -50), maxPanY + 50);
-        panY.setValue(clampedDy);
+        const clampedDy = Math.max(gestureState.dy, 0); // Never go above 0 (top)
+        panY.setValue(Math.min(clampedDy, maxPanY + 100)); // Max with some buffer
       },
       onPanResponderRelease: (evt, gestureState) => {
         if (gestureState.dy > 50) {
