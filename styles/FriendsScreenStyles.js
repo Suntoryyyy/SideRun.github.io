@@ -7,7 +7,9 @@ export default StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 40,
+    paddingTop: 100,
     minHeight: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
   },
   header: {
     alignItems: 'center',
