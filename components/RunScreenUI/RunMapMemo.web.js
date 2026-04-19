@@ -110,9 +110,9 @@ const RunMapMemo = ({
         )}
 
         {/* Spectator target marker */}
-        {mode === 'spectate' && spectateFriend && spectateFriend.latitude !== undefined && (
-          <Marker position={[spectateFriend.latitude, spectateFriend.longitude]}>
-            <Popup>{spectateFriend.name || 'Friend'}</Popup>
+        {mode === 'spectate' && currentLocation && (
+          <Marker position={[currentLocation.latitude, currentLocation.longitude]}>
+            <Popup>{spectateFriend?.name || 'Friend'}</Popup>
           </Marker>
         )}
         

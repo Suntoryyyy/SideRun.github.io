@@ -71,15 +71,21 @@ export default function RunScreen({ route, navigation }) {
 
   // Background Audio Ducking Init
   useEffect(() => {
-    Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-      staysActiveInBackground: true,
-      interruptionModeIOS: 1, // DO_NOT_MIX (lowers background volume)
-      playsInSilentModeIOS: true,
-      shouldDuckAndroid: true,
-      interruptionModeAndroid: 1,
-      playThroughEarpieceAndroid: false,
-    });
+    if (Platform.OS !== "web") {
+      try {
+        Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          staysActiveInBackground: true,
+          interruptionModeIOS: 1, // DO_NOT_MIX (lowers background volume)
+          playsInSilentModeIOS: true,
+          shouldDuckAndroid: true,
+          interruptionModeAndroid: 1, // DO_NOT_MIX
+          playThroughEarpieceAndroid: false,
+        });
+      } catch (err) {
+        console.warn("Failed to set audio mode:", err);
+      }
+    }
   }, []);
 
   const processCheerQueue = async () => {
@@ -106,20 +112,26 @@ export default function RunScreen({ route, navigation }) {
           : currentCheer.message;
 
       if (messageToSpeak) {
-        Speech.speak(messageToSpeak, {
-          rate: 0.95,
-          onStart: async () => {
-            // Audio ducking naturally handles background music lowering
-          },
-          onDone: () => {
-            isPlayingCheer.current = false;
-            setTimeout(processCheerQueue, 300); // Check if more in queue
-          },
-          onError: () => {
-            isPlayingCheer.current = false;
-            processCheerQueue();
-          },
-        });
+        try {
+          Speech.speak(messageToSpeak, {
+            rate: 0.95,
+            onStart: async () => {
+              // Audio ducking naturally handles background music lowering
+            },
+            onDone: () => {
+              isPlayingCheer.current = false;
+              setTimeout(processCheerQueue, 300); // Check if more in queue
+            },
+            onError: () => {
+              isPlayingCheer.current = false;
+              processCheerQueue();
+            },
+          });
+        } catch (e) {
+          console.warn("Speech playback error (e.g. Web autoplay blocked):", e);
+          isPlayingCheer.current = false;
+          processCheerQueue();
+        }
       } else {
         isPlayingCheer.current = false;
         processCheerQueue();

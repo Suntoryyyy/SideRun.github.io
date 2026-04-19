@@ -30,7 +30,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "bundler": "metro"
+      "bundler": "metro",
+      "shortName": "SideRun",
+      "name": "SideRun Pro",
+      "themeColor": "#24C789",
+      "backgroundColor": "#F4F5F7",
+      "display": "standalone"
     },
     "experiments": {
       "baseUrl": "/SideRun.github.io"

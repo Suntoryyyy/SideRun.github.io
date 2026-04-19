@@ -133,7 +133,48 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
     }
   };
 
+  const wakeLockRef = useRef(null);
+
+  const requestWakeLock = async () => {
+    if (Platform.OS === "web" && "wakeLock" in navigator) {
+      try {
+        wakeLockRef.current = await navigator.wakeLock.request("screen");
+        console.log("Wake Lock is active!");
+      } catch (err) {
+        console.warn(`Wake Lock Error: ${err.name}, ${err.message}`);
+      }
+    }
+  };
+
+  const releaseWakeLock = async () => {
+    if (wakeLockRef.current !== null && Platform.OS === "web") {
+      try {
+        await wakeLockRef.current.release();
+        wakeLockRef.current = null;
+        console.log("Wake Lock has been released.");
+      } catch (err) {
+        console.warn(`Failed to release Wake Lock: ${err.name}, ${err.message}`);
+      }
+    }
+  };
+
+  // Re-request wake lock when page regains visibility (if currently running)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible" && isRunning && !isPaused && wakeLockRef.current === null) {
+        requestWakeLock();
+      }
+    };
+    if (Platform.OS === "web" && typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+      return () => {
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+      };
+    }
+  }, [isRunning, isPaused]);
+
   const startRun = async () => {
+    requestWakeLock();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     if (!currentLocation)
       return Alert.alert(
@@ -237,6 +278,7 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
   };
 
   const stopRun = async () => {
+    releaseWakeLock();
     setIsRunning(false);
     setIsPaused(false);
     if (watchId.current) {
