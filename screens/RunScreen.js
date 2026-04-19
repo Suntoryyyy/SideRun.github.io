@@ -255,9 +255,12 @@ export default function RunScreen({ route, navigation }) {
           Math.abs(gestureState.dy) > 5
         );
       },
-      onPanResponderMove: Animated.event([null, { dy: panY }], {
-        useNativeDriver: false,
-      }),
+      onPanResponderMove: (evt, gestureState) => {
+        // Clamp panY between 0 and max collapsed position
+        const maxPanY = height * 0.75 - 200;
+        const clampedDy = Math.min(Math.max(gestureState.dy, -50), maxPanY + 50);
+        panY.setValue(clampedDy);
+      },
       onPanResponderRelease: (evt, gestureState) => {
         if (gestureState.dy > 50) {
           // Dragged down

@@ -201,7 +201,7 @@ const liveMockFriend = {
         .select("id, username, weeklyDistance, avatar")
         .order("weeklyDistance", { ascending: false })
         .limit(10);
-      if (!lbErr && lbData) {
+      if (!lbErr && lbData && lbData.length > 0) {
         const formattedLb = lbData.map((u) => ({
           name: u.username,
           weeklyDistance: u.weeklyDistance || 0,
@@ -211,7 +211,25 @@ const liveMockFriend = {
         await AsyncStorage.setItem("leaderboard", JSON.stringify(formattedLb));
       } else {
         const leaderboardData = await AsyncStorage.getItem("leaderboard");
-        if (leaderboardData) setLeaderboard(JSON.parse(leaderboardData));
+        if (leaderboardData) {
+          setLeaderboard(JSON.parse(leaderboardData));
+        } else {
+          // Generate mock leaderboard data
+          const mockLeaderboard = [
+            { name: "Alex Chen", weeklyDistance: 125.5, avatar: "🏃‍♂️" },
+            { name: "Maria Garcia", weeklyDistance: 118.2, avatar: "🏃‍♀️" },
+            { name: "David Kim", weeklyDistance: 112.8, avatar: "🚀" },
+            { name: "Emma Wilson", weeklyDistance: 108.4, avatar: "💪" },
+            { name: "James Liu", weeklyDistance: 105.0, avatar: "⚡" },
+            { name: "Sophie Turner", weeklyDistance: 102.6, avatar: "🔥" },
+            { name: "Marco Rossi", weeklyDistance: 98.3, avatar: "👟" },
+            { name: "Lisa Anderson", weeklyDistance: 95.5, avatar: "🏆" },
+            { name: "Chris Martinez", weeklyDistance: 92.1, avatar: "💨" },
+            { name: "Nina Patel", weeklyDistance: 88.7, avatar: "🌟" },
+          ];
+          setLeaderboard(mockLeaderboard);
+          await AsyncStorage.setItem("leaderboard", JSON.stringify(mockLeaderboard));
+        }
       }
     } catch (e) {
       console.error(e);
@@ -643,7 +661,8 @@ const liveMockFriend = {
         <View style={StyleSheet.absoluteFillObject} backgroundColor="#EAEAEA" />
       )}
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} scrollIndicatorInsets={{ top: 1 }}>
+        <View style={{ height: 100, backgroundColor: 'rgba(255, 255, 255, 0.85)' }} />
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
