@@ -38,9 +38,9 @@ const RunMapMemo = ({
   userAvatar
 }) => {
   const defaultCenter = [39.9042, 116.4074]; // Default to Beijing if no loc
-  const mapCenter = currentLocation 
+  const mapCenter = currentLocation && currentLocation.latitude !== undefined
     ? [currentLocation.latitude, currentLocation.longitude] 
-    : (spectateFriend ? [spectateFriend.latitude, spectateFriend.longitude] : defaultCenter);
+    : (spectateFriend && spectateFriend.latitude !== undefined ? [spectateFriend.latitude, spectateFriend.longitude] : defaultCenter);
     
   const polylinePositions = (runData?.coordinates || []).map(c => [c.latitude, c.longitude]);
 
@@ -72,7 +72,7 @@ const RunMapMemo = ({
         )}
 
         {/* Spectator target marker */}
-        {mode === 'spectate' && spectateFriend && (
+        {mode === 'spectate' && spectateFriend && spectateFriend.latitude !== undefined && (
           <Marker position={[spectateFriend.latitude, spectateFriend.longitude]}>
             <Popup>{spectateFriend.name || 'Friend'}</Popup>
           </Marker>
