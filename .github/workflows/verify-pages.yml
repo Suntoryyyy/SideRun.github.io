@@ -1,0 +1,32 @@
+name: Verify GitHub Pages Build
+
+on:
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web export
+        run: npm run predeploy
+
+      - name: Validate export output
+        run: |
+          test -f dist/index.html
+          test -f dist/.nojekyll
+          echo "dist/index.html and dist/.nojekyll exist"

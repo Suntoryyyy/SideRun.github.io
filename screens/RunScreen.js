@@ -15,14 +15,12 @@ import {
   UIManager,
   LayoutAnimation,
   PanResponder,
-  Image,
   Animated,
 } from "react-native";
 import styles from "../styles/RunScreenStyles";
 import useUserStore from '../store/useUserStore';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
 import * as Speech from "expo-speech";
 import { Audio } from "expo-av";
 import { supabase } from "../services/supabase";
@@ -69,7 +67,7 @@ export default function RunScreen({ route, navigation }) {
   const user = useUserStore((s) => s.user);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
   const [friendsWatching, setFriendsWatching] = useState(2);
-  const userAvatar = user?.avatar;
+  const [userAvatar, setUserAvatar] = useState(user?.avatar || null);
   const [cheers, setCheers] = useState([]);
   const [visibilityScope, setVisibilityScope] = useState("friends");
 
@@ -149,40 +147,31 @@ export default function RunScreen({ route, navigation }) {
       myIdRef.current = myId;
 
       cheerSub = supabase
-          .channel("public:live_cheers")
-          .on(
-            "postgres_changes",
-            { 
-              event: "INSERT", 
-              schema: "public", 
-              table: "live_cheers",
-              filter: `receiver_id=in.(${[cu.id, cu.phone, cu.username].filter(Boolean).join(',')})`
-            },
-            (payload) => {
-              const newCheer = payload.new;
-              // Filter already applied at server level, but keep this safe check
-              if (true) {
-                const cheerId = Date.now().toString() + Math.random();
+        .channel("public:live_cheers")
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "live_cheers",
+            filter: `receiver_id=in.(${[user.id, user.phone, user.username].filter(Boolean).join(',')})`,
+          },
+          (payload) => {
+            const newCheer = payload.new;
+            const cheerId = Date.now().toString() + Math.random();
 
-                // Render visual element immediately (max limit 15 to prevent lag)
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setLiveEmojis((prev) => {
-                  const limited = prev.length > 15 ? prev.slice(-14) : prev;
-                  return [
-                    ...limited,
-                    { id: cheerId, emoji: newCheer.emoji || "🔥" },
-                  ];
-                });
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setLiveEmojis((prev) => {
+              const limited = prev.length > 15 ? prev.slice(-14) : prev;
+              return [...limited, { id: cheerId, emoji: newCheer.emoji || "🔥" }];
+            });
 
-                // Queue up audio to prevent overlapping speech
-                cheerQueue.current.push({ ...newCheer });
-                processCheerQueue();
-              }
-            },
-          )
-          .subscribe();
-      }
-    });
+            cheerQueue.current.push({ ...newCheer });
+            processCheerQueue();
+          },
+        )
+        .subscribe();
+    }
 
     return () => {
       isMounted = false;
@@ -307,6 +296,10 @@ export default function RunScreen({ route, navigation }) {
   };
 
   useEffect(() => {
+    if (user?.avatar) setUserAvatar(user.avatar);
+  }, [user?.avatar]);
+
+  useEffect(() => {
     loadUserAvatar();
   }, []);
 
@@ -360,8 +353,6 @@ export default function RunScreen({ route, navigation }) {
       ]);
       if (error) console.warn("Mock cheer sent:", error);
     }
-  };
-    setCheers((prev) => [...prev, newCheer]);
   };
 
   const removeCheer = (id) => {
