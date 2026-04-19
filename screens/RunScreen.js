@@ -28,22 +28,13 @@ import MapStyle from "./MapStyle.json";
 import RunMapMemo from "../components/RunScreenUI/RunMapMemo";
 import MetricDashboard from "../components/RunScreenUI/MetricDashboard";
 import SpectatorControls from "../components/RunScreenUI/SpectatorControls";
+import RunSummaryModal from "../components/RunScreenUI/RunSummaryModal";
 
 if (
   Platform.OS === "android" &&
   UIManager.setLayoutAnimationEnabledExperimental
 ) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
-// Conditionally import MapView for native platforms only
-let MapView, Polyline, Marker, PROVIDER_GOOGLE;
-if (Platform.OS !== "web") {
-  const Maps = require("react-native-maps");
-  MapView = Maps.default;
-  Polyline = Maps.Polyline;
-  Marker = Maps.Marker;
-  PROVIDER_GOOGLE = Maps.PROVIDER_GOOGLE;
 }
 
 const { width, height } = Dimensions.get("window");
