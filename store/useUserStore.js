@@ -12,11 +12,19 @@ const useUserStore = create((set, get) => ({
     try {
       let userData = null;
       if (Platform.OS === 'web') {
-        userData = sessionStorage.getItem('currentUser');
+        try {
+          userData = sessionStorage.getItem('currentUser');
+        } catch (e) {
+          console.warn('sessionStorage access failed', e);
+        }
       }
       
       if (!userData) {
-        userData = await AsyncStorage.getItem('currentUser');
+        try {
+          userData = await AsyncStorage.getItem('currentUser');
+        } catch (e) {
+          console.warn('AsyncStorage get currentUser failed', e);
+        }
       }
 
       if (userData) {
@@ -36,9 +44,19 @@ const useUserStore = create((set, get) => ({
     try {
       const stringifiedUser = JSON.stringify(userData);
       if (rememberMe || Platform.OS !== 'web') {
-        await AsyncStorage.setItem('currentUser', stringifiedUser);
+        try {
+          await AsyncStorage.setItem('currentUser', stringifiedUser);
+        } catch (e) {
+          console.warn('AsyncStorage set currentUser failed', e);
+        }
       } else {
-        sessionStorage.setItem('currentUser', stringifiedUser);
+        if (Platform.OS === 'web') {
+          try {
+            sessionStorage.setItem('currentUser', stringifiedUser);
+          } catch (e) {
+            console.warn('sessionStorage set currentUser failed', e);
+          }
+        }
       }
       set({ user: userData, isLoggedIn: true });
     } catch (e) {
@@ -55,9 +73,20 @@ const useUserStore = create((set, get) => ({
       const updatedUser = { ...currentUser, ...updates };
       const stringifiedUser = JSON.stringify(updatedUser);
       
-      await AsyncStorage.setItem('currentUser', stringifiedUser);
-      if (Platform.OS === 'web' && sessionStorage.getItem('currentUser')) {
-        sessionStorage.setItem('currentUser', stringifiedUser);
+      try {
+        await AsyncStorage.setItem('currentUser', stringifiedUser);
+      } catch (e) {
+        console.warn('AsyncStorage set currentUser failed', e);
+      }
+
+      if (Platform.OS === 'web') {
+        try {
+          if (sessionStorage.getItem('currentUser')) {
+            sessionStorage.setItem('currentUser', stringifiedUser);
+          }
+        } catch (e) {
+          console.warn('sessionStorage profile sync failed', e);
+        }
       }
       
       set({ user: updatedUser });
@@ -69,9 +98,18 @@ const useUserStore = create((set, get) => ({
   // Logout clears state and storage
   logout: async () => {
     try {
-      await AsyncStorage.removeItem('currentUser');
+      try {
+        await AsyncStorage.removeItem('currentUser');
+      } catch (e) {
+        console.warn('AsyncStorage remove currentUser failed', e);
+      }
+      
       if (Platform.OS === 'web') {
-        sessionStorage.removeItem('currentUser');
+        try {
+          sessionStorage.removeItem('currentUser');
+        } catch (e) {
+          console.warn('sessionStorage remove currentUser failed', e);
+        }
       }
       set({ user: null, isLoggedIn: false });
     } catch (e) {
