@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, Dimensions, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { formatDuration } from '../../utils/timeUtils';
 import { Ionicons } from '@expo/vector-icons';
@@ -36,7 +36,9 @@ const RunSummaryModal = ({ durationInSeconds, runData, currentSpeed, closeRun })
             style={styles.doneButton} 
             activeOpacity={0.8}
             onPress={() => {
-              if (global.Haptics) global.Haptics.impactAsync(global.Haptics.ImpactFeedbackStyle.Medium);
+              if (Platform.OS !== "web") {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              }
               closeRun();
             }}
           >

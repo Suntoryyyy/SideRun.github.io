@@ -14,15 +14,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../services/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import MapStyle from "./MapStyle.json";
-
-let MapView, Polyline, Marker;
-if (Platform.OS !== "web") {
-  const Maps = require("react-native-maps");
-  MapView = Maps.default;
-  Polyline = Maps.Polyline;
-  Marker = Maps.Marker;
-}
+import HistoryMap from "../components/RunScreenUI/HistoryMap";
 
 const { width, height } = Dimensions.get("window");
 
@@ -156,49 +148,11 @@ export default function RunHistoryScreen({ navigation }) {
             <ScrollView contentContainerStyle={styles.modalScroll}>
               {/* Map Track */}
               <View style={styles.mapContainer}>
-                {Platform.OS === "web" ? (
-                  <View style={styles.webMapPlaceholder}>
-                    <Ionicons name="map-outline" size={48} color="#999" />
-                    <Text style={styles.webMapText}>
-                      Track visible on mobile app
-                    </Text>
-                  </View>
-                ) : selectedRun.coordinates &&
-                  selectedRun.coordinates.length > 0 ? (
-                  <MapView
-                    style={styles.map}
-                    initialRegion={{
-                      latitude: selectedRun.coordinates[0].latitude,
-                      longitude: selectedRun.coordinates[0].longitude,
-                      latitudeDelta: 0.02,
-                      longitudeDelta: 0.02,
-                    }}
-                    scrollEnabled={false}
-                    zoomEnabled={false}
-                    customMapStyle={MapStyle}
-                  >
-                    <Polyline
-                      coordinates={selectedRun.coordinates}
-                      strokeColor="#FF9500"
-                      strokeWidth={5}
-                    />
-                    <Marker
-                      coordinate={selectedRun.coordinates[0]}
-                      title="Start"
-                      pinColor="green"
-                    />
-                    <Marker
-                      coordinate={
-                        selectedRun.coordinates[
-                          selectedRun.coordinates.length - 1
-                        ]
-                      }
-                      title="Finish"
-                      pinColor="red"
-                    />
-                  </MapView>
+                {selectedRun.coordinates && selectedRun.coordinates.length > 0 ? (
+                  <HistoryMap coordinates={selectedRun.coordinates} />
                 ) : (
                   <View style={styles.webMapPlaceholder}>
+                    <Ionicons name="map-outline" size={48} color="#999" />
                     <Text style={styles.webMapText}>
                       No GPS data for this run
                     </Text>
