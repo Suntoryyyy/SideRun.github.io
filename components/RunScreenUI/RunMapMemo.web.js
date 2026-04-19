@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Platform, TouchableOpacity, Animated } from 'react-native';
+import { Image } from 'expo-image';
 import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -13,6 +14,42 @@ L.Icon.Default.mergeOptions({
   iconUrl: require('leaflet/dist/images/marker-icon.png'),
   shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
 });
+
+const FloatingEmoji = ({ emoji, onComplete }) => {
+  const [anim] = React.useState(new Animated.Value(0));
+
+  React.useEffect(() => {
+    Animated.timing(anim, {
+      toValue: 1,
+      duration: 2000,
+      useNativeDriver: false, // web doesn't fully support all native drivers, false is safer wrapper
+    }).start(onComplete);
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        styles.floatingEmoji,
+        {
+          bottom: anim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [100, 400],
+          }),
+          opacity: anim.interpolate({
+            inputRange: [0, 0.8, 1],
+            outputRange: [1, 1, 0],
+          }),
+        },
+      ]}
+    >
+      {emoji && (emoji.startsWith('data:image') || emoji.startsWith('file:') || emoji.startsWith('http')) ? (
+        <Image source={{ uri: emoji }} style={{ width: 60, height: 60 }} />
+      ) : (
+        <Text style={styles.floatingEmojiText}>{emoji}</Text>
+      )}
+    </Animated.View>
+  );
+};
 
 const RecenterControl = ({ location }) => {
   const map = useMap();
@@ -35,6 +72,7 @@ const RunMapMemo = ({
   liveEmojis = [],
   cheers = [],
   recenterMap,
+  setLiveEmojis,
   userAvatar
 }) => {
   const defaultCenter = [39.9042, 116.4074]; // Default to Beijing if no loc
@@ -103,6 +141,30 @@ const RunMapMemo = ({
           {mode === 'spectate' ? 'Watching: ' + (spectateFriend?.name || 'Live') : 'Tracking You (Web)'}
         </Text>
       </View>
+
+      {/* Floating Emojis (received) */}
+      {liveEmojis.map((c) => (
+        <FloatingEmoji
+          key={c.id}
+          emoji={c.emoji}
+          onComplete={() => {
+            if (setLiveEmojis) {
+              setLiveEmojis((prev) => prev.filter((e) => e.id !== c.id));
+            }
+          }}
+        />
+      ))}
+
+      {/* Cheers sent queue popup */}
+      {cheers.map((cheer, index) => (
+        <View
+          key={`cheer-${index}`}
+          style={[styles.cheerBubble, { top: 50 + index * 60 }]}
+        >
+          <Text style={styles.cheerText}>{cheer.emoji}</Text>
+        </View>
+      ))}
+
     </View>
   );
 };
@@ -149,6 +211,34 @@ const styles = StyleSheet.create({
     fontWeight: 'bold', 
     color: '#24C789', 
     fontSize: 14
+  },
+  floatingEmoji: {
+    position: 'absolute',
+    left: '42%',
+    zIndex: 1500,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  floatingEmojiText: {
+    fontSize: 60,
+  },
+  cheerBubble: {
+    position: 'absolute',
+    right: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 25,
+    padding: 12,
+    zIndex: 1500,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cheerText: {
+    fontSize: 24,
   }
 });
 

@@ -49,8 +49,8 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
       setRegion({
         latitude: mockStartLat,
         longitude: mockStartLng,
-        latitudeDelta: 0.025,
-        longitudeDelta: 0.025,
+        latitudeDelta: 0.005,
+        longitudeDelta: 0.005,
       });
       setDurationInSeconds(1240); // 20 minutes in
       setRunData({
@@ -123,8 +123,8 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
         setRegion({
           latitude,
           longitude,
-          latitudeDelta: 0.025,
-          longitudeDelta: 0.025,
+          latitudeDelta: 0.005,
+          longitudeDelta: 0.005,
         });
       }
     } catch (error) {

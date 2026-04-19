@@ -193,7 +193,7 @@ export default function RunScreen({ route, navigation }) {
         center: currentLocation,
         pitch: 0,
         heading: 0,
-        zoom: 16
+        zoom: 18
       });
     }
   };
@@ -213,7 +213,7 @@ export default function RunScreen({ route, navigation }) {
         center: currentLocation,
         pitch: 0,
         heading: 0,
-        zoom: 16
+        zoom: 18
       }, { duration: 1000 });
     }
   }, [currentLocation, mode, regionSet]);
