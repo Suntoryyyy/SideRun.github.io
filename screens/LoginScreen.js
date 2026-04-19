@@ -36,54 +36,13 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
     // Check if there's a saved auto-login preference we should load
     const loadRememberedUser = async () => {
       try {
-      const pseudoEmail = `${trimmedPhone}@siderun.app`;
-      
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: pseudoEmail,
-        password: password,
-      });
-
-      if (error) {
-        setIsLoading(false);
-        if (error.message.includes('Invalid login credentials')) {
-          showAlert('Login Failed', 'Incorrect phone number or password. Please try again or create an account.');
-        } else {
-          showAlert('Login Failed', error.message);
+        const rememberedPhone = await AsyncStorage.getItem('rememberedPhone');
+        if (rememberedPhone) {
+          setPhone(rememberedPhone);
+          setRememberMe(true);
         }
-        return;
-      }
-
-      // Fetch user profile from the database
-      let username = 'Runner';
-      if (data.user) {
-        const { data: profile } = await supabase
-          .from('users')
-          .select('username')
-          .eq('id', data.user.id)
-          .single();
-          
-        if (profile && profile.username) {
-          username = profile.username;
-        }
-      }
-
-      const userInfo = JSON.stringify({ phone: trimmedPhone, username, id: data?.user?.id });
-
-      if (rememberMe) {
-        await AsyncStorage.setItem('rememberedPhone', trimmedPhone);
-      } else {
-        await AsyncStorage.removeItem('rememberedPhone');
-      }
-
-      if (Platform.OS === 'web') {
-        sessionStorage.setItem('currentUser', userInfo);
-      }
-      await AsyncStorage.setItem('currentUser', userInfo);
-
-      setIsLoading(false);
-      setLoggedIn(true);
-    } catch (e) {
-        // Ignore
+      } catch (e) {
+        console.warn('Failed to load remembered phone', e);
       }
     };
     loadRememberedUser();
@@ -102,9 +61,9 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
     if (trimmedPhone === 'admin' || trimmedPhone === '123456') {
       const adminInfo = JSON.stringify({ phone: '1234567890', username: 'Admin Bypass' });
       if (Platform.OS === 'web') {
-        sessionStorage.setItem('currentUser', adminInfo);
+        try { sessionStorage.setItem("currentUser", adminInfo); } catch (e) { console.warn(e); }
       }
-      await AsyncStorage.setItem('currentUser', adminInfo);
+      try { await AsyncStorage.setItem('currentUser', adminInfo); } catch (e) { console.warn("AsyncStorage set error", e); };
       setLoggedIn(true);
       return;
     }
@@ -139,21 +98,22 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
       const userInfo = JSON.stringify({ phone: trimmedPhone, username, id: data?.user?.id });
       
       if (rememberMe) {
-        await AsyncStorage.setItem('rememberedPhone', trimmedPhone);
+        try { await AsyncStorage.setItem('rememberedPhone', trimmedPhone); } catch (e) { console.warn("AsyncStorage set error", e); };
       } else {
-        await AsyncStorage.removeItem('rememberedPhone');
+        try { await AsyncStorage.removeItem('rememberedPhone'); } catch (e) { console.warn("AsyncStorage remove error", e); };
       }
 
       if (Platform.OS === 'web') {
-        sessionStorage.setItem('currentUser', userInfo);
+        try { sessionStorage.setItem("currentUser", userInfo); } catch (e) { console.warn(e); }
       }
-      await AsyncStorage.setItem('currentUser', userInfo);
+      try { await AsyncStorage.setItem('currentUser', userInfo); } catch (e) { console.warn("AsyncStorage set error", e); };
 
       setIsLoading(false);
       setLoggedIn(true);
 
     } catch (e) {
-      showAlert('Error', 'An error occurred during login');
+      console.error(e);
+      showAlert('Error', `Login exception: ${e.message || JSON.stringify(e)}`);
       setIsLoading(false);
     }
   };

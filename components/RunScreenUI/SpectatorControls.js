@@ -23,7 +23,7 @@ const SpectatorControls = ({
   if (mode === 'spectate') {
     return (
       <View style={styles.controlsContainer}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', paddingHorizontal: 20 }}>
+        <Animated.View style={[{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', paddingHorizontal: 20 }, { opacity: contentOpacity }]}>
           <TouchableOpacity
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -70,7 +70,7 @@ const SpectatorControls = ({
           >
             <Ionicons name='add' size={28} color='#24C789' />
           </TouchableOpacity>
-        </View>
+        </Animated.View>
       </View>
     );
   }

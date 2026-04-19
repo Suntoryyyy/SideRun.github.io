@@ -16,11 +16,11 @@ const MetricDashboard = ({
   return (
     <View style={styles.statsContainer}>
           {mode === "spectate" && spectateFriend && (
-             <View style={{ alignItems: 'center', marginBottom: 10 }}>
+             <Animated.View style={{ alignItems: 'center', marginBottom: 10, opacity: contentOpacity }}>
                <Text style={{ fontSize: 16, fontWeight: '700', color: '#FF9500' }}>
                  {signalLost ? "🔴 信号较弱..." : "🟢 当前同步:"} {spectateFriend.name} {spectateFriend.avatar}
                </Text>
-             </View>
+             </Animated.View>
           )}
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
