@@ -6,8 +6,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../services/supabase';
 import CustomAlert from '../components/CustomAlert';
+import useUserStore from '../store/useUserStore';
 
-export default function LoginScreen({ navigation, setLoggedIn }) {
+export default function LoginScreen({ navigation }) {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -15,6 +16,8 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
   const [isLoading, setIsLoading] = useState(false);
   const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '', type: 'error' });
   const [region, setRegion] = useState({ latitude: 37.7749, longitude: -122.4194 });
+
+  const login = useUserStore((s) => s.login);
 
   useEffect(() => {
     (async () => {
@@ -59,12 +62,8 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
     }
 
     if (trimmedPhone === 'admin' || trimmedPhone === '123456') {
-      const adminInfo = JSON.stringify({ phone: '1234567890', username: 'Admin Bypass' });
-      if (Platform.OS === 'web') {
-        try { sessionStorage.setItem("currentUser", adminInfo); } catch (e) { console.warn(e); }
-      }
-      try { await AsyncStorage.setItem('currentUser', adminInfo); } catch (e) { console.warn("AsyncStorage set error", e); };
-      setLoggedIn(true);
+      const adminInfo = { phone: '1234567890', username: 'Admin Bypass' };
+      await login(adminInfo, rememberMe);
       return;
     }
 
@@ -95,7 +94,7 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
         if (profile && profile.username) username = profile.username;
       }
 
-      const userInfo = JSON.stringify({ phone: trimmedPhone, username, id: data?.user?.id });
+      const userInfo = { phone: trimmedPhone, username, id: data?.user?.id };
       
       if (rememberMe) {
         try { await AsyncStorage.setItem('rememberedPhone', trimmedPhone); } catch (e) { console.warn("AsyncStorage set error", e); };
@@ -103,13 +102,8 @@ export default function LoginScreen({ navigation, setLoggedIn }) {
         try { await AsyncStorage.removeItem('rememberedPhone'); } catch (e) { console.warn("AsyncStorage remove error", e); };
       }
 
-      if (Platform.OS === 'web') {
-        try { sessionStorage.setItem("currentUser", userInfo); } catch (e) { console.warn(e); }
-      }
-      try { await AsyncStorage.setItem('currentUser', userInfo); } catch (e) { console.warn("AsyncStorage set error", e); };
-
+      await login(userInfo, rememberMe);
       setIsLoading(false);
-      setLoggedIn(true);
 
     } catch (e) {
       console.error(e);

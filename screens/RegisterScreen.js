@@ -7,14 +7,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../services/supabase';
 
 import CustomAlert from '../components/CustomAlert';
+import useUserStore from '../store/useUserStore';
 
-export default function RegisterScreen({ navigation, setLoggedIn }) {
+export default function RegisterScreen({ navigation }) {
   const [phone, setPhone] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '', type: 'error' });
   const [region, setRegion] = useState({ latitude: 37.7749, longitude: -122.4194 });
+
+  const login = useUserStore((s) => s.login);
 
   useEffect(() => {
     (async () => {
@@ -71,14 +74,11 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
         }
       }
 
-      const currentUser = JSON.stringify({ phone: trimmedPhone, username: trimmedUsername, id: data?.user?.id });
-      if (Platform.OS === 'web') {
-        sessionStorage.setItem('currentUser', currentUser);
-      }
-      await AsyncStorage.setItem('currentUser', currentUser);
+      const currentUser = { phone: trimmedPhone, username: trimmedUsername, id: data?.user?.id };
+      
+      await login(currentUser, true);
 
       setIsLoading(false);
-      setLoggedIn(true);
 
     } catch (e) {
       showAlert('Error', 'An error occurred during registration');
@@ -175,7 +175,6 @@ export default function RegisterScreen({ navigation, setLoggedIn }) {
         type={alertConfig.type}
         onClose={() => {
           setAlertConfig({ ...alertConfig, visible: false });
-          if (alertConfig.type === 'success') setLoggedIn(true);
         }}
       />
     </KeyboardAvoidingView>
