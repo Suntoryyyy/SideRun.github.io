@@ -9,6 +9,8 @@ import { supabase } from '../services/supabase';
 import CustomAlert from '../components/CustomAlert';
 import useUserStore from '../store/useUserStore';
 
+import WebBackgroundMap from '../components/WebBackgroundMap';
+
 export default function RegisterScreen({ navigation }) {
   const [phone, setPhone] = useState('');
   const [username, setUsername] = useState('');
@@ -92,20 +94,7 @@ export default function RegisterScreen({ navigation }) {
       style={styles.container}
     >
       {/* Background Map */}
-      {Platform.OS === 'web' ? (
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: -1 }}>
-          <iframe
-            width="100%"
-            height="100%"
-            frameBorder="0"
-            scrolling="no"
-            src={`https://www.openstreetmap.org/export/embed.html?bbox=${region.longitude - 0.05},${region.latitude - 0.05},${region.longitude + 0.05},${region.latitude + 0.05}&layer=mapnik`}
-            style={{ border: 'none', filter: 'brightness(0.9) grayscale(0.8)' }}
-          />
-        </div>
-      ) : (
-        <View style={StyleSheet.absoluteFillObject} backgroundColor="#EAEAEA" />
-      )}
+      <WebBackgroundMap region={region} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <BlurView intensity={85} tint="light" style={styles.glassCard}>

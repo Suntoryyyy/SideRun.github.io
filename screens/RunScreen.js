@@ -441,8 +441,10 @@ export default function RunScreen({ route, navigation }) {
           signalLost={signalLost}
         />
 
+        {/* Dynamic spacer pushes running controls (start/stop) to bottom, but lets spectator controls sit natively below stats */}
+        <Animated.View style={{ flex: mode === 'spectate' ? 0 : 1 }} />
 
-                <SpectatorControls
+        <SpectatorControls
           mode={mode}
           isRunning={isRunning}
           isPaused={isPaused}

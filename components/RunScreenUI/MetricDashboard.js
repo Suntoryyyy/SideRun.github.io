@@ -17,19 +17,19 @@ const MetricDashboard = ({
     <View style={styles.statsContainer}>
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
-              <Text style={styles.statValue}>
+              <Text style={styles.statValue} adjustsFontSizeToFit numberOfLines={1}>
                 {(runData.distance * 1000).toFixed(0)}
               </Text>
               <Text style={styles.statLabel}>METERS</Text>
             </View>
             <View style={styles.statBox}>
-              <Text style={styles.statValue}>
+              <Text style={styles.statValue} adjustsFontSizeToFit numberOfLines={1}>
                 {formatDuration(durationInSeconds)}
               </Text>
               <Text style={styles.statLabel}>TIME</Text>
             </View>
             <View style={styles.statBox}>
-              <Text style={styles.statValue}>{currentSpeed}</Text>
+              <Text style={styles.statValue} adjustsFontSizeToFit numberOfLines={1}>{currentSpeed}</Text>
               <Text style={styles.statLabel}>SPEED (M/S)</Text>
             </View>
           </View>
@@ -53,7 +53,7 @@ const MetricDashboard = ({
           >
             <View style={{ flex: 1 }} />
             <View style={styles.statBox}>
-              <Text style={styles.statValue}>
+              <Text style={styles.statValue} adjustsFontSizeToFit numberOfLines={1}>
                 {Math.round(runData.calories)}
               </Text>
               <Text style={styles.statLabel}>KCAL BURNED</Text>

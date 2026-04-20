@@ -25,6 +25,8 @@ import ActivityFeed from "../components/ActivityFeed";
 import CustomAlert from "../components/CustomAlert";
 import Leaderboard from "../components/Leaderboard";
 
+import WebBackgroundMap from '../components/WebBackgroundMap';
+
 export default function FriendsScreen({ navigation }) {
   const [friends, setFriends] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
@@ -637,29 +639,7 @@ const liveMockFriend = {
   return (
     <View style={styles.container}>
       {/* Background Map - Same as Register for visual cohesion */}
-      {Platform.OS === "web" ? (
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: -1,
-          }}
-        >
-          <iframe
-            width="100%"
-            height="100%"
-            frameBorder="0"
-            scrolling="no"
-            src={`https://www.openstreetmap.org/export/embed.html?bbox=-122.46,37.72,-122.38,37.82&layer=mapnik`}
-            style={{ border: "none", filter: "brightness(0.9) grayscale(0.8)" }}
-          />
-        </div>
-      ) : (
-        <View style={StyleSheet.absoluteFillObject} backgroundColor="#EAEAEA" />
-      )}
+      <WebBackgroundMap region={{ latitude: 37.77, longitude: -122.42 }} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} scrollIndicatorInsets={{ top: 1 }}>
         <View style={styles.header}>

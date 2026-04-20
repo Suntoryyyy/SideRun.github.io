@@ -106,7 +106,7 @@ export default StyleSheet.create({
     elevation: 8,
     paddingTop: 12,
     paddingBottom: 425,
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
   },
   dashboardCollapsed: {
     flex: 0,

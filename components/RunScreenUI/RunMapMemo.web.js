@@ -56,9 +56,15 @@ const FloatingEmoji = ({ emoji, onComplete }) => {
 const RecenterControl = ({ location }) => {
   const map = useMap();
   useEffect(() => {
+    // Android Web PWA 0x0 container size issue fix
+    const t = setTimeout(() => {
+      map.invalidateSize();
+    }, 400);
+
     if (location) {
       map.setView([location.latitude, location.longitude], map.getZoom());
     }
+    return () => clearTimeout(t);
   }, [location, map]);
   return null;
 };
@@ -85,16 +91,16 @@ const RunMapMemo = ({
   const polylinePositions = (runData?.coordinates || []).map(c => [c.latitude, c.longitude]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { flex: 1, height: '100vh', width: '100vw' }]}>
       <MapContainer 
         center={mapCenter} 
         zoom={16} 
-        style={{ width: '100%', height: '100%' }}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         zoomControl={false}
       >
         <TileLayer
-          attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
         />
 
         {currentLocation && <RecenterControl location={currentLocation} />}
