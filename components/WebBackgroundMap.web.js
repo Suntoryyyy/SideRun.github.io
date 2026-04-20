@@ -24,8 +24,8 @@ export default function WebBackgroundMap({ region }) {
     : defaultCenter;
 
   return (
-    <View style={[StyleSheet.absoluteFillObject, { zIndex: -1 }]} pointerEvents="none">
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: -1, width: '100vw', height: '100vh', backgroundColor: '#EAEAEA' }}>
+    <View style={[StyleSheet.absoluteFillObject, { zIndex: -10 }]} pointerEvents="none">
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: -10, width: '100vw', height: '100vh', backgroundColor: '#EAEAEA' }}>
         <MapContainer 
           center={center} 
           zoom={14} 

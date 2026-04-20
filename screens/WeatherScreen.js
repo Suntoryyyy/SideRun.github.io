@@ -144,7 +144,6 @@ export default function WeatherScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={{ height: 100, backgroundColor: '#F4F5F7' }} />
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
