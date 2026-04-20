@@ -377,27 +377,6 @@ export default function RunScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
-      {mode === 'spectate' && (
-        <>
-          <TouchableOpacity 
-            style={styles.backButton} 
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="chevron-back" size={28} color="#24C789" />
-          </TouchableOpacity>
-
-          {spectateFriend && (
-            <View style={styles.spectatorBadge}>
-              <BlurView intensity={80} tint="light" style={styles.spectatorBadgeInner}>
-                <Text style={styles.spectatorBadgeText}>
-                  {signalLost ? "🔴 信号弱" : "🟢 正在同步"} • {spectateFriend.name} {spectateFriend.avatar}
-                </Text>
-              </BlurView>
-            </View>
-          )}
-        </>
-      )}
-
       <RunMapMemo mode={mode} spectateFriend={spectateFriend} 
         navigation={navigation}
         region={region}
@@ -414,6 +393,26 @@ export default function RunScreen({ route, navigation }) {
         setLiveEmojis={setLiveEmojis}
       />
 
+      {mode === 'spectate' && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 150, zIndex: 100 }} pointerEvents="box-none">
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="chevron-back" size={28} color="#24C789" />
+          </TouchableOpacity>
+
+          {spectateFriend && (
+            <View style={styles.spectatorBadge}>
+              <BlurView intensity={80} tint="light" style={styles.spectatorBadgeInner}>
+                <Text style={styles.spectatorBadgeText}>
+                  {signalLost ? "🔴 信号弱" : "🟢 正在同步"} • {spectateFriend.name} {spectateFriend.avatar}
+                </Text>
+              </BlurView>
+            </View>
+          )}
+        </View>
+      )}
 
       <Animated.View
         style={[

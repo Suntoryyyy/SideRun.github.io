@@ -1,6 +1,6 @@
 import React from 'react';
 import * as Haptics from 'expo-haptics';
-import { View, Text, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, Animated, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import styles from '../../styles/RunScreenStyles';
@@ -50,6 +50,25 @@ const SpectatorControls = ({
             style={{ backgroundColor: '#F0F0F0', width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginHorizontal: 5 }}
           >
             <Text style={{ fontSize: 20 }}>💦</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              Alert.prompt("Send Message", "Type a message to cheer them on!", [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Send",
+                  onPress: (text) => {
+                    if (text && text.trim().length > 0) {
+                      sendCheer(text);
+                    }
+                  },
+                },
+              ]);
+            }}
+            style={{ backgroundColor: '#E0F2FE', width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginHorizontal: 5 }}
+          >
+            <Ionicons name="chatbubble-outline" size={20} color="#0284C7" />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={async () => {

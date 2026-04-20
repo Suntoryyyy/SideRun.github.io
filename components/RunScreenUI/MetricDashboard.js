@@ -37,7 +37,18 @@ const MetricDashboard = ({
           <Animated.View
             style={[
               styles.statsRow,
-              { marginTop: 24, opacity: contentOpacity },
+              { 
+                marginTop: contentOpacity.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 24]
+                }), 
+                opacity: contentOpacity,
+                height: contentOpacity.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 80]
+                }),
+                overflow: 'hidden'
+              },
             ]}
           >
             <View style={{ flex: 1 }} />

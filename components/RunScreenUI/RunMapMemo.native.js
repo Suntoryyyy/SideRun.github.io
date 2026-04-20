@@ -16,7 +16,7 @@ const FloatingEmoji = ({ emoji, onComplete }) => {
     Animated.timing(anim, {
       toValue: 1,
       duration: 2000,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start(onComplete);
   }, []);
 
@@ -27,7 +27,7 @@ const FloatingEmoji = ({ emoji, onComplete }) => {
         {
           bottom: anim.interpolate({
             inputRange: [0, 1],
-            outputRange: [100, 400],
+            outputRange: [150, 450],
           }),
           opacity: anim.interpolate({
             inputRange: [0, 0.8, 1],
@@ -36,10 +36,12 @@ const FloatingEmoji = ({ emoji, onComplete }) => {
         },
       ]}
     >
-      {emoji && (emoji.startsWith('data:image') || emoji.startsWith('file:') || emoji.startsWith('http')) ? (
-        <Image source={{ uri: emoji }} style={{ width: 60, height: 60 }} contentFit="contain" />
+      {emoji && typeof emoji === 'string' && (emoji.startsWith('data:image') || emoji.startsWith('file:') || emoji.startsWith('http')) ? (
+        <Image source={{ uri: emoji }} style={{ width: 80, height: 80, borderRadius: 12, borderWidth: 3, borderColor: '#24C789', backgroundColor: '#fff', overflow: 'hidden' }} contentFit="cover" />
       ) : (
-        <Text style={styles.floatingEmojiText}>{emoji}</Text>
+        <View style={{ backgroundColor: emoji.length > 2 ? 'rgba(36, 199, 137, 0.9)' : 'transparent', paddingHorizontal: emoji.length > 2 ? 15 : 0, paddingVertical: emoji.length > 2 ? 10 : 0, borderRadius: 20 }}>
+          <Text style={[styles.floatingEmojiText, emoji.length > 2 ? { fontSize: 18, color: '#fff', fontWeight: 'bold' } : {}]}>{emoji}</Text>
+        </View>
       )}
     </Animated.View>
   );

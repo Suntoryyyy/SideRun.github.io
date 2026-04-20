@@ -174,7 +174,6 @@ export default StyleSheet.create({
   statValue: {
     fontSize: 32,
     fontWeight: '900',
-    fontFamily: Platform.OS === 'ios' ? 'HelveticaNeue-CondensedBlack' : 'sans-serif-condensed',
     color: '#222222',
     fontVariant: ['tabular-nums'],
     letterSpacing: 0,

@@ -34,7 +34,8 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
     if (mode === "spectate" && navigation && navigation.getState) {
       // Mock tracking a friend
       setIsRunning(true);
-      const mockStartLat = 37.78825;
+      const mockStartLat = 37.7674; // Kezar Stadium
+      const mockStartLng = -122.4554;
       
     const heartbeat = setInterval(() => {
       if (Date.now() - lastUpdateTime.current > 10000) {
@@ -44,8 +45,7 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
       }
     }, 5000);
 
-      const mockStartLng = -122.4324;
-      setCurrentLocation({ latitude: mockStartLat, longitude: mockStartLng });
+      setCurrentLocation({ latitude: mockStartLat + 0.0004 * Math.sin(0), longitude: mockStartLng + 0.0008 * Math.cos(0) });
       setRegion({
         latitude: mockStartLat,
         longitude: mockStartLng,
@@ -56,15 +56,16 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
       setRunData({
         distance: 4.5,
         calories: 320,
-        coordinates: [{ latitude: mockStartLat, longitude: mockStartLng }],
+        coordinates: [{ latitude: mockStartLat + 0.0004 * Math.sin(0), longitude: mockStartLng + 0.0008 * Math.cos(0) }],
       });
       
+      let simTime = 0;
       const interval = setInterval(() => {
+        simTime += 0.05;
         setRunData(prev => {
-          const lastLoc = prev.coordinates[prev.coordinates.length - 1] || { latitude: mockStartLat, longitude: mockStartLng };
           const newLoc = {
-            latitude: lastLoc.latitude + 0.0001,
-            longitude: lastLoc.longitude + 0.0001
+            latitude: mockStartLat + 0.0004 * Math.sin(simTime),
+            longitude: mockStartLng + 0.0008 * Math.cos(simTime)
           };
           setCurrentLocation(newLoc);
           lastUpdateTime.current = Date.now();
