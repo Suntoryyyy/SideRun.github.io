@@ -22,34 +22,34 @@ const SpectatorControls = ({
 }) => {
   if (mode === 'spectate') {
     return (
-      <View style={styles.controlsContainer}>
-        <Animated.View style={[{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', paddingHorizontal: 20 }, { opacity: contentOpacity }]}>
+      <View style={[styles.controlsContainer, { paddingTop: 10 }]}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-evenly', width: '100%', paddingHorizontal: 10 }}>
           <TouchableOpacity
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
               sendCheer('🔥');
             }}
-            style={{ backgroundColor: '#F0F0F0', width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center' }}
+            style={{ backgroundColor: '#F0F0F0', width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginHorizontal: 5 }}
           >
-            <Text style={{ fontSize: 24 }}>🔥</Text>
+            <Text style={{ fontSize: 20 }}>🔥</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
               sendCheer('🚀');
             }}
-            style={{ backgroundColor: '#F0F0F0', width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center' }}
+            style={{ backgroundColor: '#F0F0F0', width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginHorizontal: 5 }}
           >
-            <Text style={{ fontSize: 24 }}>🚀</Text>
+            <Text style={{ fontSize: 20 }}>🚀</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
               sendCheer('💦');
             }}
-            style={{ backgroundColor: '#F0F0F0', width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center' }}
+            style={{ backgroundColor: '#F0F0F0', width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginHorizontal: 5 }}
           >
-            <Text style={{ fontSize: 24 }}>💦</Text>
+            <Text style={{ fontSize: 20 }}>💦</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={async () => {
@@ -66,11 +66,11 @@ const SpectatorControls = ({
                 sendCheer(`data:image/jpeg;base64,${result.assets[0].base64}`);
               }
             }}
-            style={{ backgroundColor: '#E8F8F2', width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#24C789' }}
+            style={{ backgroundColor: '#E8F8F2', width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#24C789', marginHorizontal: 5 }}
           >
-            <Ionicons name='add' size={28} color='#24C789' />
+            <Ionicons name='add' size={24} color='#24C789' />
           </TouchableOpacity>
-        </Animated.View>
+        </View>
       </View>
     );
   }

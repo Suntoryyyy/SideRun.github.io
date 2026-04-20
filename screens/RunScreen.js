@@ -377,7 +377,28 @@ export default function RunScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
-            <RunMapMemo mode={mode} spectateFriend={spectateFriend} 
+      {mode === 'spectate' && (
+        <>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="chevron-back" size={28} color="#24C789" />
+          </TouchableOpacity>
+
+          {spectateFriend && (
+            <View style={styles.spectatorBadge}>
+              <BlurView intensity={80} tint="light" style={styles.spectatorBadgeInner}>
+                <Text style={styles.spectatorBadgeText}>
+                  {signalLost ? "🔴 信号弱" : "🟢 正在同步"} • {spectateFriend.name} {spectateFriend.avatar}
+                </Text>
+              </BlurView>
+            </View>
+          )}
+        </>
+      )}
+
+      <RunMapMemo mode={mode} spectateFriend={spectateFriend} 
         navigation={navigation}
         region={region}
         currentLocation={currentLocation}

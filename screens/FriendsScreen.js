@@ -662,7 +662,6 @@ const liveMockFriend = {
       )}
 
       <ScrollView contentContainerStyle={styles.scrollContent} scrollIndicatorInsets={{ top: 1 }}>
-        <View style={{ height: 100, backgroundColor: 'rgba(255, 255, 255, 0.85)' }} />
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}

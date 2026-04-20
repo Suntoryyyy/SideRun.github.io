@@ -39,6 +39,24 @@ export default StyleSheet.create({
     height: height,
     position: 'relative',
   },
+  spectatorBadge: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : (Platform.OS === 'web' ? 90 : 40),
+    right: 20,
+    zIndex: 999,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  spectatorBadgeInner: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  spectatorBadgeText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#333',
+  },
   backButton: {
     position: 'absolute',
     top: Platform.OS === 'ios' ? 60 : (Platform.OS === 'web' ? 90 : 40),
