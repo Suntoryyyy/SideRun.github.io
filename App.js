@@ -6,6 +6,7 @@ import { createStackNavigator, TransitionPresets } from '@react-navigation/stack
 import * as TaskManager from 'expo-task-manager';
 import * as Location from 'expo-location';
 import { View, ActivityIndicator, Platform, StyleSheet } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 const BACKGROUND_LOCATION_TASK = "BACKGROUND_LOCATION_TASK";
 
@@ -48,8 +49,10 @@ import OnboardingWelcomeScreen from './screens/OnboardingWelcomeScreen';
 import OnboardingPermissionsScreen from './screens/OnboardingPermissionsScreen';
 import OnboardingGoalScreen, { ONBOARDING_KEY } from './screens/OnboardingGoalScreen';
 
-// Shared constant so HomeScreen can offset its floating CTA above the bar
-export const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 83 : Platform.OS === 'android' ? 64 : 68;
+// Shared constant so HomeScreen can offset its floating CTA above the bar.
+// On web (iOS Safari) we match the iOS height so the safe-area bottom padding
+// is consistent with the native layout.
+export const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 83 : Platform.OS === 'android' ? 64 : 83;
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -177,6 +180,7 @@ export default function App() {
   }
 
   return (
+    <SafeAreaProvider>
     <NavigationContainer>
       <StatusBar style="auto" />
       <Stack.Navigator screenOptions={{ headerShown: false, ...TransitionPresets.SlideFromRightIOS }}>
@@ -210,20 +214,21 @@ export default function App() {
         )}
       </Stack.Navigator>
     </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 0,
+    // Thin separator so the bar reads as attached to the content, not floating
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(11,15,19,0.07)',
     elevation: 0,
-    shadowColor: '#0B0F13',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
+    shadowColor: 'transparent',
     height: TAB_BAR_HEIGHT,
-    paddingBottom: Platform.OS === 'ios' ? 28 : Platform.OS === 'android' ? 8 : 10,
+    // Let safe-area-context supply the extra bottom padding on iOS/web
+    paddingBottom: Platform.OS === 'ios' ? 28 : Platform.OS === 'android' ? 8 : 28,
     paddingTop: 8,
   },
   tabLabel: {

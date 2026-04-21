@@ -135,6 +135,19 @@ export default function ProfileScreen({ navigation, handleLogout }) {
     }
   };
 
+  // Privacy toggles save immediately — no need to be in edit mode
+  const handlePrivacyToggle = async (key, value) => {
+    if (key === 'allowFriendsViewRecord') setAllowFriendsViewRecord(value);
+    else setAllowStrangersAdd(value);
+    try {
+      const raw = await AsyncStorage.getItem("currentUser");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        await AsyncStorage.setItem("currentUser", JSON.stringify({ ...parsed, [key]: value }));
+      }
+    } catch (_) {}
+  };
+
   const onLogoutPress = async () => {
     if (Platform.OS === "web") {
       if (window.confirm("Log out of SideRun?")) {
@@ -237,10 +250,9 @@ export default function ProfileScreen({ navigation, handleLogout }) {
             </View>
             <Switch
               value={allowFriendsViewRecord}
-              onValueChange={setAllowFriendsViewRecord}
+              onValueChange={(v) => handlePrivacyToggle('allowFriendsViewRecord', v)}
               trackColor={{ false: "#E5E7EB", true: "#0B0F13" }}
               thumbColor="#FFFFFF"
-              disabled={!isEditing}
             />
           </View>
 
@@ -251,10 +263,9 @@ export default function ProfileScreen({ navigation, handleLogout }) {
             </View>
             <Switch
               value={allowStrangersAdd}
-              onValueChange={setAllowStrangersAdd}
+              onValueChange={(v) => handlePrivacyToggle('allowStrangersAdd', v)}
               trackColor={{ false: "#E5E7EB", true: "#0B0F13" }}
               thumbColor="#FFFFFF"
-              disabled={!isEditing}
             />
           </View>
         </View>
