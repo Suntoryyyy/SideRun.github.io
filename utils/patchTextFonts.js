@@ -1,4 +1,4 @@
-import { Text, StyleSheet } from 'react-native';
+import { Platform, Text, StyleSheet } from 'react-native';
 import { FONT } from '../constants/typography';
 
 /**
@@ -8,6 +8,14 @@ import { FONT } from '../constants/typography';
  *
  * Texts that set their own fontFamily (e.g. Ionicons via nested Text) are
  * left untouched.
+ *
+ * NOTE: This is a NATIVE-ONLY patch. On web, react-native-web's Text.render
+ * returns an element whose style has already been converted to DOM-ready
+ * CSS properties. Wrapping it in an array style causes downstream code to
+ * hand un-normalized array values (e.g. fontVariant: ['tabular-nums']) to
+ * the DOM, which throws "Failed to set an indexed property [0] on
+ * CSSStyleDeclaration" and blanks the screen. On web we rely on explicit
+ * `fontFamily: FONT.*` entries in the typography system and StyleSheet.
  */
 const WEIGHT_TO_FAMILY = {
   '100': FONT.regular,
@@ -29,6 +37,8 @@ export default function patchTextFonts() {
   if (patched) return;
   patched = true;
 
+  if (Platform.OS === 'web') return;
+
   const originalRender = Text.render;
   if (typeof originalRender !== 'function') return;
 
@@ -38,7 +48,6 @@ export default function patchTextFonts() {
 
     const flat = StyleSheet.flatten(element.props.style) || {};
 
-    // Respect explicit fontFamily (icon fonts, custom overrides).
     if (flat.fontFamily) return element;
 
     const weight = flat.fontWeight != null ? String(flat.fontWeight) : 'normal';
