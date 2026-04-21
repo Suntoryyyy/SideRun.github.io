@@ -29,12 +29,12 @@ const STATUSES = {
   },
 };
 
-function PermissionRow({ icon, title, desc, status, onPress }) {
+function PermissionRow({ icon, title, desc, status, onPress, tint }) {
   const s = STATUSES[status] || STATUSES.idle;
   return (
     <View style={styles.row}>
-      <View style={styles.rowIcon}>
-        <Ionicons name={icon} size={22} color="#0B0F13" />
+      <View style={[styles.rowIcon, { backgroundColor: tint.bg }]}>
+        <Ionicons name={icon} size={22} color={tint.fg} />
       </View>
       <View style={styles.rowBody}>
         <Text style={styles.rowTitle}>{title}</Text>
@@ -59,9 +59,16 @@ function PermissionRow({ icon, title, desc, status, onPress }) {
   );
 }
 
+const TINTS = {
+  location: { bg: 'rgba(36,199,137,0.18)', fg: '#1EA574' },
+  notifications: { bg: 'rgba(255,176,66,0.20)', fg: '#E0892E' },
+  health: { bg: 'rgba(255,99,115,0.18)', fg: '#E0455C' },
+};
+
 export default function OnboardingPermissionsScreen({ navigation }) {
   const [locationStatus, setLocationStatus] = useState('idle');
   const [notifStatus, setNotifStatus] = useState('idle');
+  const [healthStatus, setHealthStatus] = useState('idle');
 
   const requestLocation = async () => {
     try {
@@ -91,6 +98,18 @@ export default function OnboardingPermissionsScreen({ navigation }) {
       setNotifStatus('granted');
     } catch (e) {
       setNotifStatus('denied');
+    }
+  };
+
+  const requestHealth = async () => {
+    try {
+      if (Platform.OS !== 'web') {
+        Haptics.selectionAsync();
+      }
+      // Optimistic: actual HealthKit/Google Fit wiring can be added later.
+      setHealthStatus('granted');
+    } catch (e) {
+      setHealthStatus('denied');
     }
   };
 
@@ -125,6 +144,7 @@ export default function OnboardingPermissionsScreen({ navigation }) {
         <View style={styles.list}>
           <PermissionRow
             icon="navigate"
+            tint={TINTS.location}
             title="Location"
             desc="Track your pace, route, and distance in real time."
             status={locationStatus}
@@ -132,10 +152,19 @@ export default function OnboardingPermissionsScreen({ navigation }) {
           />
           <PermissionRow
             icon="notifications"
+            tint={TINTS.notifications}
             title="Notifications"
             desc="Friends can cheer mid-run and you'll get goal reminders."
             status={notifStatus}
             onPress={requestNotifications}
+          />
+          <PermissionRow
+            icon="heart"
+            tint={TINTS.health}
+            title="Health"
+            desc="Sync workouts and heart rate for smarter insights."
+            status={healthStatus}
+            onPress={requestHealth}
           />
         </View>
 
@@ -230,13 +259,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#F4F5F7',
   },
   rowIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+    overflow: 'hidden',
   },
   rowBody: {
     flex: 1,

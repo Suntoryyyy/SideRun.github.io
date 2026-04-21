@@ -6,7 +6,7 @@ import { createStackNavigator, TransitionPresets } from '@react-navigation/stack
 import * as TaskManager from 'expo-task-manager';
 import * as Location from 'expo-location';
 import { View, ActivityIndicator, Platform, StyleSheet } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const BACKGROUND_LOCATION_TASK = "BACKGROUND_LOCATION_TASK";
 
@@ -49,20 +49,34 @@ import OnboardingWelcomeScreen from './screens/OnboardingWelcomeScreen';
 import OnboardingPermissionsScreen from './screens/OnboardingPermissionsScreen';
 import OnboardingGoalScreen, { ONBOARDING_KEY } from './screens/OnboardingGoalScreen';
 
-// Shared constant so HomeScreen can offset its floating CTA above the bar.
-// On web (iOS Safari) we match the iOS height so the safe-area bottom padding
-// is consistent with the native layout.
-export const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 83 : Platform.OS === 'android' ? 64 : 83;
+// Visual height of icon + label; actual bar size adds safe-area bottom inset
+const TAB_BAR_CONTENT_HEIGHT = 56;
+
+// Backwards-compat export for screens that position floating CTAs above the
+// bar (HomeScreen). We approximate here — the bar itself uses the live inset.
+export const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 86 : Platform.OS === 'android' ? 64 : 86;
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
 function MainTabNavigator({ handleLogout }) {
+  const insets = useSafeAreaInsets();
+  // iOS Safari reports a real bottom inset for the URL bar; use it directly.
+  // Android tabs sit above the software nav bar which is already excluded, so
+  // we only add a small visual breathing room.
+  const bottomPad = Platform.OS === 'android' ? 8 : Math.max(insets.bottom, 12);
+
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            height: TAB_BAR_CONTENT_HEIGHT + bottomPad,
+            paddingBottom: bottomPad,
+          },
+        ],
         tabBarActiveTintColor: '#0B0F13',
         tabBarInactiveTintColor: '#9AA0A6',
         tabBarLabelStyle: styles.tabLabel,
@@ -221,15 +235,12 @@ export default function App() {
 const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: '#FFFFFF',
-    // Thin separator so the bar reads as attached to the content, not floating
     borderTopWidth: 1,
     borderTopColor: 'rgba(11,15,19,0.07)',
     elevation: 0,
     shadowColor: 'transparent',
-    height: TAB_BAR_HEIGHT,
-    // Let safe-area-context supply the extra bottom padding on iOS/web
-    paddingBottom: Platform.OS === 'ios' ? 28 : Platform.OS === 'android' ? 8 : 28,
     paddingTop: 8,
+    // height + paddingBottom applied dynamically from useSafeAreaInsets
   },
   tabLabel: {
     fontFamily: 'Inter_600SemiBold',
