@@ -11,31 +11,27 @@ import {
   Animated,
   Platform,
 } from "react-native";
-import useUserStore from '../store/useUserStore';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../services/supabase";
 import { useIsFocused } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { BlurView } from "expo-blur";
-import * as Location from "expo-location";
-import MapStyle from "./MapStyle.json";
 import ProgressRing from "../components/ProgressRing";
 import Sparkline from "../components/Sparkline";
 import EmptyState from "../components/EmptyState";
 import { T, FONT } from "../constants/typography";
 
-let MapView, PROVIDER_GOOGLE;
-if (Platform.OS !== "web") {
-  const Maps = require("react-native-maps");
-  MapView = Maps.default;
-  PROVIDER_GOOGLE = Maps.PROVIDER_GOOGLE;
-}
-
 const { width } = Dimensions.get("window");
 
 const DEFAULT_WEEKLY_GOAL_KM = 20;
 const WEEKLY_GOAL_KEY = "siderun_weekly_goal_km";
+
+const hapticLight = () => {
+  if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+};
+const hapticHeavy = () => {
+  if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+};
 
 export default function HomeScreen({ navigation }) {
   const isFocused = useIsFocused();
@@ -46,38 +42,16 @@ export default function HomeScreen({ navigation }) {
   const [weekStats, setWeekStats] = useState({ km: 0, runs: 0, bestKm: 0 });
   const [weekSeries, setWeekSeries] = useState([0, 0, 0, 0, 0, 0, 0]);
   const [recentRun, setRecentRun] = useState(null);
-  const [region, setRegion] = useState({
-    latitude: 37.7749,
-    longitude: -122.4194,
-    latitudeDelta: 0.05,
-    longitudeDelta: 0.05,
-  });
-
-  useEffect(() => {
-    (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") return;
-      let location = await Location.getCurrentPositionAsync({});
-      setRegion({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-      });
-    })();
-  }, []);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return "Good Morning";
-    if (hour < 18) return "Good Afternoon";
-    return "Good Evening";
+    if (hour < 12) return "GOOD MORNING";
+    if (hour < 18) return "GOOD AFTERNOON";
+    return "GOOD EVENING";
   };
 
   useEffect(() => {
-    if (isFocused) {
-      loadUserData();
-    }
+    if (isFocused) loadUserData();
   }, [isFocused]);
 
   const loadUserData = async () => {
@@ -126,7 +100,6 @@ export default function HomeScreen({ navigation }) {
           0
         );
 
-        // Build a 7-day series ending today (oldest first)
         const series = Array(7).fill(0);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -134,7 +107,7 @@ export default function HomeScreen({ navigation }) {
           const d = new Date(r.created_at);
           d.setHours(0, 0, 0, 0);
           const diffDays = Math.round((today - d) / 86400000);
-          const idx = 6 - diffDays; // 0 = 6 days ago, 6 = today
+          const idx = 6 - diffDays;
           if (idx >= 0 && idx <= 6) {
             series[idx] += Number(r.distance) || 0;
           }
@@ -180,10 +153,10 @@ export default function HomeScreen({ navigation }) {
 
   const handlePressIn = () => {
     Animated.spring(startButtonScale, {
-      toValue: 0.92,
+      toValue: 0.96,
       useNativeDriver: true,
-      speed: 20,
-      bounciness: 10,
+      speed: 30,
+      bounciness: 8,
     }).start();
   };
 
@@ -191,90 +164,52 @@ export default function HomeScreen({ navigation }) {
     Animated.spring(startButtonScale, {
       toValue: 1,
       useNativeDriver: true,
-      speed: 20,
-      bounciness: 10,
+      speed: 30,
+      bounciness: 8,
     }).start();
   };
 
+  const goalProgress = Math.min(1, weekStats.km / weeklyGoalKm || 0);
+  const goalPct = Math.min(100, Math.round(goalProgress * 100));
+
   return (
     <View style={styles.container}>
-      {/* Background Live Map */}
-      {Platform.OS === "web" ? (
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: -1,
-          }}
-        >
-          <iframe
-            width="100%"
-            height="100%"
-            frameBorder="0"
-            scrolling="no"
-            src={`https://www.openstreetmap.org/export/embed.html?bbox=${region.longitude - 0.025},${region.latitude - 0.025},${region.longitude + 0.025},${region.latitude + 0.025}&layer=mapnik`}
-            style={{ border: "none", filter: "brightness(0.9) grayscale(0.8)" }}
-          />
-        </div>
-      ) : (
-        MapView && (
-          <MapView
-            style={StyleSheet.absoluteFillObject}
-            provider={PROVIDER_GOOGLE}
-            region={region}
-            customMapStyle={MapStyle}
-            showsUserLocation={false}
-            pitchEnabled={false}
-            rotateEnabled={false}
-            scrollEnabled={false}
-            zoomEnabled={false}
-          />
-        )
-      )}
-
-      {/* Main Content Overlay */}
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Dribbble-Style Greeting Header */}
+        {/* Editorial header */}
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.menuButton}
+            activeOpacity={0.8}
             onPress={() => navigation.openDrawer()}
           >
-            <BlurView intensity={60} tint="light" style={styles.iconCircle}>
-              <Ionicons name="menu" size={24} color="#111" />
-            </BlurView>
+            <Ionicons name="menu" size={22} color="#0B0F13" />
           </TouchableOpacity>
-          <View style={styles.headerTop}>
+          <View style={styles.headerTopRow}>
             <View style={styles.greetingContainer}>
               <Text style={styles.greeting}>{getGreeting()}</Text>
               <Text style={styles.userName}>{username}</Text>
             </View>
-            <View style={styles.userInfoContainer}>
-              {avatar &&
-              (avatar.startsWith("file:") ||
-                avatar.startsWith("http") ||
-                avatar.startsWith("data:")) ? (
-                <Image
-                  source={{ uri: avatar }}
-                  style={styles.homeAvatarImage}
-                />
-              ) : (
-                <BlurView intensity={60} tint="light" style={styles.iconCircle}>
-                  <Ionicons name="person" size={24} color="#111" />
-                </BlurView>
-              )}
-            </View>
+            {avatar &&
+            (avatar.startsWith("file:") ||
+              avatar.startsWith("http") ||
+              avatar.startsWith("data:")) ? (
+              <Image
+                source={{ uri: avatar }}
+                style={styles.homeAvatarImage}
+              />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Ionicons name="person" size={22} color="#0B0F13" />
+              </View>
+            )}
           </View>
         </View>
 
-        {/* Weekly Stats Card — Apple Fitness / Oura inspired */}
-        <BlurView intensity={80} tint="light" style={styles.weekHeroCard}>
+        {/* Weekly hero card — Apple Fitness / Oura inspired */}
+        <View style={styles.weekHeroCard}>
           <View style={styles.weekHeroTop}>
             <View style={styles.weekHeroLeft}>
               <Text style={styles.weekHeroLabel}>THIS WEEK</Text>
@@ -286,22 +221,19 @@ export default function HomeScreen({ navigation }) {
               </View>
               <View style={styles.weekHeroChip}>
                 <Text style={styles.weekHeroChipText}>
-                  {Math.min(
-                    100,
-                    Math.round((weekStats.km / weeklyGoalKm) * 100)
-                  )}
-                  % of {weeklyGoalKm} km goal
+                  {goalPct}% of {weeklyGoalKm} km goal
                 </Text>
               </View>
             </View>
             <ProgressRing
-              size={92}
+              size={96}
               stroke={10}
-              progress={weekStats.km / weeklyGoalKm}
+              progress={goalProgress}
               color="#24C789"
               trackColor="rgba(0,0,0,0.06)"
+              valueText={`${goalPct}%`}
               label="WEEK"
-              textColor="#111"
+              textColor="#0B0F13"
             />
           </View>
 
@@ -331,91 +263,89 @@ export default function HomeScreen({ navigation }) {
           </View>
 
           <Sparkline
-            data={weekSeries.some((v) => v > 0) ? weekSeries : [0.1, 0.2, 0.15, 0.3, 0.2, 0.4, 0.25]}
-            width={width - 24 * 2 - 24 * 2}
+            data={
+              weekSeries.some((v) => v > 0)
+                ? weekSeries
+                : [0.1, 0.2, 0.15, 0.3, 0.2, 0.4, 0.25]
+            }
+            width={width - 24 * 2 - 20 * 2}
             height={32}
             color="#24C789"
             fillOpacity={0.18}
           />
-        </BlurView>
+        </View>
 
-        {/* Live Weather Preview */}
+        {/* Weather preview */}
         <TouchableOpacity
-          activeOpacity={0.8}
+          activeOpacity={0.85}
           onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            hapticLight();
             navigation.navigate("Weather");
           }}
+          style={styles.weatherCard}
         >
-          <BlurView intensity={75} tint="light" style={styles.weatherCard}>
-            <View style={styles.weatherIconContainer}>
-              <Ionicons name="partly-sunny" size={32} color="#24C789" />
-            </View>
-            <View style={styles.weatherMeta}>
-              <Text style={styles.weatherTemp}>18°C · Perfect Conditions</Text>
-              <Text style={styles.weatherDesc}>
-                Low wind, great time for a run
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#555" />
-          </BlurView>
+          <View style={styles.weatherIconContainer}>
+            <Ionicons name="partly-sunny" size={26} color="#1EA574" />
+          </View>
+          <View style={styles.weatherMeta}>
+            <Text style={styles.weatherTemp}>18°C · Perfect Conditions</Text>
+            <Text style={styles.weatherDesc}>
+              Low wind, great time for a run
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#9AA0A6" />
         </TouchableOpacity>
 
-        {/* Recent Run - Mini Card */}
+        {/* Recent Run */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Run</Text>
-          <TouchableOpacity
-            onPress={() => navigation.navigate("RunHistory")}
-          >
-            <Text style={styles.seeAllText}>See All</Text>
+          <Text style={styles.sectionTitle}>Recent run</Text>
+          <TouchableOpacity onPress={() => navigation.navigate("RunHistory")}>
+            <Text style={styles.seeAllText}>See all</Text>
           </TouchableOpacity>
         </View>
 
         {recentRun ? (
           <TouchableOpacity
-            activeOpacity={0.8}
+            activeOpacity={0.85}
             onPress={() => navigation.navigate("RunHistory")}
+            style={styles.recentRunCard}
           >
-            <BlurView intensity={80} tint="light" style={styles.recentRunCard}>
-              <View style={styles.runIconBg}>
-                <Ionicons name="location" size={20} color="#FFF" />
-              </View>
-              <View style={styles.runInfo}>
-                <Text style={styles.runTitle}>
-                  {Number(recentRun.distance).toFixed(2)} km run
-                </Text>
-                <Text style={styles.runDate}>
-                  {formatRelativeDate(recentRun.created_at)}
-                </Text>
-              </View>
-              <View style={styles.runStats}>
-                <Text style={styles.runDistance}>
-                  {Number(recentRun.distance).toFixed(2)} km
-                </Text>
-                <Text style={styles.runTime}>
-                  {formatDuration(recentRun.duration_seconds)}
-                </Text>
-              </View>
-            </BlurView>
+            <View style={styles.runIconBg}>
+              <Ionicons name="footsteps" size={18} color="#FFF" />
+            </View>
+            <View style={styles.runInfo}>
+              <Text style={styles.runTitle}>
+                {Number(recentRun.distance).toFixed(2)} km run
+              </Text>
+              <Text style={styles.runDate}>
+                {formatRelativeDate(recentRun.created_at)}
+              </Text>
+            </View>
+            <View style={styles.runStats}>
+              <Text style={styles.runDistance}>
+                {formatDuration(recentRun.duration_seconds)}
+              </Text>
+              <Text style={styles.runTime}>duration</Text>
+            </View>
           </TouchableOpacity>
         ) : (
           <EmptyState
             compact
             icon="footsteps-outline"
             title="No runs yet"
-            desc="Tap START RUN to log your first one and light up the week ring."
+            desc="Tap Start run to log your first one and light up the week ring."
             accent="#FF5A36"
           />
         )}
       </ScrollView>
 
-      {/* Floating Big Start Button Component */}
+      {/* Floating primary CTA — dark pill, matches onboarding / auth */}
       <View style={styles.startActionContainer}>
         <TouchableWithoutFeedback
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
           onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            hapticHeavy();
             navigation.navigate("Run");
           }}
         >
@@ -425,13 +355,16 @@ export default function HomeScreen({ navigation }) {
               { transform: [{ scale: startButtonScale }] },
             ]}
           >
+            <View style={styles.playDot}>
+              <Ionicons name="play" size={14} color="#0B0F13" />
+            </View>
+            <Text style={styles.startActionText}>Start run</Text>
             <Ionicons
-              name="play"
-              size={32}
-              color="#FFF"
-              style={styles.playIcon}
+              name="arrow-forward"
+              size={18}
+              color="#FFFFFF"
+              style={styles.playArrow}
             />
-            <Text style={styles.startActionText}>START RUN</Text>
           </Animated.View>
         </TouchableWithoutFeedback>
       </View>
@@ -442,44 +375,42 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#EAEAEA",
+    backgroundColor: "#F7F8FA",
   },
   scrollContent: {
-    padding: 24,
-    paddingTop: Platform.OS === "ios" ? 60 : 40,
+    paddingHorizontal: 24,
+    paddingTop: Platform.OS === "ios" ? 64 : 44,
     paddingBottom: 140,
   },
   header: {
-    marginBottom: 32,
-    marginTop: 10,
+    marginBottom: 20,
   },
   menuButton: {
-    marginBottom: 20,
-    alignSelf: "flex-start",
-  },
-  iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
-    overflow: "hidden",
-    backgroundColor: "rgba(255, 255, 255, 0.4)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.8)",
+    alignSelf: "flex-start",
+    marginBottom: 18,
+    shadowColor: "#0B0F13",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 2,
   },
-  headerTop: {
+  headerTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
   greetingContainer: {
     flex: 1,
+    paddingRight: 12,
   },
   greeting: {
-    ...T.label,
-    fontSize: 12,
-    color: "#6B6F76",
+    ...T.eyebrow,
     marginBottom: 4,
   },
   userName: {
@@ -487,25 +418,36 @@ const styles = StyleSheet.create({
     fontSize: 30,
     letterSpacing: -1,
   },
-  userInfoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
   homeAvatarImage: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     borderWidth: 2,
-    borderColor: "#24C789",
+    borderColor: "#FFFFFF",
+  },
+  avatarFallback: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#0B0F13",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 2,
   },
   weekHeroCard: {
     borderRadius: 28,
     padding: 20,
-    marginBottom: 20,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.9)",
-    backgroundColor: "rgba(255, 255, 255, 0.72)",
+    marginBottom: 14,
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#0B0F13",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.05,
+    shadowRadius: 24,
+    elevation: 2,
   },
   weekHeroTop: {
     flexDirection: "row",
@@ -518,16 +460,17 @@ const styles = StyleSheet.create({
   },
   weekHeroLabel: {
     ...T.eyebrow,
-    color: "#6B6F76",
     marginBottom: 6,
   },
   weekHeroNumRow: {
     flexDirection: "row",
     alignItems: "baseline",
-    marginBottom: 8,
+    marginBottom: 10,
   },
   weekHeroNum: {
     ...T.displayM,
+    fontSize: 40,
+    lineHeight: 44,
   },
   weekHeroUnit: {
     fontFamily: FONT.semibold,
@@ -540,7 +483,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: "rgba(36,199,137,0.15)",
+    backgroundColor: "rgba(36,199,137,0.12)",
   },
   weekHeroChipText: {
     ...T.pill,
@@ -548,13 +491,13 @@ const styles = StyleSheet.create({
   },
   weekHeroDivider: {
     height: 1,
-    backgroundColor: "rgba(0,0,0,0.08)",
+    backgroundColor: "rgba(11,15,19,0.06)",
     marginVertical: 14,
   },
   weekHeroStatsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 12,
+    marginBottom: 14,
   },
   weekHeroStat: {
     alignItems: "flex-start",
@@ -570,161 +513,142 @@ const styles = StyleSheet.create({
     ...T.metricUnit,
   },
   weatherCard: {
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 32,
+    borderRadius: 22,
+    padding: 16,
+    marginBottom: 24,
     flexDirection: "row",
     alignItems: "center",
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.9)",
-    backgroundColor: "rgba(255, 255, 255, 0.65)",
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#0B0F13",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.04,
+    shadowRadius: 18,
+    elevation: 1,
   },
   weatherIconContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: "rgba(36, 199, 137, 0.15)",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(36,199,137,0.12)",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 16,
+    marginRight: 14,
   },
   weatherMeta: {
     flex: 1,
   },
   weatherTemp: {
+    fontFamily: FONT.extraBold,
     fontSize: 15,
-    fontWeight: "800",
-    color: "#111",
-    marginBottom: 4,
+    color: "#0B0F13",
+    letterSpacing: -0.2,
+    marginBottom: 2,
   },
   weatherDesc: {
-    fontSize: 13,
-    color: "#666",
-    fontWeight: "500",
+    ...T.caption,
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
-    marginBottom: 16,
-    paddingHorizontal: 4,
+    marginBottom: 12,
+    paddingHorizontal: 2,
   },
   sectionTitle: {
-    fontFamily: FONT.extraBold,
-    fontSize: 20,
-    color: "#111",
-    letterSpacing: -0.5,
+    ...T.title3,
   },
   seeAllText: {
     fontFamily: FONT.bold,
     fontSize: 13,
-    color: "#24C789",
-    marginBottom: 4,
+    color: "#0B0F13",
+    textDecorationLine: "underline",
   },
   recentRunCard: {
-    borderRadius: 24,
-    padding: 20,
+    borderRadius: 22,
+    padding: 16,
     marginBottom: 12,
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.9)",
-    backgroundColor: "rgba(255, 255, 255, 0.75)",
-    overflow: "hidden",
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#0B0F13",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.04,
+    shadowRadius: 18,
+    elevation: 1,
   },
   runIconBg: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#111",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#0B0F13",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 16,
+    marginRight: 14,
   },
   runInfo: {
     flex: 1,
   },
   runTitle: {
     fontFamily: FONT.extraBold,
-    fontSize: 16,
-    color: "#111",
-    marginBottom: 4,
+    fontSize: 15,
+    color: "#0B0F13",
+    marginBottom: 2,
     letterSpacing: -0.2,
   },
   runDate: {
-    fontFamily: FONT.medium,
-    fontSize: 13,
-    color: "#666",
+    ...T.caption,
   },
   runStats: {
     alignItems: "flex-end",
   },
   runDistance: {
     fontFamily: FONT.extraBold,
-    fontSize: 16,
-    color: "#24C789",
-    marginBottom: 4,
-    letterSpacing: -0.3,
+    fontSize: 15,
+    color: "#0B0F13",
+    letterSpacing: -0.2,
     fontVariant: ["tabular-nums"],
   },
   runTime: {
-    fontFamily: FONT.semibold,
-    fontSize: 13,
-    color: "#666",
-    fontVariant: ["tabular-nums"],
-  },
-  emptyRunCard: {
-    borderRadius: 24,
-    padding: 24,
-    marginBottom: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.9)",
-    backgroundColor: "rgba(255, 255, 255, 0.65)",
-    overflow: "hidden",
-  },
-  emptyRunText: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#444",
-    marginTop: 8,
-  },
-  emptyRunSub: {
-    fontSize: 13,
-    color: "#777",
-    marginTop: 4,
-    textAlign: "center",
+    ...T.label,
+    marginTop: 2,
   },
   startActionContainer: {
     position: "absolute",
-    bottom: 40,
+    bottom: 28,
     left: 0,
     right: 0,
     alignItems: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
   },
   startActionBtn: {
-    backgroundColor: "#24C789",
+    backgroundColor: "#0B0F13",
     width: "100%",
-    height: 64,
-    borderRadius: 32,
+    height: 60,
+    borderRadius: 30,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#24C789",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
+    paddingHorizontal: 20,
+    shadowColor: "#0B0F13",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
     elevation: 8,
   },
-  playIcon: {
-    marginRight: 8,
+  playDot: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  playArrow: {
+    marginLeft: 10,
   },
   startActionText: {
-    fontFamily: FONT.extraBold,
-    fontSize: 18,
-    color: "#FFFFFF",
-    letterSpacing: 1,
+    ...T.button,
+    fontSize: 16,
   },
 });
