@@ -212,6 +212,18 @@ export default function ProfileScreen({ navigation, handleLogout }) {
           </TouchableOpacity>
           <Text style={styles.avatarName}>{username || "Runner"}</Text>
           <Text style={styles.avatarPhone}>{phone}</Text>
+
+          {/* Gentle nudge when username hasn't been set yet */}
+          {!username && !isEditing && (
+            <TouchableOpacity
+              style={styles.usernamePrompt}
+              onPress={() => setIsEditing(true)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="pencil-outline" size={12} color="#24C789" />
+              <Text style={styles.usernamePromptText}>Add a username</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* ── Profile info card ── */}
@@ -388,6 +400,22 @@ const styles = StyleSheet.create({
     height: 88,
     borderRadius: 44,
     backgroundColor: "#F4F5F7",
+  },
+  usernamePrompt: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#24C789",
+  },
+  usernamePromptText: {
+    fontFamily: FONT.semibold,
+    fontSize: 12,
+    color: "#24C789",
   },
   avatarEditBadge: {
     position: "absolute",

@@ -189,15 +189,22 @@ export default StyleSheet.create({
   },
   dragHandleContainer: {
     width: '100%',
-    height: 28,
+    height: 32,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 4,
   },
   dragHandle: {
     width: 40,
     height: 4,
     backgroundColor: '#E4E6EA',
     borderRadius: 2,
+  },
+  dragHandleHint: {
+    fontFamily: FONT.semibold,
+    fontSize: 10,
+    color: '#9AA0A6',
+    letterSpacing: 0.4,
   },
 
   // Map avatar halo (around the runner dot)

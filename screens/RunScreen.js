@@ -443,19 +443,26 @@ export default function RunScreen({ route, navigation }) {
         </View>
       )}
 
+      {/* On web PanResponder fights with Leaflet touch events — tap-only there */}
       <Animated.View
         style={[
           styles.dashboardContainer,
           { transform: [{ translateY: panY }] },
         ]}
-        {...panResponder.panHandlers}
+        {...(Platform.OS !== 'web' ? panResponder.panHandlers : {})}
       >
         <TouchableOpacity
           style={styles.dragHandleContainer}
           activeOpacity={0.8}
           onPress={togglePanel}
+          hitSlop={{ top: 10, bottom: 10, left: 60, right: 60 }}
         >
           <View style={styles.dragHandle} />
+          {Platform.OS === 'web' && (
+            <Text style={styles.dragHandleHint}>
+              {isPanelCollapsed ? '▲ Show stats' : '▼ Hide'}
+            </Text>
+          )}
         </TouchableOpacity>
 
               <MetricDashboard

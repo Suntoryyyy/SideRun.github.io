@@ -92,7 +92,7 @@ function MainTabNavigator({ handleLogout }) {
         name="Run"
         component={RunScreen}
         options={{
-          tabBarLabel: 'Run',
+          tabBarLabel: () => null,   // circular button is self-explanatory
           tabBarIcon: ({ focused }) => (
             <View style={[styles.runTab, focused && styles.runTabFocused]}>
               <Ionicons name="play" size={19} color="#FFFFFF" />
@@ -238,14 +238,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   runTab: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: '#0B0F13',
     justifyContent: 'center',
     alignItems: 'center',
-    // lift the Run button slightly above the bar for visual prominence
-    marginBottom: Platform.OS === 'ios' ? 10 : 4,
+    // without the label below, we can lift the button higher
+    marginBottom: Platform.OS === 'ios' ? 16 : Platform.OS === 'android' ? 8 : 16,
     shadowColor: '#0B0F13',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,

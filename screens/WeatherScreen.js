@@ -9,6 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { Ionicons } from '@expo/vector-icons';
 import Sparkline from '../components/Sparkline';
@@ -40,7 +41,6 @@ export default function WeatherScreen({ navigation }) {
     }
 
     try {
-
       let userLocation = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       if (!userLocation) {
          userLocation = await Location.getLastKnownPositionAsync();
@@ -49,15 +49,23 @@ export default function WeatherScreen({ navigation }) {
         setLocation(userLocation.coords);
       }
     } catch (locationError) {
-      console.log('Location fetch failed or timed out. Falling back to mock data.', locationError);
+      console.log('Location fetch failed or timed out. Trying cached run coords.', locationError);
+    }
+
+    // If GPS permission was denied / unavailable on web, fall back to the
+    // last run coordinates that useRunTracking caches after every run.
+    if (!location) {
+      try {
+        const cached = await AsyncStorage.getItem('lastRunCoords');
+        if (cached) {
+          const { latitude, longitude } = JSON.parse(cached);
+          if (latitude && longitude) setLocation({ latitude, longitude });
+        }
+      } catch (_) {}
     }
     
     try {
-      // For demo purposes, using mock weather data
-      // In production, replace with: const API_KEY = 'your_openweathermap_key';
-      // const response = await axios.get(`https://api.openweathermap.org/data/2.5/weather?lat=${userLocation.coords.latitude}&lon=${userLocation.coords.longitude}&appid=${API_KEY}&units=metric`);
-
-      // Mock weather data
+      // Mock weather data used only when no API key or no coords at all
       const mockWeather = {
         main: {
           temp: 22,
@@ -89,11 +97,8 @@ export default function WeatherScreen({ navigation }) {
       ];
 
       const apiKey = process.env.EXPO_PUBLIC_OPENWEATHER_API_KEY;
-      const coords = location ||
-        (await (async () => {
-          const pos = await Location.getLastKnownPositionAsync();
-          return pos?.coords;
-        })());
+      // `location` is already populated from GPS or lastRunCoords above
+      const coords = location;
 
       if (apiKey && coords) {
         try {
