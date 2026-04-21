@@ -591,13 +591,15 @@ export default function FriendsScreen({ navigation }) {
         scrollIndicatorInsets={{ top: 1 }}
       >
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-          >
-            <Ionicons name="chevron-back" size={22} color="#0B0F13" />
-          </TouchableOpacity>
+          <View style={styles.headerTopRow}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+            >
+              <Ionicons name="chevron-back" size={22} color="#0B0F13" />
+            </TouchableOpacity>
+          </View>
           <Text style={styles.title}>Crew</Text>
           <Text style={styles.subtitle}>
             Run together, cheer each other on, climb the board.

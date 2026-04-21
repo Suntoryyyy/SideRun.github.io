@@ -180,31 +180,29 @@ export default function HomeScreen({ navigation }) {
       >
         {/* Editorial header */}
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.menuButton}
-            activeOpacity={0.8}
-            onPress={() => navigation.openDrawer()}
-          >
-            <Ionicons name="menu" size={22} color="#0B0F13" />
-          </TouchableOpacity>
           <View style={styles.headerTopRow}>
             <View style={styles.greetingContainer}>
               <Text style={styles.greeting}>{getGreeting()}</Text>
               <Text style={styles.userName}>{username}</Text>
             </View>
-            {avatar &&
-            (avatar.startsWith("file:") ||
-              avatar.startsWith("http") ||
-              avatar.startsWith("data:")) ? (
-              <Image
-                source={{ uri: avatar }}
-                style={styles.homeAvatarImage}
-              />
-            ) : (
-              <View style={styles.avatarFallback}>
-                <Ionicons name="person" size={22} color="#0B0F13" />
-              </View>
-            )}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Profile')}
+              activeOpacity={0.8}
+            >
+              {avatar &&
+              (avatar.startsWith("file:") ||
+                avatar.startsWith("http") ||
+                avatar.startsWith("data:")) ? (
+                <Image
+                  source={{ uri: avatar }}
+                  style={styles.homeAvatarImage}
+                />
+              ) : (
+                <View style={styles.avatarFallback}>
+                  <Ionicons name="person" size={22} color="#0B0F13" />
+                </View>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -380,25 +378,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 24,
     paddingTop: Platform.OS === "ios" ? 64 : 44,
-    paddingBottom: 140,
+    // leave room for the floating "Start run" pill + tab bar below it
+    paddingBottom: 180,
   },
   header: {
     marginBottom: 20,
-  },
-  menuButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#FFFFFF",
-    justifyContent: "center",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    marginBottom: 18,
-    shadowColor: "#0B0F13",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 2,
   },
   headerTopRow: {
     flexDirection: "row",
@@ -614,7 +598,8 @@ const styles = StyleSheet.create({
   },
   startActionContainer: {
     position: "absolute",
-    bottom: 28,
+    // sit above the tab bar (TAB_BAR_HEIGHT) + a little breathing room
+    bottom: Platform.OS === "ios" ? 99 : Platform.OS === "android" ? 80 : 84,
     left: 0,
     right: 0,
     alignItems: "center",

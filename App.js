@@ -1,23 +1,18 @@
 import 'react-native-gesture-handler';
 import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { createDrawerNavigator } from '@react-navigation/drawer';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator, TransitionPresets } from '@react-navigation/stack';
 import * as TaskManager from 'expo-task-manager';
 import * as Location from 'expo-location';
-import { View, ActivityIndicator, Platform } from 'react-native';
+import { View, ActivityIndicator, Platform, StyleSheet } from 'react-native';
 
 const BACKGROUND_LOCATION_TASK = "BACKGROUND_LOCATION_TASK";
 
 if (Platform.OS !== 'web') {
   TaskManager.defineTask(BACKGROUND_LOCATION_TASK, ({ data: { locations }, error }) => {
-    if (error) {
-      console.error(error);
-      return;
-    }
+    if (error) { console.error(error); return; }
     if (locations) {
-      // In a real app, you would sync this to AsyncStorage or Zustand here
-      // For now we just define the task so the OS keeps the app alive
       console.log("Background location heartbeat:", locations.length);
     }
   });
@@ -39,7 +34,6 @@ import {
 } from '@expo-google-fonts/inter';
 import patchTextFonts from './utils/patchTextFonts';
 
-// Import screen components
 import HomeScreen from './screens/HomeScreen';
 import FriendsScreen from './screens/FriendsScreen';
 import ChatScreen from './screens/ChatScreen';
@@ -54,84 +48,77 @@ import OnboardingWelcomeScreen from './screens/OnboardingWelcomeScreen';
 import OnboardingPermissionsScreen from './screens/OnboardingPermissionsScreen';
 import OnboardingGoalScreen, { ONBOARDING_KEY } from './screens/OnboardingGoalScreen';
 
-const Drawer = createDrawerNavigator();
+// Shared constant so HomeScreen can offset its floating CTA above the bar
+export const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 83 : Platform.OS === 'android' ? 64 : 68;
+
+const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-function DrawerNavigator({ handleLogout }) {
+function MainTabNavigator({ handleLogout }) {
   return (
-    <Drawer.Navigator
+    <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        drawerActiveBackgroundColor: '#E8F8F2',
-        drawerActiveTintColor: '#24C789',
-        drawerInactiveTintColor: '#666666',
-        drawerStyle: {
-          backgroundColor: '#FFFFFF',
-          width: 240,
-        }
+        tabBarStyle: styles.tabBar,
+        tabBarActiveTintColor: '#0B0F13',
+        tabBarInactiveTintColor: '#9AA0A6',
+        tabBarLabelStyle: styles.tabLabel,
       }}
     >
-      <Drawer.Screen 
-        name="Home" 
-        component={HomeScreen} 
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
         options={{
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" color={color} size={size} />
-          )
+          tabBarLabel: 'Home',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'home' : 'home-outline'} size={22} color={color} />
+          ),
         }}
       />
-      <Drawer.Screen 
-        name="Friends" 
-        component={FriendsScreen} 
+      <Tab.Screen
+        name="Friends"
+        component={FriendsScreen}
         options={{
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="people-outline" color={color} size={size} />
-          )
+          tabBarLabel: 'Crew',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'people' : 'people-outline'} size={22} color={color} />
+          ),
         }}
       />
-      <Drawer.Screen 
-        name="Run" 
-        component={RunScreen} 
+      <Tab.Screen
+        name="Run"
+        component={RunScreen}
         options={{
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="footsteps-outline" color={color} size={size} />
-          )
+          tabBarLabel: 'Run',
+          tabBarIcon: ({ focused }) => (
+            <View style={[styles.runTab, focused && styles.runTabFocused]}>
+              <Ionicons name="play" size={19} color="#FFFFFF" />
+            </View>
+          ),
         }}
       />
-      <Drawer.Screen 
-        name="Weather" 
-        component={WeatherScreen} 
+      <Tab.Screen
+        name="Weather"
+        component={WeatherScreen}
         options={{
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="partly-sunny-outline" color={color} size={size} />
-          )
+          tabBarLabel: 'Weather',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'partly-sunny' : 'partly-sunny-outline'} size={22} color={color} />
+          ),
         }}
       />
-      <Drawer.Screen 
+      <Tab.Screen
         name="Profile"
         options={{
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" color={color} size={size} />
-          )
+          tabBarLabel: 'Me',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'person' : 'person-outline'} size={22} color={color} />
+          ),
         }}
       >
         {props => <ProfileScreen {...props} handleLogout={handleLogout} />}
-      </Drawer.Screen>
-      <Drawer.Screen 
-        name="Badges" 
-        component={BadgesScreen} 
-        options={{
-          drawerItemStyle: { display: 'none' }
-        }} 
-      />
-      <Drawer.Screen 
-        name="RunHistory" 
-        component={RunHistoryScreen} 
-        options={{
-          drawerItemStyle: { display: 'none' }
-        }} 
-      />
-    </Drawer.Navigator>
+      </Tab.Screen>
+    </Tab.Navigator>
   );
 }
 
@@ -144,15 +131,10 @@ export default function App() {
     async function prepareApp() {
       try {
         const interFonts = {
-          Inter_400Regular,
-          Inter_500Medium,
-          Inter_600SemiBold,
-          Inter_700Bold,
-          Inter_800ExtraBold,
-          Inter_900Black,
+          Inter_400Regular, Inter_500Medium, Inter_600SemiBold,
+          Inter_700Bold, Inter_800ExtraBold, Inter_900Black,
         };
         if (Platform.OS === 'web') {
-          // Explicitly load font from CDN to avoid GitHub Pages base-path 404s
           await Font.loadAsync({
             Ionicons: 'https://unpkg.com/@expo/vector-icons@15.1.1/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf',
             ...interFonts,
@@ -179,8 +161,6 @@ export default function App() {
 
   const completeOnboarding = () => setOnboardingDone(true);
 
-
-
   const handleLogoutWrapper = async () => {
     try {
       if (global.account) await global.account.deleteSession('current');
@@ -203,10 +183,10 @@ export default function App() {
         {!isLoggedIn ? (
           <>
             <Stack.Screen name="Login">
-              {props => <LoginScreen {...props}  />}
+              {props => <LoginScreen {...props} />}
             </Stack.Screen>
             <Stack.Screen name="Register">
-              {props => <RegisterScreen {...props}  />}
+              {props => <RegisterScreen {...props} />}
             </Stack.Screen>
           </>
         ) : !onboardingDone ? (
@@ -214,20 +194,60 @@ export default function App() {
             <Stack.Screen name="OnboardingWelcome" component={OnboardingWelcomeScreen} />
             <Stack.Screen name="OnboardingPermissions" component={OnboardingPermissionsScreen} />
             <Stack.Screen name="OnboardingGoal">
-              {props => (
-                <OnboardingGoalScreen {...props} onComplete={completeOnboarding} />
-              )}
+              {props => <OnboardingGoalScreen {...props} onComplete={completeOnboarding} />}
             </Stack.Screen>
           </>
         ) : (
           <>
             <Stack.Screen name="Main">
-              {props => <DrawerNavigator {...props} handleLogout={handleLogoutWrapper} />}
+              {props => <MainTabNavigator {...props} handleLogout={handleLogoutWrapper} />}
             </Stack.Screen>
+            {/* Overlay screens pushed on top of the tab bar */}
             <Stack.Screen name="Chat" component={ChatScreen} />
+            <Stack.Screen name="RunHistory" component={RunHistoryScreen} />
+            <Stack.Screen name="Badges" component={BadgesScreen} />
           </>
         )}
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBar: {
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 0,
+    elevation: 0,
+    shadowColor: '#0B0F13',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    height: TAB_BAR_HEIGHT,
+    paddingBottom: Platform.OS === 'ios' ? 28 : Platform.OS === 'android' ? 8 : 10,
+    paddingTop: 8,
+  },
+  tabLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+    letterSpacing: 0.2,
+    marginTop: 2,
+  },
+  runTab: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#0B0F13',
+    justifyContent: 'center',
+    alignItems: 'center',
+    // lift the Run button slightly above the bar for visual prominence
+    marginBottom: Platform.OS === 'ios' ? 10 : 4,
+    shadowColor: '#0B0F13',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  runTabFocused: {
+    backgroundColor: '#24C789',
+  },
+});

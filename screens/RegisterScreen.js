@@ -2,13 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
   Animated,
 } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Stop, G } from 'react-native-svg';
@@ -16,6 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { supabase } from '../services/supabase';
 import CustomAlert from '../components/CustomAlert';
+import AuthField from '../components/AuthField';
+import AuthButton from '../components/AuthButton';
 import useUserStore from '../store/useUserStore';
 import { T, FONT } from '../constants/typography';
 
@@ -23,8 +23,6 @@ export default function RegisterScreen({ navigation }) {
   const [phone, setPhone] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [focused, setFocused] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
     visible: false,
@@ -200,59 +198,28 @@ export default function RegisterScreen({ navigation }) {
         </View>
 
         <View style={styles.form}>
-          <View style={[styles.field, focused === 'phone' && styles.fieldFocus]}>
-            <Ionicons name="call-outline" size={18} color="#6B6F76" style={styles.fieldIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Phone number"
-              placeholderTextColor="#A5A9B0"
-              keyboardType="phone-pad"
-              value={phone}
-              onChangeText={setPhone}
-              autoCapitalize="none"
-              onFocus={() => setFocused('phone')}
-              onBlur={() => setFocused(null)}
-            />
-          </View>
+          <AuthField
+            icon="call-outline"
+            label="Phone number"
+            keyboardType="phone-pad"
+            value={phone}
+            onChangeText={setPhone}
+          />
 
-          <View style={[styles.field, focused === 'username' && styles.fieldFocus]}>
-            <Ionicons name="person-outline" size={18} color="#6B6F76" style={styles.fieldIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Display name"
-              placeholderTextColor="#A5A9B0"
-              value={username}
-              onChangeText={setUsername}
-              autoCapitalize="none"
-              onFocus={() => setFocused('username')}
-              onBlur={() => setFocused(null)}
-            />
-          </View>
+          <AuthField
+            icon="person-outline"
+            label="Display name"
+            value={username}
+            onChangeText={setUsername}
+          />
 
-          <View style={[styles.field, focused === 'password' && styles.fieldFocus]}>
-            <Ionicons name="lock-closed-outline" size={18} color="#6B6F76" style={styles.fieldIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Create a password"
-              placeholderTextColor="#A5A9B0"
-              secureTextEntry={!showPassword}
-              value={password}
-              onChangeText={setPassword}
-              onFocus={() => setFocused('password')}
-              onBlur={() => setFocused(null)}
-            />
-            <TouchableOpacity
-              style={styles.eye}
-              onPress={() => setShowPassword(!showPassword)}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons
-                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                size={18}
-                color="#6B6F76"
-              />
-            </TouchableOpacity>
-          </View>
+          <AuthField
+            icon="lock-closed-outline"
+            label="Create a password"
+            secure
+            value={password}
+            onChangeText={setPassword}
+          />
 
           {password.length > 0 ? (
             <View style={styles.strengthRow}>
@@ -276,21 +243,11 @@ export default function RegisterScreen({ navigation }) {
             Policy. We never share your runs without your permission.
           </Text>
 
-          <TouchableOpacity
-            style={[styles.primaryBtn, isLoading && styles.primaryBtnDisabled]}
+          <AuthButton
+            label="Create account"
+            loading={isLoading}
             onPress={handleRegister}
-            disabled={isLoading}
-            activeOpacity={0.85}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <>
-                <Text style={styles.primaryBtnText}>Create account</Text>
-                <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
-              </>
-            )}
-          </TouchableOpacity>
+          />
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Already have an account? </Text>
@@ -321,7 +278,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 28,
     paddingTop: 56,
-    paddingBottom: 48,
+    paddingBottom: Platform.OS === 'web' ? 120 : 48,
   },
   topBar: {
     flexDirection: 'row',
@@ -375,35 +332,6 @@ const styles = StyleSheet.create({
   form: {
     width: '100%',
   },
-  field: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F4F5F7',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    height: 56,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  fieldFocus: {
-    borderColor: '#0B0F13',
-    backgroundColor: '#FFFFFF',
-  },
-  fieldIcon: {
-    marginRight: 10,
-  },
-  input: {
-    flex: 1,
-    fontFamily: FONT.semibold,
-    fontSize: 15,
-    color: '#0B0F13',
-    paddingVertical: 0,
-  },
-  eye: {
-    padding: 4,
-    marginLeft: 8,
-  },
   strengthRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -436,26 +364,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 20,
     paddingHorizontal: 4,
-  },
-  primaryBtn: {
-    flexDirection: 'row',
-    backgroundColor: '#0B0F13',
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    shadowColor: '#0B0F13',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 22,
-    elevation: 6,
-  },
-  primaryBtnDisabled: {
-    opacity: 0.6,
-  },
-  primaryBtnText: {
-    ...T.button,
   },
   footer: {
     flexDirection: 'row',

@@ -2,13 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
   Animated,
 } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Stop, G } from 'react-native-svg';
@@ -17,16 +15,16 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { supabase } from '../services/supabase';
 import CustomAlert from '../components/CustomAlert';
+import AuthField from '../components/AuthField';
+import AuthButton from '../components/AuthButton';
 import useUserStore from '../store/useUserStore';
 import { T, FONT } from '../constants/typography';
 
 export default function LoginScreen({ navigation }) {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [focused, setFocused] = useState(null);
   const [alertConfig, setAlertConfig] = useState({
     visible: false,
     title: '',
@@ -175,45 +173,21 @@ export default function LoginScreen({ navigation }) {
         </View>
 
         <View style={styles.form}>
-          <View style={[styles.field, focused === 'phone' && styles.fieldFocus]}>
-            <Ionicons name="call-outline" size={18} color="#6B6F76" style={styles.fieldIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Phone number"
-              placeholderTextColor="#A5A9B0"
-              keyboardType="phone-pad"
-              value={phone}
-              onChangeText={setPhone}
-              autoCapitalize="none"
-              onFocus={() => setFocused('phone')}
-              onBlur={() => setFocused(null)}
-            />
-          </View>
+          <AuthField
+            icon="call-outline"
+            label="Phone number"
+            keyboardType="phone-pad"
+            value={phone}
+            onChangeText={setPhone}
+          />
 
-          <View style={[styles.field, focused === 'password' && styles.fieldFocus]}>
-            <Ionicons name="lock-closed-outline" size={18} color="#6B6F76" style={styles.fieldIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              placeholderTextColor="#A5A9B0"
-              secureTextEntry={!showPassword}
-              value={password}
-              onChangeText={setPassword}
-              onFocus={() => setFocused('password')}
-              onBlur={() => setFocused(null)}
-            />
-            <TouchableOpacity
-              style={styles.eye}
-              onPress={() => setShowPassword(!showPassword)}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons
-                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                size={18}
-                color="#6B6F76"
-              />
-            </TouchableOpacity>
-          </View>
+          <AuthField
+            icon="lock-closed-outline"
+            label="Password"
+            secure
+            value={password}
+            onChangeText={setPassword}
+          />
 
           <View style={styles.optionsRow}>
             <TouchableOpacity
@@ -234,21 +208,11 @@ export default function LoginScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity
-            style={[styles.primaryBtn, isLoading && styles.primaryBtnDisabled]}
+          <AuthButton
+            label="Log in"
+            loading={isLoading}
             onPress={handleLogin}
-            disabled={isLoading}
-            activeOpacity={0.85}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <>
-                <Text style={styles.primaryBtnText}>Log in</Text>
-                <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
-              </>
-            )}
-          </TouchableOpacity>
+          />
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>New to SideRun? </Text>
@@ -279,7 +243,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 28,
     paddingTop: 64,
-    paddingBottom: 48,
+    // Extra bottom padding on web so Safari's floating address bar never hides the sign-up link
+    paddingBottom: Platform.OS === 'web' ? 120 : 48,
   },
   heroWrap: {
     alignSelf: 'center',
@@ -320,35 +285,6 @@ const styles = StyleSheet.create({
   form: {
     width: '100%',
   },
-  field: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F4F5F7',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    height: 56,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  fieldFocus: {
-    borderColor: '#0B0F13',
-    backgroundColor: '#FFFFFF',
-  },
-  fieldIcon: {
-    marginRight: 10,
-  },
-  input: {
-    flex: 1,
-    fontFamily: FONT.semibold,
-    fontSize: 15,
-    color: '#0B0F13',
-    paddingVertical: 0,
-  },
-  eye: {
-    padding: 4,
-    marginLeft: 8,
-  },
   optionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -384,26 +320,6 @@ const styles = StyleSheet.create({
     fontFamily: FONT.bold,
     fontSize: 13,
     color: '#0B0F13',
-  },
-  primaryBtn: {
-    flexDirection: 'row',
-    backgroundColor: '#0B0F13',
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    shadowColor: '#0B0F13',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 22,
-    elevation: 6,
-  },
-  primaryBtnDisabled: {
-    opacity: 0.6,
-  },
-  primaryBtnText: {
-    ...T.button,
   },
   footer: {
     flexDirection: 'row',

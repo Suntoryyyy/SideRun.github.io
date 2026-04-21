@@ -98,9 +98,10 @@ const RunMapMemo = ({
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         zoomControl={false}
       >
+        {/* light_all = minimal light grey — matches v3 minimalist palette */}
         <TileLayer
           attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
         />
 
         {currentLocation && <RecenterControl location={currentLocation} />}
@@ -142,13 +143,18 @@ const RunMapMemo = ({
         </BlurView>
       </TouchableOpacity>
 
-      {/* Floating status badge */}
-      <View style={styles.badgeContainer}>
-        <BlurView intensity={80} tint="light" style={{ ...StyleSheet.absoluteFillObject }} />
-        <Text style={styles.badgeText}>
-          {mode === 'spectate' ? 'Watching: ' + (spectateFriend?.name || 'Live') : 'Tracking You (Web)'}
-        </Text>
-      </View>
+      {/* Live / spectate pill — only visible when a run is active or watching */}
+      {(isRunning || mode === 'spectate') && (
+        <View style={styles.badgeContainer}>
+          <BlurView intensity={80} tint="light" style={{ ...StyleSheet.absoluteFillObject }} />
+          <View style={styles.badgeDot} />
+          <Text style={styles.badgeText}>
+            {mode === 'spectate'
+              ? 'Watching ' + (spectateFriend?.name || 'Live')
+              : 'Live'}
+          </Text>
+        </View>
+      )}
 
       {/* Floating Emojis (received) */}
       {liveEmojis.map((c) => (
@@ -199,26 +205,34 @@ const styles = StyleSheet.create({
   },
   badgeContainer: {
     position: 'absolute',
-    bottom: 40,
+    top: 20,
     left: 20,
     backgroundColor: 'transparent',
     overflow: 'hidden',
     borderRadius: 20,
-    paddingVertical: 5,
-    paddingHorizontal: 15,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
     zIndex: 1000,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  badgeDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#24C789',
   },
   badgeText: {
-    fontWeight: 'bold', 
-    color: '#24C789', 
-    fontSize: 14
+    fontFamily: 'Inter_700Bold',
+    color: '#0B0F13',
+    fontSize: 12,
+    letterSpacing: 0.2,
   },
   floatingEmoji: {
     position: 'absolute',

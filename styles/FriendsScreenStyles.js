@@ -1,4 +1,4 @@
-import { StyleSheet } from "react-native";
+import { StyleSheet, Platform } from "react-native";
 import { T, FONT } from "../constants/typography";
 
 export default StyleSheet.create({
@@ -12,28 +12,27 @@ export default StyleSheet.create({
   },
   header: {
     paddingHorizontal: 24,
-    paddingTop: 64,
+    paddingTop: Platform.OS === 'ios' ? 56 : 36,
     paddingBottom: 20,
     backgroundColor: "#FFFFFF",
-    position: "relative",
     marginBottom: 12,
   },
+  headerTopRow: {
+    height: 44,
+    justifyContent: "center",
+    marginBottom: 4,
+  },
   backButton: {
-    position: "absolute",
-    left: 20,
-    top: 60,
     width: 40,
     height: 40,
     borderRadius: 20,
     backgroundColor: "#F4F5F7",
     justifyContent: "center",
     alignItems: "center",
-    zIndex: 10,
   },
   title: {
     ...T.title1,
     fontSize: 28,
-    marginTop: 8,
     textAlign: "left",
     marginBottom: 4,
   },
