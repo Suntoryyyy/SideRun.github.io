@@ -23,6 +23,112 @@ import { T, FONT } from '../../constants/typography';
 
 const { width } = Dimensions.get('window');
 
+// Render a simple shareable card to a canvas and return a PNG blob.
+// Used on web in place of a native share sheet (coursework-scope friendly).
+const buildWebCardBlob = ({ distanceKm, duration, paceLabel, kcal, username, isPB }) => {
+  if (typeof document === 'undefined') return null;
+  return new Promise((resolve) => {
+    const W = 1080;
+    const H = 1350;
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#0B0F13');
+    grad.addColorStop(1, '#1A1F26');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.fillStyle = '#9AA0A6';
+    ctx.font = '700 36px -apple-system, "Inter", "Segoe UI", system-ui, sans-serif';
+    ctx.fillText('SIDERUN', 72, 130);
+
+    ctx.fillStyle = isPB ? '#FFFFFF' : 'rgba(255,255,255,0.1)';
+    const pillText = isPB ? '★ NEW 5K PB' : 'RUN COMPLETED';
+    ctx.font = '800 28px -apple-system, "Inter", sans-serif';
+    const pillW = ctx.measureText(pillText).width + 60;
+    ctx.beginPath();
+    const pillX = W - 72 - pillW;
+    const pillY = 90;
+    const pillH = 56;
+    const r = 28;
+    ctx.moveTo(pillX + r, pillY);
+    ctx.lineTo(pillX + pillW - r, pillY);
+    ctx.arcTo(pillX + pillW, pillY, pillX + pillW, pillY + r, r);
+    ctx.lineTo(pillX + pillW, pillY + pillH - r);
+    ctx.arcTo(pillX + pillW, pillY + pillH, pillX + pillW - r, pillY + pillH, r);
+    ctx.lineTo(pillX + r, pillY + pillH);
+    ctx.arcTo(pillX, pillY + pillH, pillX, pillY + pillH - r, r);
+    ctx.lineTo(pillX, pillY + r);
+    ctx.arcTo(pillX, pillY, pillX + r, pillY, r);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = isPB ? '#0B0F13' : '#FFFFFF';
+    ctx.fillText(pillText, pillX + 30, pillY + 38);
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '900 280px -apple-system, "Inter", sans-serif';
+    const distStr = distanceKm.toFixed(2);
+    ctx.fillText(distStr, 72, 540);
+    ctx.fillStyle = '#9AA0A6';
+    ctx.font = '800 72px -apple-system, "Inter", sans-serif';
+    const distW = ctx.measureText(distStr).width;
+    ctx.fillText('km', 90 + distW, 540);
+
+    ctx.fillStyle = '#9AA0A6';
+    ctx.font = '600 36px -apple-system, "Inter", sans-serif';
+    ctx.fillText(`@${username}`, 72, 600);
+
+    const formatDur = (secs) => {
+      const h = Math.floor(secs / 3600);
+      const m = Math.floor((secs % 3600) / 60);
+      const s = Math.floor(secs % 60);
+      return h > 0
+        ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+        : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    };
+    const stats = [
+      { label: 'TIME', value: formatDur(duration) },
+      { label: 'PACE', value: `${paceLabel} /km` },
+      { label: 'KCAL', value: String(kcal) },
+    ];
+    stats.forEach((s, i) => {
+      const x = 72 + i * 320;
+      ctx.fillStyle = '#9AA0A6';
+      ctx.font = '800 28px -apple-system, "Inter", sans-serif';
+      ctx.fillText(s.label, x, 780);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '800 68px -apple-system, "Inter", sans-serif';
+      ctx.fillText(s.value, x, 860);
+    });
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(72, 960);
+    ctx.lineTo(W - 72, 960);
+    ctx.stroke();
+
+    ctx.fillStyle = '#9AA0A6';
+    ctx.font = '600 32px -apple-system, "Inter", sans-serif';
+    ctx.fillText(new Date().toLocaleDateString(undefined, {
+      weekday: 'long', month: 'short', day: 'numeric'
+    }), 72, 1040);
+
+    ctx.fillStyle = '#24C789';
+    ctx.beginPath();
+    ctx.arc(140, 1230, 28, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '900 28px -apple-system, "Inter", sans-serif';
+    ctx.fillText('siderun.app', 190, 1243);
+
+    canvas.toBlob((blob) => resolve(blob), 'image/png', 0.95);
+  });
+};
+
 // Targets used to fill the three rings.
 const DISTANCE_TARGET_KM = 5;   // "close the distance ring" = 5 km
 const DURATION_TARGET_SEC = 1800; // 30 min
@@ -69,37 +175,64 @@ const RunSummaryModal = ({ durationInSeconds, runData, currentSpeed, closeRun })
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
 
+    // WEB: compose the card client-side onto a canvas and trigger a download
+    // — lighter than linking social SDKs and gives the user a shareable PNG.
     if (Platform.OS === 'web') {
-      Alert.alert(
-        'Share coming soon on web',
-        'Open SideRun on iOS or Android to share a polished run card to Instagram, Messages, or anywhere else.'
-      );
+      try {
+        setIsSharing(true);
+        const blob = await buildWebCardBlob({
+          distanceKm,
+          duration,
+          paceLabel: formatPace(paceMinPerKm),
+          kcal,
+          username,
+          isPB,
+        });
+        if (!blob) throw new Error('Could not render card');
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+        a.download = `siderun-${stamp}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (e) {
+        console.warn('[RunSummaryModal] web download failed', e);
+        Alert.alert('Save failed', 'Could not generate the run card.');
+      } finally {
+        setIsSharing(false);
+      }
       return;
     }
 
+    // NATIVE: snapshot the card and save directly to Photos.
     try {
       setIsSharing(true);
-      // Lazy-require native-only modules so the web bundle doesn't choke on them.
       const { captureRef } = require('react-native-view-shot');
-      const Sharing = require('expo-sharing');
+      const MediaLibrary = require('expo-media-library');
+
+      const perm = await MediaLibrary.requestPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(
+          'Allow photo access',
+          'SideRun needs permission to save your run card to Photos.'
+        );
+        return;
+      }
+
       const uri = await captureRef(shareRef, {
         format: 'png',
         quality: 0.95,
         result: 'tmpfile',
       });
-      const available = await Sharing.isAvailableAsync();
-      if (!available) {
-        Alert.alert('Share', 'Sharing is not available on this device.');
-        return;
-      }
-      await Sharing.shareAsync(uri, {
-        mimeType: 'image/png',
-        dialogTitle: 'Share your run',
-        UTI: 'public.png',
-      });
+      await MediaLibrary.saveToLibraryAsync(uri);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Saved to Photos', 'Your run card is now in your camera roll.');
     } catch (e) {
-      console.warn('[RunSummaryModal] share failed', e);
-      Alert.alert('Share failed', e?.message || 'Could not capture the run card.');
+      console.warn('[RunSummaryModal] save failed', e);
+      Alert.alert('Save failed', e?.message || 'Could not capture the run card.');
     } finally {
       setIsSharing(false);
     }
@@ -194,15 +327,17 @@ const RunSummaryModal = ({ durationInSeconds, runData, currentSpeed, closeRun })
                 </Text>
               </View>
               <View style={styles.statBox}>
-                <Text style={styles.statLabel}>PACE</Text>
-                <Text style={styles.statValue}>
-                  {formatPace(paceMinPerKm)}
-                  <Text style={styles.statUnit}> /km</Text>
-                </Text>
-              </View>
-              <View style={styles.statBox}>
                 <Text style={styles.statLabel}>KCAL</Text>
                 <Text style={styles.statValue}>{kcal}</Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statLabel}>DATE</Text>
+                <Text style={styles.statValue}>
+                  {new Date().toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </Text>
               </View>
             </View>
 
@@ -235,8 +370,14 @@ const RunSummaryModal = ({ durationInSeconds, runData, currentSpeed, closeRun })
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
                   <>
-                    <Ionicons name="share-outline" size={18} color="#FFF" />
-                    <Text style={styles.ghostBtnText}>Share</Text>
+                    <Ionicons
+                      name={Platform.OS === 'web' ? 'download-outline' : 'image-outline'}
+                      size={18}
+                      color="#FFF"
+                    />
+                    <Text style={styles.ghostBtnText}>
+                      {Platform.OS === 'web' ? 'Download' : 'Save'}
+                    </Text>
                   </>
                 )}
               </TouchableOpacity>

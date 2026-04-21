@@ -1,14 +1,12 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   ScrollView,
   Dimensions,
   Image,
-  Animated,
   Platform,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -58,7 +56,6 @@ const hapticHeavy = () => {
 
 export default function HomeScreen({ navigation }) {
   const isFocused = useIsFocused();
-  const startButtonScale = useRef(new Animated.Value(1)).current;
   const [username, setUsername] = useState("Runner");
   const [avatar, setAvatar] = useState("");
   const [weeklyGoalKm, setWeeklyGoalKm] = useState(DEFAULT_WEEKLY_GOAL_KM);
@@ -203,24 +200,6 @@ export default function HomeScreen({ navigation }) {
     if (diffD === 1) return "Yesterday";
     if (diffD < 7) return `${diffD}d ago`;
     return d.toLocaleDateString();
-  };
-
-  const handlePressIn = () => {
-    Animated.spring(startButtonScale, {
-      toValue: 0.96,
-      useNativeDriver: true,
-      speed: 30,
-      bounciness: 8,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(startButtonScale, {
-      toValue: 1,
-      useNativeDriver: true,
-      speed: 30,
-      bounciness: 8,
-    }).start();
   };
 
   const goalProgress = Math.min(1, weekStats.km / weeklyGoalKm || 0);
@@ -406,36 +385,6 @@ export default function HomeScreen({ navigation }) {
           />
         )}
       </ScrollView>
-
-      {/* Floating primary CTA — dark pill, matches onboarding / auth */}
-      <View style={styles.startActionContainer}>
-        <TouchableWithoutFeedback
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}
-          onPress={() => {
-            hapticHeavy();
-            navigation.navigate("Run");
-          }}
-        >
-          <Animated.View
-            style={[
-              styles.startActionBtn,
-              { transform: [{ scale: startButtonScale }] },
-            ]}
-          >
-            <View style={styles.playDot}>
-              <Ionicons name="play" size={14} color="#0B0F13" />
-            </View>
-            <Text style={styles.startActionText}>Start run</Text>
-            <Ionicons
-              name="arrow-forward"
-              size={18}
-              color="#FFFFFF"
-              style={styles.playArrow}
-            />
-          </Animated.View>
-        </TouchableWithoutFeedback>
-      </View>
     </View>
   );
 }
@@ -448,8 +397,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 24,
     paddingTop: Platform.OS === "ios" ? 64 : 44,
-    // leave room for the floating "Start run" pill + tab bar below it
-    paddingBottom: 180,
+    // just breathing room above the tab bar; Run button on the tab bar is the CTA
+    paddingBottom: 40,
   },
   header: {
     marginBottom: 20,

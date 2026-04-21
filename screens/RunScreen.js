@@ -20,6 +20,7 @@ import { Audio } from "expo-av";
 import { supabase } from "../services/supabase";
 import RunMapMemo from "../components/RunScreenUI/RunMapMemo";
 import MetricDashboard from "../components/RunScreenUI/MetricDashboard";
+import RunLivePanel from "../components/RunScreenUI/RunLivePanel";
 import SpectatorControls from "../components/RunScreenUI/SpectatorControls";
 import RunSummaryModal from "../components/RunScreenUI/RunSummaryModal";
 
@@ -476,8 +477,19 @@ export default function RunScreen({ route, navigation }) {
           signalLost={signalLost}
         />
 
-        {/* Dynamic spacer pushes running controls (start/stop) to bottom, but lets spectator controls sit natively below stats */}
-        <Animated.View style={{ flex: mode === 'spectate' ? 0 : 1 }} />
+        {/* Live extras between primary stats and action row — replaces the
+            empty flex spacer so the expanded panel feels intentional. */}
+        {mode !== 'spectate' && (
+          <Animated.View style={{ opacity: contentOpacity, flex: 1 }}>
+            <RunLivePanel
+              runData={runData}
+              durationInSeconds={durationInSeconds}
+              currentSpeed={currentSpeed}
+              isRunning={isRunning}
+            />
+          </Animated.View>
+        )}
+        {mode === 'spectate' && <View style={{ height: 12 }} />}
 
         <SpectatorControls
           mode={mode}

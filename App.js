@@ -61,10 +61,16 @@ const Stack = createStackNavigator();
 
 function MainTabNavigator({ handleLogout }) {
   const insets = useSafeAreaInsets();
-  // iOS Safari reports a real bottom inset for the URL bar; use it directly.
-  // Android tabs sit above the software nav bar which is already excluded, so
-  // we only add a small visual breathing room.
-  const bottomPad = Platform.OS === 'android' ? 8 : Math.max(insets.bottom, 12);
+  // iOS Safari's floating URL bar eats 40–50pt depending on scroll state, but
+  // `env(safe-area-inset-bottom)` underreports it. Use a generous web floor so
+  // labels never clip. Native iOS uses the real inset (24–34pt for the home
+  // indicator). Android sits above the software nav bar so a small pad is fine.
+  const bottomPad =
+    Platform.OS === 'android'
+      ? 8
+      : Platform.OS === 'web'
+      ? Math.max(insets.bottom, 24)
+      : Math.max(insets.bottom, 12);
 
   return (
     <Tab.Navigator
