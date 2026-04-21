@@ -228,8 +228,8 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
     }
 
     const { latitude, longitude } = location.coords;
-    const newLocation = { latitude, longitude };
-    setCurrentLocation(newLocation);
+    const newLocation = { latitude, longitude, timestamp: Date.now() };
+    setCurrentLocation({ latitude, longitude });
     
     // Convert 0.005 km (5 meters) to something smaller for short distances
     const distFromLast = lastLocation.current
@@ -354,7 +354,17 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
         await AsyncStorage.removeItem(`liveRun_${c}`);
       } catch (e) {}
 
-      // Removed Alert to show summary on screen
+      // Cache the last known position for HomeScreen weather lookup
+      if (runData.coordinates.length > 0) {
+        const last = runData.coordinates[runData.coordinates.length - 1];
+        try {
+          await AsyncStorage.setItem(
+            'lastRunCoords',
+            JSON.stringify({ latitude: last.latitude, longitude: last.longitude })
+          );
+        } catch (_) {}
+      }
+
       setIsFinished(true);
     } catch (error) {
       console.error("Error saving run:", error);

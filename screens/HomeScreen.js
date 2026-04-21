@@ -253,7 +253,9 @@ export default function HomeScreen({ navigation }) {
                 />
               ) : (
                 <View style={styles.avatarFallback}>
-                  <Ionicons name="person" size={22} color="#0B0F13" />
+                  <Text style={styles.avatarFallbackText}>
+                    {(username || "R").trim().charAt(0).toUpperCase()}
+                  </Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -370,7 +372,7 @@ export default function HomeScreen({ navigation }) {
             </View>
             <View style={styles.runInfo}>
               <Text style={styles.runTitle}>
-                {Number(recentRun.distance).toFixed(2)} km run
+                {Number(recentRun.distance).toFixed(2)} km
               </Text>
               <Text style={styles.runDate}>
                 {formatRelativeDate(recentRun.created_at)}
@@ -380,7 +382,18 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.runDistance}>
                 {formatDuration(recentRun.duration_seconds)}
               </Text>
-              <Text style={styles.runTime}>duration</Text>
+              {recentRun.pace != null && recentRun.pace > 0 ? (
+                <Text style={styles.runTime}>
+                  {(() => {
+                    const p = Number(recentRun.pace);
+                    const m = Math.floor(p);
+                    const s = Math.round((p - m) * 60);
+                    return `${m}:${s < 10 ? '0' : ''}${s} /km`;
+                  })()}
+                </Text>
+              ) : (
+                <Text style={styles.runTime}>duration</Text>
+              )}
             </View>
           </TouchableOpacity>
         ) : (
@@ -478,6 +491,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 12,
     elevation: 2,
+  },
+  avatarFallbackText: {
+    fontFamily: FONT.bold,
+    fontSize: 18,
+    color: "#0B0F13",
   },
   weekHeroCard: {
     borderRadius: 28,

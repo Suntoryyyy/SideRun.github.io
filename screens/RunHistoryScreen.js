@@ -75,6 +75,52 @@ export default function RunHistoryScreen({ navigation }) {
     return 0;
   };
 
+  // Format decimal min/km (e.g. 5.5) → "5:30 /km"
+  const formatPaceMin = (pace) => {
+    const p = Number(pace);
+    if (!p || !isFinite(p) || p <= 0) return '—';
+    const m = Math.floor(p);
+    const s = Math.round((p - m) * 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  // Classify a run date string into a group label
+  const dateGroup = (dateStr) => {
+    const runDate = new Date(dateStr);
+    if (isNaN(runDate)) return 'Earlier';
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const runDay = new Date(runDate);
+    runDay.setHours(0, 0, 0, 0);
+    const diff = Math.round((today - runDay) / 86400000);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Yesterday';
+    if (diff < 7) return 'This week';
+    if (diff < 14) return 'Last week';
+    if (diff < 30) return 'This month';
+    return 'Earlier';
+  };
+
+  // Build grouped list: [{ group, runs[] }, ...]
+  const groupedRuns = (() => {
+    const groups = [];
+    const seen = new Map();
+    for (const run of runs) {
+      const g = dateGroup(run.date);
+      if (!seen.has(g)) {
+        seen.set(g, []);
+        groups.push({ group: g, items: seen.get(g) });
+      }
+      seen.get(g).push(run);
+    }
+    return groups;
+  })();
+
+  // Aggregate stats for summary bar
+  const totalKm = runs.reduce((s, r) => s + (Number(r.distance) || 0), 0);
+  const totalRuns = runs.length;
+  const bestKm = runs.reduce((m, r) => Math.max(m, Number(r.distance) || 0), 0);
+
   const runRingProgress = (run) => {
     const distance = Number(run.distance) || 0;
     const paceMin = Number(run.pace) || 8;
@@ -121,61 +167,67 @@ export default function RunHistoryScreen({ navigation }) {
             accent="#FF5A36"
           />
         ) : (
-          runs.map((run, index) => {
-            const progress = runRingProgress(run);
-            const distance = Number(run.distance) || 0;
-            const distanceDisplay =
-              distance < 1
-                ? `${(distance * 1000).toFixed(0)} m`
-                : `${distance.toFixed(2)} km`;
-            const paceDisplay =
-              distance < 1
-                ? `${(run.pace ? (1000 / (run.pace * 60)) : 0).toFixed(1)} m/s`
-                : `${run.pace ?? "—"} /km`;
-            return (
-              <TouchableOpacity
-                key={index}
-                style={styles.runCard}
-                activeOpacity={0.85}
-                onPress={() => openRunDetails(run)}
-              >
-                <View style={styles.runRingBox}>
-                  <ThreeRings
-                    size={56}
-                    stroke={5}
-                    gap={2}
-                    rings={[
-                      {
-                        progress: progress.dist,
-                        color: "#FF5A36",
-                        trackColor: "rgba(255,90,54,0.12)",
-                      },
-                      {
-                        progress: progress.pace,
-                        color: "#24C789",
-                        trackColor: "rgba(36,199,137,0.12)",
-                      },
-                      {
-                        progress: progress.time,
-                        color: "#00C2FF",
-                        trackColor: "rgba(0,194,255,0.12)",
-                      },
-                    ]}
-                  />
-                </View>
-                <View style={styles.runInfo}>
-                  <Text style={styles.runTitle}>{distanceDisplay}</Text>
-                  <Text style={styles.runDate}>
-                    {run.date} · {run.duration}
-                  </Text>
-                </View>
-                <View style={styles.runStats}>
-                  <Text style={styles.runPace}>{paceDisplay}</Text>
-                  <Text style={styles.runCalories}>{run.calories} kcal</Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })
+          <>
+            {/* Summary bar */}
+            <View style={styles.summaryBar}>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryValue}>{totalKm.toFixed(1)}</Text>
+                <Text style={styles.summaryLabel}>KM TOTAL</Text>
+              </View>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryValue}>{totalRuns}</Text>
+                <Text style={styles.summaryLabel}>RUNS</Text>
+              </View>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryValue}>{bestKm.toFixed(2)}</Text>
+                <Text style={styles.summaryLabel}>BEST KM</Text>
+              </View>
+            </View>
+
+            {groupedRuns.map(({ group, items }) => (
+              <View key={group}>
+                <Text style={styles.groupLabel}>{group}</Text>
+                {items.map((run, index) => {
+                  const progress = runRingProgress(run);
+                  const distance = Number(run.distance) || 0;
+                  const distanceDisplay = distance < 1
+                    ? `${(distance * 1000).toFixed(0)} m`
+                    : `${distance.toFixed(2)} km`;
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      style={styles.runCard}
+                      activeOpacity={0.85}
+                      onPress={() => openRunDetails(run)}
+                    >
+                      <View style={styles.runRingBox}>
+                        <ThreeRings
+                          size={56}
+                          stroke={5}
+                          gap={2}
+                          rings={[
+                            { progress: progress.dist, color: "#FF5A36", trackColor: "rgba(255,90,54,0.12)" },
+                            { progress: progress.pace, color: "#24C789", trackColor: "rgba(36,199,137,0.12)" },
+                            { progress: progress.time, color: "#00C2FF", trackColor: "rgba(0,194,255,0.12)" },
+                          ]}
+                        />
+                      </View>
+                      <View style={styles.runInfo}>
+                        <Text style={styles.runTitle}>{distanceDisplay}</Text>
+                        <Text style={styles.runDate}>{run.time} · {run.duration}</Text>
+                      </View>
+                      <View style={styles.runStats}>
+                        <Text style={styles.runPace}>{formatPaceMin(run.pace)} /km</Text>
+                        <Text style={styles.runCalories}>{run.calories ? `${Math.round(run.calories)} kcal` : '—'}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ))}
+          </>
         )}
       </ScrollView>
 
@@ -217,73 +269,31 @@ export default function RunHistoryScreen({ navigation }) {
               {/* Stats Grid */}
               <View style={styles.statsGrid}>
                 <View style={styles.statBox}>
-                  <Text style={styles.statLabel}>Distance</Text>
+                  <Text style={styles.statLabel}>DISTANCE</Text>
                   <Text style={styles.statValue}>
-                    {selectedRun.distance < 1 ? (selectedRun.distance * 1000).toFixed(0) : selectedRun.distance}{" "}
-                    <Text style={styles.statUnit}>{selectedRun.distance < 1 ? 'm' : 'km'}</Text>
+                    {Number(selectedRun.distance) < 1
+                      ? `${(Number(selectedRun.distance) * 1000).toFixed(0)}`
+                      : Number(selectedRun.distance).toFixed(2)}
+                    <Text style={styles.statUnit}> {Number(selectedRun.distance) < 1 ? 'm' : 'km'}</Text>
                   </Text>
                 </View>
                 <View style={styles.statBox}>
-                  <Text style={styles.statLabel}>{selectedRun.distance < 1 ? "Speed" : "Pace"}</Text>
+                  <Text style={styles.statLabel}>PACE</Text>
                   <Text style={styles.statValue}>
-                    {selectedRun.distance < 1 ? ((selectedRun.distance * 1000) / (selectedRun.pace * selectedRun.distance * 60)).toFixed(1) : selectedRun.pace} <Text style={styles.statUnit}>{selectedRun.distance < 1 ? 'm/s' : '/km'}</Text>
+                    {formatPaceMin(selectedRun.pace)}
+                    <Text style={styles.statUnit}> /km</Text>
                   </Text>
                 </View>
                 <View style={styles.statBox}>
-                  <Text style={styles.statLabel}>Duration</Text>
+                  <Text style={styles.statLabel}>DURATION</Text>
                   <Text style={styles.statValue}>{selectedRun.duration}</Text>
                 </View>
                 <View style={styles.statBox}>
-                  <Text style={styles.statLabel}>Calories</Text>
+                  <Text style={styles.statLabel}>CALORIES</Text>
                   <Text style={styles.statValue}>
-                    {selectedRun.calories}{" "}
-                    <Text style={styles.statUnit}>kcal</Text>
+                    {selectedRun.calories ? Math.round(selectedRun.calories) : '—'}
+                    {selectedRun.calories ? <Text style={styles.statUnit}> kcal</Text> : null}
                   </Text>
-                </View>
-              </View>
-
-              {/* Heart Rate Zones (Simulated Data) */}
-              <View style={styles.sectionContainer}>
-                <Text style={styles.sectionTitle}>Heart Rate Zones</Text>
-                <View style={styles.zoneRow}>
-                  <View
-                    style={[
-                      styles.zoneColor,
-                      { backgroundColor: "#FF3B30", width: "15%" },
-                    ]}
-                  />
-                  <Text style={styles.zoneName}>Peak (160+)</Text>
-                  <Text style={styles.zoneTime}>15%</Text>
-                </View>
-                <View style={styles.zoneRow}>
-                  <View
-                    style={[
-                      styles.zoneColor,
-                      { backgroundColor: "#FF9500", width: "45%" },
-                    ]}
-                  />
-                  <Text style={styles.zoneName}>Cardio (140-159)</Text>
-                  <Text style={styles.zoneTime}>45%</Text>
-                </View>
-                <View style={styles.zoneRow}>
-                  <View
-                    style={[
-                      styles.zoneColor,
-                      { backgroundColor: "#FFCC00", width: "30%" },
-                    ]}
-                  />
-                  <Text style={styles.zoneName}>Fat Burn (110-139)</Text>
-                  <Text style={styles.zoneTime}>30%</Text>
-                </View>
-                <View style={styles.zoneRow}>
-                  <View
-                    style={[
-                      styles.zoneColor,
-                      { backgroundColor: "#34C759", width: "10%" },
-                    ]}
-                  />
-                  <Text style={styles.zoneName}>Warm Up ({"<110"})</Text>
-                  <Text style={styles.zoneTime}>10%</Text>
                 </View>
               </View>
             </ScrollView>
@@ -334,6 +344,52 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 8,
     paddingHorizontal: 30,
+  },
+  summaryBar: {
+    flexDirection: "row",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    paddingVertical: 18,
+    paddingHorizontal: 8,
+    marginBottom: 20,
+    alignItems: "center",
+    justifyContent: "space-around",
+    shadowColor: "#0B0F13",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
+    elevation: 2,
+  },
+  summaryItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+  summaryValue: {
+    fontFamily: FONT.extraBold,
+    fontSize: 22,
+    color: "#0B0F13",
+    letterSpacing: -0.5,
+    fontVariant: ["tabular-nums"],
+  },
+  summaryLabel: {
+    ...T.eyebrow,
+    fontSize: 9,
+    marginTop: 3,
+  },
+  summaryDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: "rgba(0,0,0,0.08)",
+  },
+  groupLabel: {
+    fontFamily: FONT.bold,
+    fontSize: 11,
+    color: "#9AA0A6",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 10,
+    marginTop: 4,
+    paddingLeft: 4,
   },
   runCard: {
     backgroundColor: "#FFF",
