@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   Dimensions,
   Platform,
   ScrollView,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { formatDuration } from '../../utils/timeUtils';
@@ -15,6 +17,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import ThreeRings from '../ThreeRings';
 import Sparkline from '../Sparkline';
+import ShareCard, { SHARE_CARD_HEIGHT } from '../ShareCard';
+import useUserStore from '../../store/useUserStore';
 import { T, FONT } from '../../constants/typography';
 
 const { width } = Dimensions.get('window');
@@ -26,6 +30,10 @@ const PACE_FLOOR = 8;  // min/km – slowest considered (0%)
 const PACE_CEIL = 4;   // min/km – fastest considered (100%)
 
 const RunSummaryModal = ({ durationInSeconds, runData, currentSpeed, closeRun }) => {
+  const shareRef = useRef(null);
+  const [isSharing, setIsSharing] = useState(false);
+  const username = useUserStore((s) => s.user?.username) || 'Runner';
+
   const distanceKm = Number(runData?.distance || 0);
   const duration = Number(durationInSeconds || 0);
   const paceMinPerKm =
@@ -55,8 +63,69 @@ const RunSummaryModal = ({ durationInSeconds, runData, currentSpeed, closeRun })
 
   const isPB = distanceKm >= DISTANCE_TARGET_KM;
 
+  const handleShare = async () => {
+    if (isSharing) return;
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+
+    if (Platform.OS === 'web') {
+      Alert.alert(
+        'Share coming soon on web',
+        'Open SideRun on iOS or Android to share a polished run card to Instagram, Messages, or anywhere else.'
+      );
+      return;
+    }
+
+    try {
+      setIsSharing(true);
+      // Lazy-require native-only modules so the web bundle doesn't choke on them.
+      const { captureRef } = require('react-native-view-shot');
+      const Sharing = require('expo-sharing');
+      const uri = await captureRef(shareRef, {
+        format: 'png',
+        quality: 0.95,
+        result: 'tmpfile',
+      });
+      const available = await Sharing.isAvailableAsync();
+      if (!available) {
+        Alert.alert('Share', 'Sharing is not available on this device.');
+        return;
+      }
+      await Sharing.shareAsync(uri, {
+        mimeType: 'image/png',
+        dialogTitle: 'Share your run',
+        UTI: 'public.png',
+      });
+    } catch (e) {
+      console.warn('[RunSummaryModal] share failed', e);
+      Alert.alert('Share failed', e?.message || 'Could not capture the run card.');
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
   return (
     <Modal visible={true} transparent animationType="slide">
+      {/* Off-screen share card — rendered so captureRef has something to snapshot.
+          Skipped on web since we don't support native-style capture + share there. */}
+      {Platform.OS !== 'web' ? (
+        <View pointerEvents="none" style={styles.shareOffscreen}>
+          <ShareCard
+            ref={shareRef}
+            distanceKm={distanceKm}
+            durationLabel={formatDuration(duration)}
+            paceLabel={formatPace(paceMinPerKm)}
+            kcal={kcal}
+            distProgress={distProgress}
+            paceProgress={paceProgress}
+            durProgress={durProgress}
+            username={username}
+            isPB={isPB}
+          />
+        </View>
+      ) : null}
+
       <BlurView intensity={90} tint="dark" style={styles.blurContainer}>
         <View style={styles.card}>
           <ScrollView
@@ -157,16 +226,19 @@ const RunSummaryModal = ({ durationInSeconds, runData, currentSpeed, closeRun })
 
             <View style={styles.actionsRow}>
               <TouchableOpacity
-                style={styles.ghostBtn}
+                style={[styles.ghostBtn, isSharing && styles.ghostBtnBusy]}
                 activeOpacity={0.8}
-                onPress={() => {
-                  if (Platform.OS !== 'web') {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }
-                }}
+                onPress={handleShare}
+                disabled={isSharing}
               >
-                <Ionicons name="share-outline" size={18} color="#FFF" />
-                <Text style={styles.ghostBtnText}>Share</Text>
+                {isSharing ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Ionicons name="share-outline" size={18} color="#FFF" />
+                    <Text style={styles.ghostBtnText}>Share</Text>
+                  </>
+                )}
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.doneButton}
@@ -371,10 +443,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.04)',
     gap: 6,
   },
+  ghostBtnBusy: {
+    opacity: 0.6,
+  },
   ghostBtnText: {
     fontFamily: FONT.bold,
     fontSize: 15,
     color: '#FFFFFF',
+  },
+  shareOffscreen: {
+    position: 'absolute',
+    top: 0,
+    left: -10000,
+    width: 340,
+    height: SHARE_CARD_HEIGHT,
+    opacity: 0,
   },
   doneButton: {
     flex: 1.3,
