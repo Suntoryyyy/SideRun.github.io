@@ -2,12 +2,24 @@ import 'react-native-url-polyfill/auto'; // Polyfill required for React Native +
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 
-// MemFire Cloud credentials (Supabase SDK)
-// Replace these with your actual Memfire Cloud Project URL and anon key from your dashboard
-const memfireUrl = 'https://d7ef9e8g91hmdup7u4e0.baseapi.memfiredb.com'; // e.g., https://xxx.memfire.com
-const memfireAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImV4cCI6MzM1Mjg4ODI0OSwiaWF0IjoxNzc2MDg4MjQ5LCJpc3MiOiJzdXBhYmFzZSJ9.foErpts0bF8t69SNOZRFmxekClOYIoKQxkOnDO-qqm4';
+// Read from env (Expo exposes any EXPO_PUBLIC_* var to the client bundle).
+// Define them in a local `.env` file at the project root — see `.env.example`.
+const supabaseUrl =
+  process.env.EXPO_PUBLIC_SUPABASE_URL ||
+  process.env.EXPO_PUBLIC_MEMFIRE_URL;
+const supabaseAnonKey =
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+  process.env.EXPO_PUBLIC_MEMFIRE_ANON_KEY;
 
-export const supabase = createClient(memfireUrl, memfireAnonKey, {
+if (!supabaseUrl || !supabaseAnonKey) {
+  // Fail loudly during dev, but don't crash the bundle so Expo can still boot.
+  console.error(
+    '[supabase] Missing EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY. ' +
+      'Copy .env.example to .env and fill in your project credentials.'
+  );
+}
+
+export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,

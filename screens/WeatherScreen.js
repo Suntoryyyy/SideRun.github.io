@@ -6,10 +6,16 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Dimensions,
 } from 'react-native';
 import * as Location from 'expo-location';
 import axios from 'axios';
 import { Ionicons } from '@expo/vector-icons';
+import Sparkline from '../components/Sparkline';
+import EmptyState from '../components/EmptyState';
+import { T, FONT } from '../constants/typography';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function WeatherScreen({ navigation }) {
   const [weather, setWeather] = useState(null);
@@ -72,9 +78,7 @@ export default function WeatherScreen({ navigation }) {
         },
       };
 
-      setWeather(mockWeather);
-
-      // Mock forecast
+      // Mock forecast (used only if no API key/location available)
       const mockForecast = [
         { time: '06:00', temp: 18, condition: 'Clear', icon: '01d' },
         { time: '09:00', temp: 22, condition: 'Sunny', icon: '02d' },
@@ -84,7 +88,60 @@ export default function WeatherScreen({ navigation }) {
         { time: '21:00', temp: 19, condition: 'Clear', icon: '01n' },
       ];
 
-      setForecast(mockForecast);
+      const apiKey = process.env.EXPO_PUBLIC_OPENWEATHER_API_KEY;
+      const coords = location ||
+        (await (async () => {
+          const pos = await Location.getLastKnownPositionAsync();
+          return pos?.coords;
+        })());
+
+      if (apiKey && coords) {
+        try {
+          const { data: current } = await axios.get(
+            'https://api.openweathermap.org/data/2.5/weather',
+            {
+              params: {
+                lat: coords.latitude,
+                lon: coords.longitude,
+                appid: apiKey,
+                units: 'metric',
+              },
+            }
+          );
+          setWeather(current);
+
+          const { data: forecastRes } = await axios.get(
+            'https://api.openweathermap.org/data/2.5/forecast',
+            {
+              params: {
+                lat: coords.latitude,
+                lon: coords.longitude,
+                appid: apiKey,
+                units: 'metric',
+                cnt: 6,
+              },
+            }
+          );
+          setForecast(
+            (forecastRes?.list || []).map((slot) => ({
+              time: new Date(slot.dt * 1000).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+              temp: Math.round(slot.main?.temp),
+              condition: slot.weather?.[0]?.main || 'Clear',
+              icon: slot.weather?.[0]?.icon || '01d',
+            }))
+          );
+        } catch (apiErr) {
+          console.warn('OpenWeatherMap request failed, falling back to mock', apiErr);
+          setWeather(mockWeather);
+          setForecast(mockForecast);
+        }
+      } else {
+        setWeather(mockWeather);
+        setForecast(mockForecast);
+      }
       setLoading(false);
     } catch (error) {
       console.error('Error getting weather:', error);
@@ -92,17 +149,31 @@ export default function WeatherScreen({ navigation }) {
     }
   };
 
-  const getWeatherIcon = (condition) => {
-    const icons = {
-      'Clear': '☀️',
-      'Sunny': '☀️',
-      'Partly cloudy': '⛅',
-      'Cloudy': '☁️',
-      'Rain': '🌧️',
-      'Thunderstorm': '⛈️',
-      'Snow': '❄️',
-    };
-    return icons[condition] || '☀️';
+  const getWeatherIconName = (condition) => {
+    const c = (condition || '').toLowerCase();
+    if (c.includes('thunder')) return 'thunderstorm';
+    if (c.includes('snow')) return 'snow';
+    if (c.includes('rain') || c.includes('drizzle')) return 'rainy';
+    if (c.includes('cloud')) return 'partly-sunny';
+    if (c.includes('clear') || c.includes('sun')) return 'sunny';
+    if (c.includes('mist') || c.includes('fog') || c.includes('haze')) return 'cloudy';
+    return 'partly-sunny';
+  };
+
+  const getRunningChip = () => {
+    if (!weather) return { label: 'Loading…', color: '#9AA0A6', bg: 'rgba(154,160,166,0.15)' };
+    const t = weather.main.temp;
+    const cond = weather.weather[0].main;
+    const wind = weather.wind.speed;
+    if (cond === 'Rain' || cond === 'Thunderstorm')
+      return { label: 'Indoor is safer', color: '#E07A3A', bg: 'rgba(224,122,58,0.15)' };
+    if (t < 5 || t > 30)
+      return { label: 'Harsh conditions', color: '#E07A3A', bg: 'rgba(224,122,58,0.15)' };
+    if (wind > 12)
+      return { label: 'Windy — be cautious', color: '#E0A93A', bg: 'rgba(224,169,58,0.18)' };
+    if (t >= 12 && t <= 24)
+      return { label: 'Perfect for running', color: '#1EA574', bg: 'rgba(36,199,137,0.15)' };
+    return { label: 'Good for a short run', color: '#1EA574', bg: 'rgba(36,199,137,0.15)' };
   };
 
   const getRunningRecommendation = () => {
@@ -141,6 +212,34 @@ export default function WeatherScreen({ navigation }) {
     );
   }
 
+  if (!weather) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+          >
+            <Ionicons name="arrow-back" size={28} color="#111111" />
+          </TouchableOpacity>
+          <Text style={styles.title}>Weather & Running Guide</Text>
+        </View>
+        <EmptyState
+          icon="cloud-offline-outline"
+          title="Weather unavailable"
+          desc="We couldn't reach a forecast. Check location permission and your connection, then try again."
+          actionLabel="Try again"
+          onAction={() => {
+            setLoading(true);
+            getWeatherData();
+          }}
+          accent="#E0A93A"
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -156,32 +255,87 @@ export default function WeatherScreen({ navigation }) {
           <Text style={styles.subtitle}>Smart recommendations for your runs</Text>
         </View>
 
-        {weather && (
-        <View style={styles.currentWeatherCard}>
-          <View style={styles.weatherMain}>
-            <Text style={styles.weatherIcon}>{getWeatherIcon(weather.weather[0].main)}</Text>
-            <View style={styles.weatherInfo}>
-              <Text style={styles.temperature}>{Math.round(weather.main.temp)}°C</Text>
-              <Text style={styles.condition}>{weather.weather[0].description}</Text>
-              <Text style={styles.feelsLike}>Feels like {Math.round(weather.main.feels_like)}°C</Text>
+        {weather && (() => {
+          const chip = getRunningChip();
+          const tempSeries = forecast.length > 0
+            ? forecast.map((h) => h.temp)
+            : [18, 22, 25, 24, 21, 19];
+          const maxIdx = tempSeries.indexOf(Math.max(...tempSeries));
+          const today = new Date();
+          const dateStr = today
+            .toLocaleDateString(undefined, {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+            })
+            .toUpperCase();
+          return (
+            <View style={styles.heroCard}>
+              <Text style={styles.heroLabel}>TODAY · {dateStr}</Text>
+              <View style={styles.heroMainRow}>
+                <View style={styles.heroLeft}>
+                  <View style={styles.heroTempRow}>
+                    <Text style={styles.heroTempNum}>
+                      {Math.round(weather.main.temp)}
+                    </Text>
+                    <Text style={styles.heroTempUnit}>°</Text>
+                  </View>
+                  <Text style={styles.heroDesc}>
+                    {weather.weather[0].description
+                      .charAt(0)
+                      .toUpperCase() + weather.weather[0].description.slice(1)}
+                    {'  ·  Feels '}
+                    {Math.round(weather.main.feels_like)}°
+                  </Text>
+                </View>
+                <View style={styles.heroIconWrap}>
+                  <Ionicons
+                    name={getWeatherIconName(weather.weather[0].main)}
+                    size={60}
+                    color="#E0A93A"
+                  />
+                </View>
+              </View>
+
+              <View style={[styles.heroChip, { backgroundColor: chip.bg }]}>
+                <View style={[styles.heroChipDot, { backgroundColor: chip.color }]} />
+                <Text style={[styles.heroChipText, { color: chip.color }]}>
+                  {chip.label}
+                </Text>
+              </View>
+
+              <View style={styles.heroCurveWrap}>
+                <Sparkline
+                  data={tempSeries}
+                  width={SCREEN_WIDTH - 40 - 32}
+                  height={44}
+                  color="#FF5A36"
+                  fillOpacity={0.18}
+                  highlightIndex={maxIdx}
+                  strokeWidth={2.2}
+                />
+              </View>
+
+              <View style={styles.heroStatsRow}>
+                <View style={styles.heroStat}>
+                  <Text style={styles.heroStatLabel}>HUMIDITY</Text>
+                  <Text style={styles.heroStatValue}>{weather.main.humidity}%</Text>
+                </View>
+                <View style={styles.heroStat}>
+                  <Text style={styles.heroStatLabel}>WIND</Text>
+                  <Text style={styles.heroStatValue}>
+                    {weather.wind.speed.toFixed(1)}
+                    <Text style={styles.heroStatUnit}> m/s</Text>
+                  </Text>
+                </View>
+                <View style={styles.heroStat}>
+                  <Text style={styles.heroStatLabel}>AQI</Text>
+                  <Text style={styles.heroStatValue}>45</Text>
+                </View>
+              </View>
             </View>
-          </View>
-          <View style={styles.weatherDetails}>
-            <View style={styles.detail}>
-              <Text style={styles.detailLabel}>Humidity</Text>
-              <Text style={styles.detailValue}>{weather.main.humidity}%</Text>
-            </View>
-            <View style={styles.detail}>
-              <Text style={styles.detailLabel}>Wind</Text>
-              <Text style={styles.detailValue}>{weather.wind.speed} m/s</Text>
-            </View>
-            <View style={styles.detail}>
-              <Text style={styles.detailLabel}>AQI</Text>
-              <Text style={styles.detailValue}>45 (Good)</Text>
-            </View>
-          </View>
-        </View>
-      )}
+          );
+        })()}
 
       <View style={styles.recommendationCard}>
         <Text style={styles.cardTitle}>Running Recommendation</Text>
@@ -204,8 +358,13 @@ export default function WeatherScreen({ navigation }) {
           {forecast.map((hour, index) => (
             <View key={index} style={styles.hourCard}>
               <Text style={styles.hourTime}>{hour.time}</Text>
-              <Text style={styles.hourIcon}>{getWeatherIcon(hour.condition)}</Text>
-              <Text style={styles.hourTemp}>{hour.temp}°C</Text>
+              <Ionicons
+                name={getWeatherIconName(hour.condition)}
+                size={22}
+                color="#E0A93A"
+                style={styles.hourIconV2}
+              />
+              <Text style={styles.hourTemp}>{hour.temp}°</Text>
               <Text style={styles.hourCondition}>{hour.condition}</Text>
             </View>
           ))}
@@ -245,9 +404,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F4F5F7',
   },
   loadingText: {
+    ...T.bodyMuted,
     fontSize: 16,
-    color: '#888888',
-    fontWeight: '500',
   },
   header: {
     alignItems: 'center',
@@ -266,82 +424,111 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#111111',
-    marginBottom: 8,
+    ...T.title3,
+    fontSize: 18,
+    marginBottom: 6,
     marginTop: 4,
     maxWidth: '70%',
     textAlign: 'center',
-    letterSpacing: -0.5,
-    textTransform: 'uppercase',
   },
   subtitle: {
-    fontSize: 16,
-    color: '#888888',
+    ...T.bodyMuted,
+    fontSize: 13,
     marginBottom: 10,
   },
-  currentWeatherCard: {
+  heroCard: {
     backgroundColor: '#FFFFFF',
-    margin: 20,
-    padding: 24,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 20,
+    borderRadius: 28,
+    shadowColor: '#0B0F13',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 4,
   },
-  weatherMain: {
+  heroLabel: {
+    ...T.eyebrow,
+    marginBottom: 8,
+  },
+  heroMainRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'space-between',
   },
-  weatherIcon: {
-    fontSize: 56,
-    marginRight: 20,
-  },
-  weatherInfo: {
+  heroLeft: {
     flex: 1,
+    paddingRight: 12,
   },
-  temperature: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#222222',
-    letterSpacing: -1,
+  heroTempRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
   },
-  condition: {
-    fontSize: 18,
-    color: '#24C789',
-    textTransform: 'capitalize',
-    fontWeight: '600',
+  heroTempNum: {
+    ...T.displayXL,
   },
-  feelsLike: {
-    fontSize: 14,
-    color: '#888888',
-    marginTop: 4,
+  heroTempUnit: {
+    fontFamily: FONT.medium,
+    fontSize: 32,
+    color: '#6B6F76',
+    marginLeft: 2,
   },
-  weatherDetails: {
+  heroDesc: {
+    ...T.bodyMuted,
+    marginTop: 2,
+  },
+  heroIconWrap: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: 'rgba(224,169,58,0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  heroChip: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    marginTop: 12,
+  },
+  heroChipDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 6,
+  },
+  heroChipText: {
+    ...T.pill,
+  },
+  heroCurveWrap: {
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  heroStatsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#F4F5F7',
-    padding: 15,
-    borderRadius: 12,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.06)',
   },
-  detail: {
-    alignItems: 'center',
-    flex: 1,
+  heroStat: {
+    alignItems: 'flex-start',
   },
-  detailLabel: {
-    fontSize: 12,
-    color: '#888888',
-    marginBottom: 4,
-    fontWeight: '600',
+  heroStatLabel: {
+    ...T.label,
+    marginBottom: 2,
   },
-  detailValue: {
+  heroStatValue: {
+    ...T.metricM,
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#222222',
+  },
+  heroStatUnit: {
+    ...T.metricUnit,
   },
   recommendationCard: {
     backgroundColor: '#FFFFFF',
@@ -356,16 +543,13 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#222222',
+    ...T.title4,
     marginBottom: 12,
   },
   recommendationText: {
-    fontSize: 16,
+    ...T.bodyL,
     color: '#444444',
     lineHeight: 24,
-    fontWeight: '500',
   },
   bestTimesCard: {
     backgroundColor: '#FFFFFF',
@@ -380,15 +564,14 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   timeSlot: {
-    fontSize: 16,
+    ...T.bodyL,
     color: '#444444',
     marginBottom: 8,
     paddingLeft: 10,
-    fontWeight: '500',
   },
   noTimesText: {
-    fontSize: 16,
-    color: '#888888',
+    ...T.bodyMuted,
+    fontSize: 15,
     fontStyle: 'italic',
     paddingLeft: 10,
   },
@@ -416,26 +599,25 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   hourTime: {
-    fontSize: 14,
+    ...T.caption,
+    fontFamily: FONT.semibold,
     color: '#888888',
     marginBottom: 8,
-    fontWeight: '600',
   },
   hourIcon: {
     fontSize: 28,
     marginBottom: 8,
   },
+  hourIconV2: {
+    marginBottom: 8,
+  },
   hourTemp: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#222222',
+    ...T.metricM,
     marginBottom: 4,
   },
   hourCondition: {
-    fontSize: 12,
-    color: '#888888',
+    ...T.caption,
     textAlign: 'center',
-    fontWeight: '500',
   },
   tipsCard: {
     backgroundColor: '#FFFFFF',
@@ -450,12 +632,10 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   tip: {
-    fontSize: 14,
+    ...T.body,
     color: '#444444',
     marginBottom: 8,
     paddingLeft: 10,
-    fontWeight: '500',
-    lineHeight: 20,
   },
   refreshButton: {
     backgroundColor: '#24C789',
@@ -472,9 +652,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   refreshButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...T.button,
     letterSpacing: 1,
   },
 });

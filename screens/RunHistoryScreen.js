@@ -15,6 +15,9 @@ import { supabase } from "../services/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import HistoryMap from "../components/RunScreenUI/HistoryMap";
+import EmptyState from "../components/EmptyState";
+import ThreeRings from "../components/ThreeRings";
+import { T, FONT } from "../constants/typography";
 
 const { width, height } = Dimensions.get("window");
 
@@ -64,6 +67,25 @@ export default function RunHistoryScreen({ navigation }) {
     }
   };
 
+  const parseDurationSec = (str) => {
+    if (!str || typeof str !== "string") return 0;
+    const parts = str.split(":").map((n) => parseInt(n, 10) || 0);
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    return 0;
+  };
+
+  const runRingProgress = (run) => {
+    const distance = Number(run.distance) || 0;
+    const paceMin = Number(run.pace) || 8;
+    const durSec = parseDurationSec(run.duration);
+    return {
+      dist: Math.min(1, distance / 5),
+      pace: Math.min(1, Math.max(0, (8 - paceMin) / 4)),
+      time: Math.min(1, durSec / 1800),
+    };
+  };
+
   const openRunDetails = (run) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedRun(run);
@@ -90,38 +112,70 @@ export default function RunHistoryScreen({ navigation }) {
         </View>
 
         {runs.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="footsteps-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyText}>No runs yet!</Text>
-            <Text style={styles.emptySubText}>
-              Head out and record your first run to see it here.
-            </Text>
-          </View>
+          <EmptyState
+            icon="footsteps-outline"
+            title="No runs yet"
+            desc="Your first run appears here with pace, splits, and the three-ring summary. Ready when you are."
+            actionLabel="Start a run"
+            onAction={() => navigation.navigate("Run")}
+            accent="#FF5A36"
+          />
         ) : (
-          runs.map((run, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.runCard}
-              activeOpacity={0.7}
-              onPress={() => openRunDetails(run)}
-            >
-              <View style={styles.runIconBox}>
-                <Ionicons name="footsteps" size={24} color="#24C789" />
-              </View>
-              <View style={styles.runInfo}>
-                  <Text style={styles.runTitle}>Distance: {run.distance < 1 ? (run.distance * 1000).toFixed(0) + ' m' : run.distance + ' km'}</Text>
-                <Text style={styles.runDate}>
-                  {run.date} • {run.duration}
-                </Text>
-              </View>
-              <View style={styles.runStats}>
-                <Text style={styles.runPace}>
-                  {run.distance < 1 ? ((run.distance * 1000) / (run.pace * run.distance * 60)).toFixed(1) + ' m/s' : run.pace + ' /km'}
-                </Text>
-                <Text style={styles.runCalories}>{run.calories} kcal</Text>
-              </View>
-            </TouchableOpacity>
-          ))
+          runs.map((run, index) => {
+            const progress = runRingProgress(run);
+            const distance = Number(run.distance) || 0;
+            const distanceDisplay =
+              distance < 1
+                ? `${(distance * 1000).toFixed(0)} m`
+                : `${distance.toFixed(2)} km`;
+            const paceDisplay =
+              distance < 1
+                ? `${(run.pace ? (1000 / (run.pace * 60)) : 0).toFixed(1)} m/s`
+                : `${run.pace ?? "—"} /km`;
+            return (
+              <TouchableOpacity
+                key={index}
+                style={styles.runCard}
+                activeOpacity={0.85}
+                onPress={() => openRunDetails(run)}
+              >
+                <View style={styles.runRingBox}>
+                  <ThreeRings
+                    size={56}
+                    stroke={5}
+                    gap={2}
+                    rings={[
+                      {
+                        progress: progress.dist,
+                        color: "#FF5A36",
+                        trackColor: "rgba(255,90,54,0.12)",
+                      },
+                      {
+                        progress: progress.pace,
+                        color: "#24C789",
+                        trackColor: "rgba(36,199,137,0.12)",
+                      },
+                      {
+                        progress: progress.time,
+                        color: "#00C2FF",
+                        trackColor: "rgba(0,194,255,0.12)",
+                      },
+                    ]}
+                  />
+                </View>
+                <View style={styles.runInfo}>
+                  <Text style={styles.runTitle}>{distanceDisplay}</Text>
+                  <Text style={styles.runDate}>
+                    {run.date} · {run.duration}
+                  </Text>
+                </View>
+                <View style={styles.runStats}>
+                  <Text style={styles.runPace}>{paceDisplay}</Text>
+                  <Text style={styles.runCalories}>{run.calories} kcal</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })
         )}
       </ScrollView>
 
@@ -263,9 +317,8 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#222222",
+    ...T.title3,
+    fontSize: 22,
   },
   emptyContainer: {
     alignItems: "center",
@@ -273,65 +326,66 @@ const styles = StyleSheet.create({
     marginTop: 60,
   },
   emptyText: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#666",
+    ...T.title3,
     marginTop: 16,
   },
   emptySubText: {
-    fontSize: 14,
-    color: "#999",
+    ...T.bodyMuted,
     textAlign: "center",
     marginTop: 8,
     paddingHorizontal: 30,
   },
   runCard: {
     backgroundColor: "#FFF",
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 20,
+    padding: 14,
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
+    shadowColor: "#0B0F13",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.04)",
   },
-  runIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#E8F8F2",
+  runRingBox: {
+    width: 56,
+    height: 56,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 16,
+    marginRight: 14,
   },
   runInfo: {
     flex: 1,
   },
   runTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#222",
-    marginBottom: 4,
+    ...T.metricL,
+    fontSize: 18,
+    marginBottom: 2,
   },
   runDate: {
-    fontSize: 13,
+    ...T.caption,
     color: "#888",
+    fontVariant: ["tabular-nums"],
   },
   runStats: {
     alignItems: "flex-end",
   },
   runPace: {
-    fontSize: 15,
-    fontWeight: "bold",
-    color: "#222",
+    fontFamily: FONT.extraBold,
+    fontSize: 14,
+    color: "#0B0F13",
+    letterSpacing: -0.2,
+    fontVariant: ["tabular-nums"],
   },
   runCalories: {
-    fontSize: 13,
+    fontFamily: FONT.semibold,
+    fontSize: 12,
     color: "#FF9500",
     marginTop: 2,
+    fontVariant: ["tabular-nums"],
   },
   modalContainer: {
     flex: 1,
@@ -349,9 +403,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#EEE",
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#111",
+    ...T.title3,
   },
   closeButton: {
     padding: 5,
@@ -393,20 +445,16 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   statLabel: {
-    fontSize: 13,
-    color: "#666",
+    ...T.label,
     marginBottom: 4,
-    fontWeight: "600",
   },
   statValue: {
+    ...T.metricL,
     fontSize: 24,
-    fontWeight: "bold",
-    color: "#222",
   },
   statUnit: {
+    ...T.metricUnit,
     fontSize: 14,
-    fontWeight: "normal",
-    color: "#888",
   },
   sectionContainer: {
     backgroundColor: "#FFF",
@@ -414,9 +462,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#222",
+    ...T.title4,
     marginBottom: 15,
   },
   zoneRow: {
@@ -425,14 +471,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   zoneName: {
+    ...T.body,
     flex: 1,
-    fontSize: 15,
     color: "#444",
   },
   zoneTime: {
+    ...T.metricM,
     fontSize: 15,
-    fontWeight: "bold",
-    color: "#222",
     width: 60,
     textAlign: "right",
   },

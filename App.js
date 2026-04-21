@@ -29,6 +29,15 @@ import { supabase } from './services/supabase';
 import * as Font from 'expo-font';
 import useUserStore from './store/useUserStore';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  Inter_800ExtraBold,
+  Inter_900Black,
+} from '@expo-google-fonts/inter';
+import patchTextFonts from './utils/patchTextFonts';
 
 // Import screen components
 import HomeScreen from './screens/HomeScreen';
@@ -41,6 +50,9 @@ import ProfileScreen from './screens/ProfileScreen';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import RunHistoryScreen from './screens/RunHistoryScreen';
+import OnboardingWelcomeScreen from './screens/OnboardingWelcomeScreen';
+import OnboardingPermissionsScreen from './screens/OnboardingPermissionsScreen';
+import OnboardingGoalScreen, { ONBOARDING_KEY } from './screens/OnboardingGoalScreen';
 
 const Drawer = createDrawerNavigator();
 const Stack = createStackNavigator();
@@ -125,25 +137,47 @@ function DrawerNavigator({ handleLogout }) {
 
 export default function App() {
   const { initialize, isLoggedIn, isLoading, logout } = useUserStore();
+  const [onboardingDone, setOnboardingDone] = useState(true);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
 
   useEffect(() => {
     async function prepareApp() {
       try {
+        const interFonts = {
+          Inter_400Regular,
+          Inter_500Medium,
+          Inter_600SemiBold,
+          Inter_700Bold,
+          Inter_800ExtraBold,
+          Inter_900Black,
+        };
         if (Platform.OS === 'web') {
           // Explicitly load font from CDN to avoid GitHub Pages base-path 404s
           await Font.loadAsync({
-            Ionicons: 'https://unpkg.com/@expo/vector-icons@15.1.1/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf'
+            Ionicons: 'https://unpkg.com/@expo/vector-icons@15.1.1/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf',
+            ...interFonts,
           });
         } else {
-          await Font.loadAsync(Ionicons.font);
+          await Font.loadAsync({ ...Ionicons.font, ...interFonts });
         }
+        patchTextFonts();
         await initialize();
+        try {
+          const flag = await AsyncStorage.getItem(ONBOARDING_KEY);
+          setOnboardingDone(flag === '1');
+        } catch (_) {
+          setOnboardingDone(false);
+        }
+        setOnboardingChecked(true);
       } catch (e) {
         console.warn(e);
+        setOnboardingChecked(true);
       }
     }
     prepareApp();
   }, []);
+
+  const completeOnboarding = () => setOnboardingDone(true);
 
 
 
@@ -154,7 +188,7 @@ export default function App() {
     await logout();
   };
 
-  if (isLoading) {
+  if (isLoading || !onboardingChecked) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#24C789" />
@@ -173,6 +207,16 @@ export default function App() {
             </Stack.Screen>
             <Stack.Screen name="Register">
               {props => <RegisterScreen {...props}  />}
+            </Stack.Screen>
+          </>
+        ) : !onboardingDone ? (
+          <>
+            <Stack.Screen name="OnboardingWelcome" component={OnboardingWelcomeScreen} />
+            <Stack.Screen name="OnboardingPermissions" component={OnboardingPermissionsScreen} />
+            <Stack.Screen name="OnboardingGoal">
+              {props => (
+                <OnboardingGoalScreen {...props} onComplete={completeOnboarding} />
+              )}
             </Stack.Screen>
           </>
         ) : (

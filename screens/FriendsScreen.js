@@ -24,6 +24,7 @@ import { supabase } from "../services/supabase";
 import ActivityFeed from "../components/ActivityFeed";
 import CustomAlert from "../components/CustomAlert";
 import Leaderboard from "../components/Leaderboard";
+import EmptyState from "../components/EmptyState";
 
 import WebBackgroundMap from '../components/WebBackgroundMap';
 
@@ -118,82 +119,22 @@ export default function FriendsScreen({ navigation }) {
         }
       }
 
-const liveMockFriend = {
-          id: "mock_live_runner",
-          name: "Runner Pro (Live)",
-          phone: "1234567890",
-          weeklyDistance: 115,
-          totalRuns: 16,
-          isOnline: true,
-          lastRun: "🏃‍♂️ Running right now! (Pace 4'30\")",
-          avatar: "🔥",
-        };
-
         if (!dbFailed && dbFriends.length > 0) {
-          // Always prepend the live mock runner for demo purposes
-          if (!dbFriends.some(f => f.id === liveMockFriend.id)) {
-             dbFriends.unshift(liveMockFriend);
-          }
           setFriends(dbFriends);
         } else {
           const friendsData = await AsyncStorage.getItem("friends");
-          let parsedFriends = friendsData ? JSON.parse(friendsData) : [];
-          if (!parsedFriends.some(f => f.id === liveMockFriend.id)) {
-            parsedFriends = [liveMockFriend, ...parsedFriends];
-            await AsyncStorage.setItem("friends", JSON.stringify(parsedFriends));
-          }
-          setFriends(parsedFriends);
-      }
+          setFriends(friendsData ? JSON.parse(friendsData) : []);
+        }
 
       if (!dbFailed && feedData.length > 0) {
         setFeed(feedData);
-        // setGlobalFeedCache(feedData); // Not defined
         await AsyncStorage.setItem("globalFeed", JSON.stringify(feedData));
       } else {
         const existingFeed = await AsyncStorage.getItem("globalFeed");
         if (existingFeed && JSON.parse(existingFeed).length > 0) {
           setFeed(JSON.parse(existingFeed));
         } else {
-          // Provide some mock data so the feed is not empty initially
-          const mockFeed = [
-            {
-              id: "mock1",
-              user: "Alice Johnson",
-              avatar: "👩‍💼",
-              time: "Just now",
-              distance: "5.2",
-              pace: "5'30\"",
-              duration: "28:36",
-              likes: 12,
-              comments: 2,
-              hasLiked: false,
-            },
-            {
-              id: "mock2",
-              user: "Bob Smith",
-              avatar: "👨‍🚀",
-              time: "2 hours ago",
-              distance: "10.0",
-              pace: "4'45\"",
-              duration: "47:30",
-              likes: 45,
-              comments: 8,
-              hasLiked: true,
-            },
-            {
-              id: "mock3",
-              user: "Diana Prince",
-              avatar: "🏃‍♀️",
-              time: "Yesterday",
-              distance: "21.1",
-              pace: "5'10\"",
-              duration: "1:49:02",
-              likes: 120,
-              comments: 15,
-              hasLiked: false,
-            }
-          ];
-          setFeed(mockFeed);
+          setFeed([]);
         }
       }
 
@@ -213,25 +154,7 @@ const liveMockFriend = {
         await AsyncStorage.setItem("leaderboard", JSON.stringify(formattedLb));
       } else {
         const leaderboardData = await AsyncStorage.getItem("leaderboard");
-        if (leaderboardData) {
-          setLeaderboard(JSON.parse(leaderboardData));
-        } else {
-          // Generate mock leaderboard data
-          const mockLeaderboard = [
-            { name: "Alex Chen", weeklyDistance: 125.5, avatar: "🏃‍♂️" },
-            { name: "Maria Garcia", weeklyDistance: 118.2, avatar: "🏃‍♀️" },
-            { name: "David Kim", weeklyDistance: 112.8, avatar: "🚀" },
-            { name: "Emma Wilson", weeklyDistance: 108.4, avatar: "💪" },
-            { name: "James Liu", weeklyDistance: 105.0, avatar: "⚡" },
-            { name: "Sophie Turner", weeklyDistance: 102.6, avatar: "🔥" },
-            { name: "Marco Rossi", weeklyDistance: 98.3, avatar: "👟" },
-            { name: "Lisa Anderson", weeklyDistance: 95.5, avatar: "🏆" },
-            { name: "Chris Martinez", weeklyDistance: 92.1, avatar: "💨" },
-            { name: "Nina Patel", weeklyDistance: 88.7, avatar: "🌟" },
-          ];
-          setLeaderboard(mockLeaderboard);
-          await AsyncStorage.setItem("leaderboard", JSON.stringify(mockLeaderboard));
-        }
+        setLeaderboard(leaderboardData ? JSON.parse(leaderboardData) : []);
       }
     } catch (e) {
       console.error(e);
@@ -474,12 +397,13 @@ const liveMockFriend = {
       ))}
 
       {friends.length === 0 && !addFriendMode && (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>No friends yet!</Text>
-          <Text style={styles.emptySubtext}>
-            Add friends to share your running adventures
-          </Text>
-        </View>
+        <EmptyState
+          icon="people-outline"
+          title="Your crew is empty"
+          desc="Add friends to share live runs, cheer each other on, and climb the leaderboard together."
+          actionLabel="Add a friend"
+          onAction={() => setAddFriendMode(true)}
+        />
       )}
     </View>
   );

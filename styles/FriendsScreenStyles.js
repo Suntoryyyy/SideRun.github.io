@@ -1,4 +1,5 @@
 import { StyleSheet } from "react-native";
+import { T, FONT } from "../constants/typography";
 
 export default StyleSheet.create({
   container: {
@@ -35,19 +36,16 @@ export default StyleSheet.create({
     zIndex: 10,
   },
   title: {
-    fontSize: 22,
+    ...T.title3,
+    fontSize: 20,
     marginTop: 4,
     maxWidth: "70%",
     textAlign: "center",
-    fontWeight: '900',
-    color: '#111111',
-    marginBottom: 8,
-    letterSpacing: -0.5,
-    textTransform: 'uppercase',
+    marginBottom: 6,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#888888',
+    ...T.bodyMuted,
+    fontSize: 13,
     marginBottom: 10,
   },
   tabBar: {
@@ -77,13 +75,15 @@ export default StyleSheet.create({
     shadowRadius: 8,
   },
   tabText: {
-    fontSize: 16,
+    fontFamily: FONT.bold,
+    fontSize: 14,
     color: '#888888',
-    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   activeTabText: {
+    fontFamily: FONT.extraBold,
     color: '#FFFFFF',
-    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   tabContent: {
     padding: 20,
@@ -96,9 +96,8 @@ export default StyleSheet.create({
     marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: '#222222',
+    ...T.title2,
+    fontSize: 22,
   },
   addButton: {
     backgroundColor: '#24C789',
@@ -111,9 +110,8 @@ export default StyleSheet.create({
     shadowRadius: 8,
   },
   addButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 14,
+    ...T.button,
+    fontSize: 13,
   },
   addFriendContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -133,7 +131,8 @@ export default StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
-    fontSize: 16,
+    fontFamily: FONT.semibold,
+    fontSize: 15,
     color: '#222222',
     borderWidth: 1,
     borderColor: '#EAEAEA',
@@ -149,9 +148,7 @@ export default StyleSheet.create({
     shadowRadius: 10,
   },
   confirmButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '900',
-    fontSize: 16,
+    ...T.button,
     letterSpacing: 1,
   },
   friendCard: {
@@ -195,21 +192,19 @@ export default StyleSheet.create({
     flex: 1,
   },
   friendName: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#222222',
+    ...T.title3,
+    fontSize: 18,
     marginBottom: 4,
   },
   friendStats: {
-    fontSize: 14,
+    fontFamily: FONT.semibold,
+    fontSize: 13,
     color: '#888888',
     marginBottom: 4,
-    fontWeight: '600',
   },
   friendLastRun: {
-    fontSize: 13,
+    ...T.caption,
     color: '#999999',
-    fontWeight: '500',
   },
   friendStatus: {
     alignItems: 'flex-end',
@@ -217,8 +212,7 @@ export default StyleSheet.create({
     alignSelf: 'flex-start',
   },
   statusIndicator: {
-    fontSize: 12,
-    fontWeight: '800',
+    ...T.pill,
     color: '#999999',
     backgroundColor: '#F4F5F7',
     paddingHorizontal: 10,
@@ -239,16 +233,13 @@ export default StyleSheet.create({
     marginTop: 20,
   },
   emptyText: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#222222',
+    ...T.title3,
     marginBottom: 8,
   },
   emptySubtext: {
+    ...T.bodyMuted,
     fontSize: 15,
-    color: '#888888',
     textAlign: 'center',
-    lineHeight: 22,
   },
   modalOverlay: {
     flex: 1,
@@ -287,18 +278,17 @@ export default StyleSheet.create({
     overflow: 'hidden',
   },
   sheetName: {
+    ...T.title2,
     fontSize: 22,
     marginTop: 4,
     maxWidth: "70%",
     textAlign: "center",
-    fontWeight: '900',
-    color: '#111111',
     marginBottom: 4,
   },
   sheetPhone: {
-    fontSize: 16,
+    fontFamily: FONT.semibold,
+    fontSize: 15,
     color: '#888888',
-    fontWeight: '600',
   },
   sheetStats: {
     flexDirection: 'row',
@@ -315,16 +305,14 @@ export default StyleSheet.create({
     alignItems: 'center',
   },
   sheetStatVal: {
+    ...T.metricL,
     fontSize: 24,
-    fontWeight: '900',
     color: '#24C789',
     marginBottom: 4,
   },
   sheetStatLbl: {
-    fontSize: 13,
-    color: '#888888',
-    fontWeight: '600',
-    textTransform: 'uppercase',
+    ...T.label,
+    fontSize: 11,
   },
   cheerQuickBtn: {
     backgroundColor: '#F4F5F7',
@@ -355,9 +343,8 @@ export default StyleSheet.create({
     shadowRadius: 12,
   },
   chatBtnText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '900',
+    ...T.button,
+    fontSize: 17,
     marginLeft: 10,
     letterSpacing: 0.5,
   },
@@ -367,9 +354,9 @@ export default StyleSheet.create({
     alignItems: 'center',
   },
   removeFriendBtnText: {
+    fontFamily: FONT.bold,
     color: '#FF3B30',
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 15,
   },
 
 
@@ -413,13 +400,13 @@ export default StyleSheet.create({
     flex: 1,
   },
   feedName: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontFamily: FONT.extraBold,
+    fontSize: 15,
     color: '#222',
+    letterSpacing: -0.2,
   },
   feedTime: {
-    fontSize: 12,
-    color: '#888',
+    ...T.caption,
     marginTop: 2,
   },
   feedMapPlaceholder: {
@@ -448,13 +435,12 @@ export default StyleSheet.create({
     alignItems: 'center',
   },
   feedStatVal: {
+    ...T.metricM,
     fontSize: 18,
-    fontWeight: '900',
-    color: '#222',
   },
   feedStatLabel: {
-    fontSize: 12,
-    color: '#888',
+    ...T.caption,
+    fontSize: 11,
   },
   feedActions: {
     flexDirection: 'row',
@@ -465,9 +451,10 @@ export default StyleSheet.create({
     alignItems: 'center',
   },
   feedActionText: {
+    fontFamily: FONT.semibold,
+    fontSize: 13,
     marginLeft: 6,
     color: '#666',
-    fontWeight: '600',
   },
 
   // LEADERBOARD STYLES
@@ -490,8 +477,8 @@ export default StyleSheet.create({
     alignItems: 'center',
   },
   rank: {
+    ...T.metricM,
     fontSize: 18,
-    fontWeight: '900',
     color: '#24C789',
   },
   leaderAvatarImage: {
@@ -515,15 +502,17 @@ export default StyleSheet.create({
     flex: 1,
   },
   leaderName: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontFamily: FONT.extraBold,
+    fontSize: 15,
     color: '#222',
+    letterSpacing: -0.2,
   },
   leaderDistance: {
-    fontSize: 14,
+    fontFamily: FONT.semibold,
+    fontSize: 13,
     color: '#888',
-    fontWeight: '600',
     marginTop: 2,
+    fontVariant: ['tabular-nums'],
   },
   medal: {
       fontSize: 24,
@@ -562,13 +551,14 @@ export default StyleSheet.create({
     flex: 1,
   },
   feedName: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontFamily: FONT.extraBold,
+    fontSize: 16,
     color: '#222',
+    letterSpacing: -0.2,
   },
   feedTime: {
-    fontSize: 14,
-    color: '#888',
+    ...T.caption,
+    fontSize: 13,
     marginTop: 2,
   },
   feedMapPlaceholder: {
@@ -582,10 +572,10 @@ export default StyleSheet.create({
     borderColor: '#EFEFEF',
   },
   feedMapText: {
+    fontFamily: FONT.semibold,
     marginTop: 8,
     color: '#999',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
   },
   feedStats: {
     flexDirection: 'row',
@@ -599,16 +589,13 @@ export default StyleSheet.create({
     alignItems: 'center',
   },
   feedStatVal: {
+    ...T.metricL,
     fontSize: 20,
-    fontWeight: '900',
-    color: '#222',
   },
   feedStatLabel: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '600',
+    ...T.label,
+    fontSize: 11,
     marginTop: 4,
-    textTransform: 'uppercase',
   },
   feedActions: {
     flexDirection: 'row',
@@ -627,8 +614,8 @@ export default StyleSheet.create({
     borderRadius: 20,
   },
   feedActionText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontFamily: FONT.bold,
+    fontSize: 13,
     color: '#555',
     marginLeft: 8,
   },
@@ -638,21 +625,10 @@ export default StyleSheet.create({
     padding: 20,
   },
   emptyFeedText: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontFamily: FONT.bold,
+    fontSize: 17,
     color: '#888',
     marginTop: 16,
-  },
-
-  emptyFeedState: {
-    alignItems: 'center',
-    marginTop: 60,
-    padding: 20,
-  },
-  emptyFeedText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#888',
-    marginTop: 16,
+    letterSpacing: -0.2,
   },
 });

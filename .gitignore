@@ -31,7 +31,17 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
+!.env.example
+
+# Vibma / Figma MCP bridge (not part of the app)
+vibma-plugin/
+vibma-plugin.zip
+.cursor/mcp.json
+
+# Archived legacy scripts
+scripts/archive/
 
 # typescript
 *.tsbuildinfo

@@ -21,6 +21,7 @@ import { supabase } from "../services/supabase";
 import ImageCropperModal from "./ImageCropperModal";
 import CustomAlert from '../components/CustomAlert';
 import NativeFilePicker from "./NativeFilePicker";
+import { T, FONT } from "../constants/typography";
 
 export default function ProfileScreen({ navigation, handleLogout }) {
   const currentUser = useUserStore((s) => s.user);
@@ -108,7 +109,7 @@ export default function ProfileScreen({ navigation, handleLogout }) {
           }
         }
 
-        setCurrentUser(user);
+        updateProfile(user);
         setUsername(user.username || "");
         setAvatar(user.avatar || "👤");
         setAllowFriendsViewRecord(user.allowFriendsViewRecord !== false);
@@ -164,7 +165,7 @@ if (error) {
               return;
             } else {
               showAlert("Partial Success", "Profile saved, but privacy settings require Supabase database columns 'allowFriendsViewRecord' and 'allowStrangersAdd' to be added.", "info");
-              setCurrentUser(updatedUser);
+              updateProfile(updatedUser);
               setIsEditing(false);
               return;
             }
@@ -175,7 +176,7 @@ if (error) {
         }
       }
 
-      setCurrentUser(updatedUser);
+      updateProfile(updatedUser);
       setIsEditing(false);
       showAlert("Success", "Profile updated successfully!", "success");
     } catch (e) {
@@ -408,9 +409,8 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#222222",
+    ...T.title2,
+    fontSize: 26,
   },
   profileCard: {
     backgroundColor: "#FFFFFF",
@@ -474,23 +474,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   label: {
-    fontSize: 14,
-    color: "#888888",
+    ...T.label,
     marginBottom: 8,
-    fontWeight: "600",
   },
   input: {
     backgroundColor: "#F4F5F7",
     borderRadius: 10,
     padding: 12,
+    fontFamily: FONT.semibold,
     fontSize: 16,
     color: "#222222",
     marginBottom: 15,
   },
   sectionHeader: {
+    ...T.title4,
     fontSize: 16,
-    fontWeight: "bold",
-    color: "#222",
     marginBottom: 16,
   },
   settingRow: {
@@ -504,26 +502,27 @@ const styles = StyleSheet.create({
     paddingRight: 16,
   },
   settingTitle: {
-    fontSize: 16,
+    fontFamily: FONT.semibold,
+    fontSize: 15,
     color: "#222",
-    fontWeight: "600",
+    letterSpacing: -0.2,
   },
   settingDesc: {
-    fontSize: 13,
+    ...T.caption,
     color: "#888",
     marginTop: 4,
   },
   valueText: {
-    fontSize: 18,
+    fontFamily: FONT.semibold,
+    fontSize: 17,
     color: "#222",
-    fontWeight: "500",
     marginBottom: 20,
     paddingVertical: 5,
   },
   valueTextDisabled: {
-    fontSize: 18,
+    fontFamily: FONT.semibold,
+    fontSize: 17,
     color: "#999",
-    fontWeight: "500",
     marginBottom: 20,
     paddingVertical: 5,
   },
@@ -550,14 +549,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   buttonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "bold",
+    ...T.button,
   },
   buttonTextDark: {
+    ...T.button,
     color: "#444444",
-    fontSize: 16,
-    fontWeight: "bold",
   },
   logoutButton: {
     marginTop: 30,
@@ -569,8 +565,7 @@ const styles = StyleSheet.create({
     borderColor: "#FF3B30",
   },
   logoutText: {
+    ...T.button,
     color: "#FF3B30",
-    fontSize: 16,
-    fontWeight: "bold",
   },
 });

@@ -1,45 +1,54 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
-import { BlurView } from 'expo-blur';
-import * as Location from 'expo-location';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  ActivityIndicator,
+  Animated,
+} from 'react-native';
+import Svg, { Circle, Defs, LinearGradient, Stop, G } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { supabase } from '../services/supabase';
 import CustomAlert from '../components/CustomAlert';
 import useUserStore from '../store/useUserStore';
-
-import WebBackgroundMap from '../components/WebBackgroundMap';
+import { T, FONT } from '../constants/typography';
 
 export default function LoginScreen({ navigation }) {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true); // Default to true
+  const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '', type: 'error' });
-  const [region, setRegion] = useState({ latitude: 37.7749, longitude: -122.4194 });
+  const [focused, setFocused] = useState(null);
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'error',
+  });
 
   const login = useUserStore((s) => s.login);
+  const spin = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(spin, {
+        toValue: 1,
+        duration: 22000,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, [spin]);
 
   useEffect(() => {
     (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') return;
-      let location = await Location.getCurrentPositionAsync({});
-      setRegion({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
-    })();
-  }, []);
-
-  const showAlert = (title, message, type = 'error') => {
-    setAlertConfig({ visible: true, title, message, type });
-  };
-
-  useEffect(() => {
-    // Check if there's a saved auto-login preference we should load
-    const loadRememberedUser = async () => {
       try {
         const rememberedPhone = await AsyncStorage.getItem('rememberedPhone');
         if (rememberedPhone) {
@@ -49,42 +58,37 @@ export default function LoginScreen({ navigation }) {
       } catch (e) {
         console.warn('Failed to load remembered phone', e);
       }
-    };
-    loadRememberedUser();
+    })();
   }, []);
 
+  const rotate = spin.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
+  const showAlert = (title, message, type = 'error') => {
+    setAlertConfig({ visible: true, title, message, type });
+  };
 
   const handleLogin = async () => {
     const trimmedPhone = phone.trim();
-
     if (!trimmedPhone || !password) {
-      showAlert('Error', 'Please enter your phone number and password');
+      showAlert('Missing info', 'Enter your phone number and password to continue.');
       return;
     }
-
-    if (trimmedPhone === 'admin' || trimmedPhone === '123456') {
-      const adminInfo = { phone: '1234567890', username: 'Admin Bypass' };
-      await login(adminInfo, rememberMe);
-      return;
-    }
-
+    if (Platform.OS !== 'web') Haptics.selectionAsync();
     setIsLoading(true);
-
     try {
       const pseudoEmail = `${trimmedPhone}@siderun.app`;
-      
       const { data, error } = await supabase.auth.signInWithPassword({
         email: pseudoEmail,
-        password: password,
+        password,
       });
-
       if (error) {
         setIsLoading(false);
-        showAlert('Login Failed', error.message);
+        showAlert('Login failed', error.message);
         return;
       }
-
       let username = 'Runner';
       if (data.user) {
         const { data: profile } = await supabase
@@ -92,21 +96,16 @@ export default function LoginScreen({ navigation }) {
           .select('username')
           .eq('id', data.user.id)
           .single();
-          
-        if (profile && profile.username) username = profile.username;
+        if (profile?.username) username = profile.username;
       }
-
       const userInfo = { phone: trimmedPhone, username, id: data?.user?.id };
-      
       if (rememberMe) {
-        try { await AsyncStorage.setItem('rememberedPhone', trimmedPhone); } catch (e) { console.warn("AsyncStorage set error", e); };
+        try { await AsyncStorage.setItem('rememberedPhone', trimmedPhone); } catch (_) {}
       } else {
-        try { await AsyncStorage.removeItem('rememberedPhone'); } catch (e) { console.warn("AsyncStorage remove error", e); };
+        try { await AsyncStorage.removeItem('rememberedPhone'); } catch (_) {}
       }
-
       await login(userInfo, rememberMe);
       setIsLoading(false);
-
     } catch (e) {
       console.error(e);
       showAlert('Error', `Login exception: ${e.message || JSON.stringify(e)}`);
@@ -115,88 +114,151 @@ export default function LoginScreen({ navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={styles.root}
     >
-      {/* Background Map */}
-      <WebBackgroundMap region={region} />
-
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <BlurView intensity={85} tint="light" style={styles.glassCard}>
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Ionicons name="footsteps" size={48} color="#24C789" />
-            <Text style={styles.logoText}>SIDERUN</Text>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.heroWrap}>
+          <Animated.View style={{ transform: [{ rotate }] }}>
+            <Svg width={200} height={200} viewBox="0 0 280 280">
+              <Defs>
+                <LinearGradient id="lg1" x1="0" y1="0" x2="1" y2="1">
+                  <Stop offset="0" stopColor="#FF5A36" />
+                  <Stop offset="1" stopColor="#FF8A64" />
+                </LinearGradient>
+                <LinearGradient id="lg2" x1="0" y1="0" x2="1" y2="1">
+                  <Stop offset="0" stopColor="#24C789" />
+                  <Stop offset="1" stopColor="#8AE676" />
+                </LinearGradient>
+                <LinearGradient id="lg3" x1="0" y1="0" x2="1" y2="1">
+                  <Stop offset="0" stopColor="#00C2FF" />
+                  <Stop offset="1" stopColor="#6AA8FF" />
+                </LinearGradient>
+              </Defs>
+              <G>
+                <Circle
+                  cx="140" cy="140" r="120"
+                  stroke="url(#lg1)" strokeWidth="14"
+                  strokeLinecap="round" strokeDasharray="540 200" fill="none"
+                />
+                <Circle
+                  cx="140" cy="140" r="96"
+                  stroke="url(#lg2)" strokeWidth="14"
+                  strokeLinecap="round" strokeDasharray="390 210" fill="none"
+                  transform="rotate(120 140 140)"
+                />
+                <Circle
+                  cx="140" cy="140" r="72"
+                  stroke="url(#lg3)" strokeWidth="14"
+                  strokeLinecap="round" strokeDasharray="260 190" fill="none"
+                  transform="rotate(220 140 140)"
+                />
+              </G>
+            </Svg>
+          </Animated.View>
+          <View style={styles.heroCenter} pointerEvents="none">
+            <Ionicons name="footsteps" size={32} color="#0B0F13" />
           </View>
-          <Text style={styles.title}>Back to the Track.</Text>
-          <Text style={styles.subtitle}>
-            Sign in to continue your fitness journey and connect with friends.
+        </View>
+
+        <View style={styles.textWrap}>
+          <Text style={styles.eyebrow}>SIDERUN</Text>
+          <Text style={styles.title}>Welcome back.</Text>
+          <Text style={styles.sub}>
+            Sign in to pick up your runs, goals, and crew.
           </Text>
         </View>
 
         <View style={styles.form}>
-          <Text style={styles.label}>Phone Number</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your phone number"
-            keyboardType="phone-pad"
-            value={phone}
-            onChangeText={setPhone}
-            autoCapitalize="none"
-          />
-
-          <Text style={styles.label}>Password</Text>
-          <View style={styles.passwordContainer}>
+          <View style={[styles.field, focused === 'phone' && styles.fieldFocus]}>
+            <Ionicons name="call-outline" size={18} color="#6B6F76" style={styles.fieldIcon} />
             <TextInput
-              style={styles.passwordInput}
-              placeholder="Enter your password"
+              style={styles.input}
+              placeholder="Phone number"
+              placeholderTextColor="#A5A9B0"
+              keyboardType="phone-pad"
+              value={phone}
+              onChangeText={setPhone}
+              autoCapitalize="none"
+              onFocus={() => setFocused('phone')}
+              onBlur={() => setFocused(null)}
+            />
+          </View>
+
+          <View style={[styles.field, focused === 'password' && styles.fieldFocus]}>
+            <Ionicons name="lock-closed-outline" size={18} color="#6B6F76" style={styles.fieldIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor="#A5A9B0"
               secureTextEntry={!showPassword}
               value={password}
               onChangeText={setPassword}
+              onFocus={() => setFocused('password')}
+              onBlur={() => setFocused(null)}
             />
-            <TouchableOpacity 
-              style={styles.eyeIcon} 
+            <TouchableOpacity
+              style={styles.eye}
               onPress={() => setShowPassword(!showPassword)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={24} color="#888" />
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={18}
+                color="#6B6F76"
+              />
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity 
-            style={styles.checkboxContainer} 
-            onPress={() => setRememberMe(!rememberMe)}
-            activeOpacity={0.7}
-          >
-            <Ionicons 
-              name={rememberMe ? 'checkmark-circle' : 'ellipse-outline'} 
-              size={24} 
-              color={rememberMe ? '#24C789' : '#888'} 
-            />
-            <Text style={styles.checkboxLabel}>Remember Me</Text>
-          </TouchableOpacity>
+          <View style={styles.optionsRow}>
+            <TouchableOpacity
+              style={styles.rememberRow}
+              onPress={() => setRememberMe(!rememberMe)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.checkbox, rememberMe && styles.checkboxOn]}>
+                {rememberMe ? (
+                  <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                ) : null}
+              </View>
+              <Text style={styles.rememberText}>Remember me</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={isLoading}>
+            <TouchableOpacity activeOpacity={0.6} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+              <Text style={styles.linkText}>Forgot?</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.primaryBtn, isLoading && styles.primaryBtnDisabled]}
+            onPress={handleLogin}
+            disabled={isLoading}
+            activeOpacity={0.85}
+          >
             {isLoading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.loginButtonText}>LOG IN</Text>
+              <>
+                <Text style={styles.primaryBtnText}>Log in</Text>
+                <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+              </>
             )}
           </TouchableOpacity>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.registerText}>Sign Up</Text>
+            <Text style={styles.footerText}>New to SideRun? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Register')} activeOpacity={0.6}>
+              <Text style={styles.footerLink}>Create account</Text>
             </TouchableOpacity>
           </View>
-
-
-
-
         </View>
-        </BlurView>
       </ScrollView>
+
       <CustomAlert
         visible={alertConfig.visible}
         title={alertConfig.title}
@@ -209,155 +271,153 @@ export default function LoginScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#FFFFFF',
   },
-  glassCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.75)',
-    borderRadius: 30,
-    padding: 30,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.9)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 5,
-  },
-  scrollContent: {
+  scroll: {
     flexGrow: 1,
-    justifyContent: 'center',
-    padding: 30,
+    paddingHorizontal: 28,
+    paddingTop: 64,
+    paddingBottom: 48,
   },
-  header: {
-    marginBottom: 40,
-  },
-  logoContainer: {
-    flexDirection: 'row',
+  heroWrap: {
+    alignSelf: 'center',
+    width: 200,
+    height: 200,
     alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'center',
+    marginBottom: 24,
   },
-  logoText: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#24C789',
-    marginLeft: 8,
-    letterSpacing: 1,
-    fontStyle: 'italic',
+  heroCenter: {
+    position: 'absolute',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#F4F5F7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textWrap: {
+    alignItems: 'center',
+    marginBottom: 36,
+  },
+  eyebrow: {
+    ...T.eyebrow,
+    marginBottom: 10,
   },
   title: {
-    fontSize: 42,
-    fontWeight: '900',
-    color: '#111',
-    marginBottom: 12,
-    letterSpacing: -1,
-    lineHeight: 48,
+    ...T.title1,
+    textAlign: 'center',
   },
-  subtitle: {
-    fontSize: 18,
-    color: '#555',
-    lineHeight: 26,
-    fontWeight: '500',
-  },
-  brandText: {
-    color: '#24C789',
-    fontWeight: '800',
-    fontStyle: 'italic',
+  sub: {
+    ...T.bodyMuted,
+    fontSize: 15,
+    textAlign: 'center',
+    marginTop: 8,
+    maxWidth: 320,
   },
   form: {
     width: '100%',
   },
-  label: {
-    fontSize: 14,
-    color: '#444444',
-    marginBottom: 8,
-    fontWeight: '600',
+  field: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F4F5F7',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    height: 56,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  fieldFocus: {
+    borderColor: '#0B0F13',
+    backgroundColor: '#FFFFFF',
+  },
+  fieldIcon: {
+    marginRight: 10,
   },
   input: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 1)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    fontSize: 16,
-    color: '#222222',
-  },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 1)',
-    borderRadius: 12,
-    marginBottom: 20,
-  },
-  passwordInput: {
     flex: 1,
-    padding: 16,
-    fontSize: 16,
-    color: '#222222',
+    fontFamily: FONT.semibold,
+    fontSize: 15,
+    color: '#0B0F13',
+    paddingVertical: 0,
   },
-  eyeIcon: {
-    padding: 16,
+  eye: {
+    padding: 4,
+    marginLeft: 8,
   },
-  checkboxContainer: {
+  optionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
-    marginLeft: 4,
+    justifyContent: 'space-between',
+    marginTop: 4,
+    marginBottom: 24,
   },
-  checkboxLabel: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#444444',
-  },
-  loginButton: {
-    backgroundColor: '#24C789',
-    borderRadius: 30,
-    padding: 16,
+  rememberRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
-    shadowColor: '#24C789',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
   },
-  loginButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-    letterSpacing: 1,
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: '#C9CCD1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  checkboxOn: {
+    backgroundColor: '#0B0F13',
+    borderColor: '#0B0F13',
+  },
+  rememberText: {
+    ...T.body,
+    fontSize: 13,
+    color: '#6B6F76',
+  },
+  linkText: {
+    ...T.body,
+    fontFamily: FONT.bold,
+    fontSize: 13,
+    color: '#0B0F13',
+  },
+  primaryBtn: {
+    flexDirection: 'row',
+    backgroundColor: '#0B0F13',
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#0B0F13',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 22,
+    elevation: 6,
+  },
+  primaryBtnDisabled: {
+    opacity: 0.6,
+  },
+  primaryBtnText: {
+    ...T.button,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 30,
+    marginTop: 28,
   },
   footerText: {
-    color: '#888888',
+    ...T.bodyMuted,
     fontSize: 14,
   },
-  registerText: {
-    color: '#24C789',
+  footerLink: {
+    ...T.body,
+    fontFamily: FONT.bold,
     fontSize: 14,
-    fontWeight: 'bold',
-  },
-  clearDataButton: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 40,
-    padding: 10,
-    opacity: 0.7,
-  },
-  clearDataText: {
-    color: '#FF3B30',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 6,
+    color: '#0B0F13',
   },
 });
