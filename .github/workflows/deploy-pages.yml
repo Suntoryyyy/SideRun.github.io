@@ -33,12 +33,17 @@ jobs:
 
       - name: Build web export
         env:
+          # Supabase credentials are injected at build time so Expo bakes them
+          # into the web bundle. Configure these in:
+          # GitHub → Settings → Secrets and variables → Actions → Repository secrets
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          # Optional — leave empty if you don't use OpenWeather on web
           EXPO_PUBLIC_OPENWEATHER_API_KEY: ${{ secrets.EXPO_PUBLIC_OPENWEATHER_API_KEY }}
         run: |
           if [ -z "$EXPO_PUBLIC_SUPABASE_URL" ] || [ -z "$EXPO_PUBLIC_SUPABASE_ANON_KEY" ]; then
-            echo "::error::Missing Supabase secrets. Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY under Settings → Secrets and variables → Actions."
+            echo "::error::Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY repository secret."
+            echo "Add them under Settings → Secrets and variables → Actions, then re-run this workflow."
             exit 1
           fi
           npm run predeploy
