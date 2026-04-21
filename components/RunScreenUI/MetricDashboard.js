@@ -1,72 +1,92 @@
 import React from 'react';
 import { View, Text, Animated } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import styles from '../../styles/RunScreenStyles';
 import { formatDuration } from '../../utils/timeUtils';
 
 const MetricDashboard = ({
   mode,
-  spectateFriend,
   runData,
   durationInSeconds,
   currentSpeed,
   contentOpacity,
   friendsWatching,
-  signalLost
 }) => {
   return (
     <View style={styles.statsContainer}>
-          <View style={styles.statsRow}>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue} adjustsFontSizeToFit numberOfLines={1}>
-                {(runData.distance * 1000).toFixed(0)}
-              </Text>
-              <Text style={styles.statLabel}>METERS</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue} adjustsFontSizeToFit numberOfLines={1}>
-                {formatDuration(durationInSeconds)}
-              </Text>
-              <Text style={styles.statLabel}>TIME</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue} adjustsFontSizeToFit numberOfLines={1}>{currentSpeed}</Text>
-              <Text style={styles.statLabel}>SPEED (M/S)</Text>
-            </View>
-          </View>
-
-          <Animated.View
-            style={[
-              styles.statsRow,
-              { 
-                marginTop: contentOpacity.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, 24]
-                }), 
-                opacity: contentOpacity,
-                height: contentOpacity.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, 80]
-                }),
-                overflow: 'hidden'
-              },
-            ]}
+      <View style={styles.statsRow}>
+        <View style={styles.statBox}>
+          <Text
+            style={styles.statValue}
+            adjustsFontSizeToFit
+            numberOfLines={1}
           >
-            <View style={{ flex: 1 }} />
-            <View style={styles.statBox}>
-              <Text style={styles.statValue} adjustsFontSizeToFit numberOfLines={1}>
-                {Math.round(runData.calories)}
-              </Text>
-              <Text style={styles.statLabel}>KCAL BURNED</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              {mode === "shared" && (
-                <Text style={styles.friendsText}>
-                  👥 {friendsWatching} friends
-                </Text>
-              )}
-            </View>
-          </Animated.View>
+            {(runData.distance * 1000).toFixed(0)}
+          </Text>
+          <Text style={styles.statLabel}>METERS</Text>
         </View>
+        <View style={styles.statBox}>
+          <Text
+            style={styles.statValue}
+            adjustsFontSizeToFit
+            numberOfLines={1}
+          >
+            {formatDuration(durationInSeconds)}
+          </Text>
+          <Text style={styles.statLabel}>TIME</Text>
+        </View>
+        <View style={styles.statBox}>
+          <Text
+            style={styles.statValue}
+            adjustsFontSizeToFit
+            numberOfLines={1}
+          >
+            {currentSpeed}
+          </Text>
+          <Text style={styles.statLabel}>M/S</Text>
+        </View>
+      </View>
+
+      <Animated.View
+        style={[
+          styles.statsRow,
+          {
+            marginTop: contentOpacity.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 20],
+            }),
+            opacity: contentOpacity,
+            height: contentOpacity.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 80],
+            }),
+            overflow: 'hidden',
+          },
+        ]}
+      >
+        <View style={{ flex: 1 }} />
+        <View style={styles.statBox}>
+          <Text
+            style={styles.statValue}
+            adjustsFontSizeToFit
+            numberOfLines={1}
+          >
+            {Math.round(runData.calories)}
+          </Text>
+          <Text style={styles.statLabel}>KCAL</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          {mode === 'shared' && (
+            <View style={styles.friendsTextRow}>
+              <Ionicons name="people" size={14} color="#24C789" />
+              <Text style={styles.friendsText}>
+                {friendsWatching} watching
+              </Text>
+            </View>
+          )}
+        </View>
+      </Animated.View>
+    </View>
   );
 };
 

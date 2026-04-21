@@ -1,19 +1,12 @@
-import axios from 'axios';
-import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
-import { BlurView } from 'expo-blur';
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
-  Alert,
   Dimensions,
-  ScrollView,
   Platform,
   UIManager,
-  LayoutAnimation,
   PanResponder,
   Animated,
 } from "react-native";
@@ -24,7 +17,6 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Speech from "expo-speech";
 import { Audio } from "expo-av";
 import { supabase } from "../services/supabase";
-import MapStyle from "./MapStyle.json";
 import RunMapMemo from "../components/RunScreenUI/RunMapMemo";
 import MetricDashboard from "../components/RunScreenUI/MetricDashboard";
 import SpectatorControls from "../components/RunScreenUI/SpectatorControls";
@@ -394,21 +386,31 @@ export default function RunScreen({ route, navigation }) {
       />
 
       {mode === 'spectate' && (
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 150, zIndex: 100 }} pointerEvents="box-none">
-          <TouchableOpacity 
-            style={styles.backButton} 
+        <View
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 150, zIndex: 100 }}
+          pointerEvents="box-none"
+        >
+          <TouchableOpacity
+            style={styles.backButton}
             onPress={() => navigation.goBack()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="chevron-back" size={28} color="#24C789" />
+            <Ionicons name="chevron-back" size={20} color="#0B0F13" />
           </TouchableOpacity>
 
           {spectateFriend && (
             <View style={styles.spectatorBadge}>
-              <BlurView intensity={80} tint="light" style={styles.spectatorBadgeInner}>
+              <View style={styles.spectatorBadgeInner}>
+                <View
+                  style={[
+                    styles.spectatorBadgeDot,
+                    signalLost && styles.spectatorBadgeDotWeak,
+                  ]}
+                />
                 <Text style={styles.spectatorBadgeText}>
-                  {signalLost ? "🔴 信号弱" : "🟢 正在同步"} • {spectateFriend.name} {spectateFriend.avatar}
+                  {signalLost ? 'Weak signal' : 'Live'} • {spectateFriend.name}
                 </Text>
-              </BlurView>
+              </View>
             </View>
           )}
         </View>
@@ -421,7 +423,6 @@ export default function RunScreen({ route, navigation }) {
         ]}
         {...panResponder.panHandlers}
       >
-        <BlurView intensity={85} tint="light" style={StyleSheet.absoluteFillObject} />
         <TouchableOpacity
           style={styles.dragHandleContainer}
           activeOpacity={0.8}

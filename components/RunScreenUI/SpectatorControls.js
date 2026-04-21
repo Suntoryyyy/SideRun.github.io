@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import styles from '../../styles/RunScreenStyles';
 
+const CHEER_EMOJIS = ['🔥', '🚀', '💦', '💪'];
+
 const SpectatorControls = ({
   mode,
   isRunning,
@@ -23,52 +25,43 @@ const SpectatorControls = ({
   if (mode === 'spectate') {
     return (
       <View style={[styles.controlsContainer, { paddingTop: 10 }]}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-evenly', width: '100%', paddingHorizontal: 10 }}>
-          <TouchableOpacity
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-              sendCheer('🔥');
-            }}
-            style={{ backgroundColor: '#F0F0F0', width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginHorizontal: 5 }}
-          >
-            <Text style={{ fontSize: 20 }}>🔥</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-              sendCheer('🚀');
-            }}
-            style={{ backgroundColor: '#F0F0F0', width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginHorizontal: 5 }}
-          >
-            <Text style={{ fontSize: 20 }}>🚀</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-              sendCheer('💦');
-            }}
-            style={{ backgroundColor: '#F0F0F0', width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginHorizontal: 5 }}
-          >
-            <Text style={{ fontSize: 20 }}>💦</Text>
-          </TouchableOpacity>
+        <View style={styles.spectatorTray}>
+          {CHEER_EMOJIS.map((emoji) => (
+            <TouchableOpacity
+              key={emoji}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                sendCheer(emoji);
+              }}
+              style={styles.spectatorCheerBtn}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.spectatorCheerEmoji}>{emoji}</Text>
+            </TouchableOpacity>
+          ))}
           <TouchableOpacity
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              Alert.prompt("Send Message", "Type a message to cheer them on!", [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Send",
-                  onPress: (text) => {
-                    if (text && text.trim().length > 0) {
-                      sendCheer(text);
-                    }
+              Alert.prompt(
+                'Send message',
+                'Type a message to cheer them on!',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Send',
+                    onPress: (text) => {
+                      if (text && text.trim().length > 0) {
+                        sendCheer(text);
+                      }
+                    },
                   },
-                },
-              ]);
+                ],
+              );
             }}
-            style={{ backgroundColor: '#E0F2FE', width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginHorizontal: 5 }}
+            style={styles.spectatorMessageBtn}
+            activeOpacity={0.85}
           >
-            <Ionicons name="chatbubble-outline" size={20} color="#0284C7" />
+            <Ionicons name="chatbubble-outline" size={18} color="#FFFFFF" />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={async () => {
@@ -85,9 +78,10 @@ const SpectatorControls = ({
                 sendCheer(`data:image/jpeg;base64,${result.assets[0].base64}`);
               }
             }}
-            style={{ backgroundColor: '#E8F8F2', width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#24C789', marginHorizontal: 5 }}
+            style={styles.spectatorPhotoBtn}
+            activeOpacity={0.85}
           >
-            <Ionicons name='add' size={24} color='#24C789' />
+            <Ionicons name="image-outline" size={18} color="#0B0F13" />
           </TouchableOpacity>
         </View>
       </View>
@@ -97,21 +91,16 @@ const SpectatorControls = ({
   if (isFinished) {
     return (
       <View style={styles.controlsContainer}>
-        <View style={styles.activeControls}>
-          <View style={[styles.statBox, { marginRight: 20 }]}>
-            <Text style={styles.statValue}>Done!</Text>
-            <Text style={styles.statLabel}>Completed</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.circleStartButton}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              closeRun();
-            }}
-          >
-            <Text style={styles.circleStartText}>DONE</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={styles.circleStartButton}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            closeRun();
+          }}
+          activeOpacity={0.9}
+        >
+          <Text style={styles.circleStartText}>Done</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -120,14 +109,28 @@ const SpectatorControls = ({
     return (
       <View style={styles.controlsContainer}>
         <View style={styles.preRunControls}>
-          <Animated.View style={[styles.scopeSelectorContainer, { opacity: contentOpacity }]}>
+          <Animated.View
+            style={[
+              styles.scopeSelectorContainer,
+              { opacity: contentOpacity },
+            ]}
+          >
             {['public', 'friends', 'private'].map((scope) => (
               <TouchableOpacity
                 key={scope}
-                style={[styles.scopeBtn, visibilityScope === scope && styles.scopeBtnActive]}
+                style={[
+                  styles.scopeBtn,
+                  visibilityScope === scope && styles.scopeBtnActive,
+                ]}
                 onPress={() => setVisibilityScope(scope)}
+                activeOpacity={0.85}
               >
-                <Text style={[styles.scopeBtnText, visibilityScope === scope && styles.scopeBtnTextActive]}>
+                <Text
+                  style={[
+                    styles.scopeBtnText,
+                    visibilityScope === scope && styles.scopeBtnTextActive,
+                  ]}
+                >
                   {scope.charAt(0).toUpperCase() + scope.slice(1)}
                 </Text>
               </TouchableOpacity>
@@ -140,6 +143,7 @@ const SpectatorControls = ({
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
               startRun();
             }}
+            activeOpacity={0.9}
           >
             <Text style={styles.circleStartText}>GO</Text>
           </TouchableOpacity>
@@ -152,7 +156,9 @@ const SpectatorControls = ({
     <View style={styles.controlsContainer}>
       <View style={styles.activeControls}>
         <TouchableOpacity
-          style={isPaused ? styles.circleResumeButton : styles.circlePauseButton}
+          style={
+            isPaused ? styles.circleResumeButton : styles.circlePauseButton
+          }
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             if (isPaused) {
@@ -161,8 +167,11 @@ const SpectatorControls = ({
               pauseRun();
             }
           }}
+          activeOpacity={0.9}
         >
-          <Text style={styles.circleButtonText}>{isPaused ? 'RESUME' : 'PAUSE'}</Text>
+          <Text style={styles.circleButtonText}>
+            {isPaused ? 'Resume' : 'Pause'}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -171,8 +180,9 @@ const SpectatorControls = ({
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
             stopRun();
           }}
+          activeOpacity={0.9}
         >
-          <Text style={styles.circleButtonText}>STOP</Text>
+          <Text style={styles.circleButtonText}>Stop</Text>
         </TouchableOpacity>
       </View>
     </View>

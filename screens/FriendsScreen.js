@@ -1,22 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { Image } from 'expo-image';
-import { BlurView } from "expo-blur";
+import { Image } from "expo-image";
 import {
-  FlatList,
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   Alert,
   TextInput,
- 
   Modal,
   Animated,
   TouchableWithoutFeedback,
 } from "react-native";
 import styles from "../styles/FriendsScreenStyles";
-import useUserStore from '../store/useUserStore';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
@@ -26,7 +21,11 @@ import CustomAlert from "../components/CustomAlert";
 import Leaderboard from "../components/Leaderboard";
 import EmptyState from "../components/EmptyState";
 
-import WebBackgroundMap from '../components/WebBackgroundMap';
+const isImageAvatar = (a) =>
+  typeof a === "string" &&
+  (a.startsWith("file:") || a.startsWith("http") || a.startsWith("data:"));
+const avatarInitial = (name) =>
+  (name || "?").trim().charAt(0).toUpperCase() || "?";
 
 export default function FriendsScreen({ navigation }) {
   const [friends, setFriends] = useState([]);
@@ -320,7 +319,7 @@ export default function FriendsScreen({ navigation }) {
   };
 
   const sendCheer = (friendName) => {
-    Alert.alert("Cheer Sent!", `You sent a cheer to ${friendName}! 🎉`);
+    Alert.alert("Cheer sent", `You sent a cheer to ${friendName}.`);
   };
 
   const renderFriendsTab = () => (
@@ -361,21 +360,25 @@ export default function FriendsScreen({ navigation }) {
         >
           <View style={styles.friendInfo}>
             <View style={styles.friendMain}>
-              {friend.avatar &&
-              (friend.avatar.startsWith("file:") ||
-                friend.avatar.startsWith("http") ||
-                friend.avatar.startsWith("data:")) ? (
+              {isImageAvatar(friend.avatar) ? (
                 <Image
                   source={{ uri: friend.avatar }}
                   style={styles.friendAvatarImage}
                 />
               ) : (
-                <Text style={styles.friendAvatar}>{friend.avatar}</Text>
+                <View style={styles.friendAvatarFallback}>
+                  <Text style={styles.friendAvatarInitial}>
+                    {avatarInitial(friend.name)}
+                  </Text>
+                </View>
               )}
               <View style={styles.friendDetails}>
                 <Text style={styles.friendName}>{friend.name}</Text>
                 <Text style={styles.friendStats}>
-                  {friend.weeklyDistance < 1 ? (friend.weeklyDistance * 1000).toFixed(0) + ' m' : (friend.weeklyDistance || 0).toFixed(2) + ' km'} this week • {friend.totalRuns} runs
+                  {friend.weeklyDistance < 1
+                    ? (friend.weeklyDistance * 1000).toFixed(0) + " m"
+                    : (friend.weeklyDistance || 0).toFixed(2) + " km"}{" "}
+                  this week • {friend.totalRuns} runs
                 </Text>
                 <Text style={styles.friendLastRun}>
                   Last run: {friend.lastRun}
@@ -383,14 +386,22 @@ export default function FriendsScreen({ navigation }) {
               </View>
             </View>
             <View style={styles.friendStatus}>
-              <Text
-                style={[
-                  styles.statusIndicator,
-                  friend.isOnline && styles.online,
-                ]}
-              >
-                {friend.isOnline ? "🟢 Online" : "⚪ Offline"}
-              </Text>
+              <View style={styles.statusPill}>
+                <View
+                  style={[
+                    styles.statusDot,
+                    friend.isOnline && styles.statusDotOnline,
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.statusPillText,
+                    friend.isOnline && styles.statusPillTextOnline,
+                  ]}
+                >
+                  {friend.isOnline ? "ONLINE" : "OFFLINE"}
+                </Text>
+              </View>
             </View>
           </View>
         </TouchableOpacity>
@@ -486,18 +497,28 @@ export default function FriendsScreen({ navigation }) {
                 <View style={styles.sheetHandle} />
 
                 <View style={styles.sheetHeader}>
-                  <Text style={styles.sheetAvatar}>
-                    {selectedFriend.avatar}
-                  </Text>
+                  {isImageAvatar(selectedFriend.avatar) ? (
+                    <Image
+                      source={{ uri: selectedFriend.avatar }}
+                      style={styles.sheetAvatarImage}
+                    />
+                  ) : (
+                    <View style={styles.sheetAvatarFallback}>
+                      <Text style={styles.sheetAvatarInitial}>
+                        {avatarInitial(selectedFriend.name)}
+                      </Text>
+                    </View>
+                  )}
                   <Text style={styles.sheetName}>{selectedFriend.name}</Text>
                   <Text style={styles.sheetPhone}>
                     {selectedFriend.phone || "Runner"}
                   </Text>
                   <TouchableOpacity
-                    style={{ position: 'absolute', right: 20, top: 15, padding: 10 }}
+                    style={styles.sheetClose}
                     onPress={closeFriendProfile}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Ionicons name="close" size={24} color="#666" />
+                    <Ionicons name="close" size={18} color="#0B0F13" />
                   </TouchableOpacity>
                 </View>
 
@@ -518,14 +539,17 @@ export default function FriendsScreen({ navigation }) {
 
                 {selectedFriend.isOnline && (
                   <TouchableOpacity
-                    style={[styles.chatBtn, { backgroundColor: "#FF9500", marginBottom: 15 }]}
+                    style={[styles.chatBtn, styles.chatBtnSecondary]}
                     onPress={() => {
-                        closeFriendProfile();
-                        navigation.navigate("Run", { mode: "spectate", spectateFriend: selectedFriend });
+                      closeFriendProfile();
+                      navigation.navigate("Run", {
+                        mode: "spectate",
+                        spectateFriend: selectedFriend,
+                      });
                     }}
                   >
-                    <Ionicons name="eye-outline" size={24} color="#FFF" />
-                    <Text style={styles.chatBtnText}>Spectate Live Run</Text>
+                    <Ionicons name="eye-outline" size={18} color="#FFF" />
+                    <Text style={styles.chatBtnText}>Spectate live run</Text>
                   </TouchableOpacity>
                 )}
 
@@ -539,7 +563,7 @@ export default function FriendsScreen({ navigation }) {
                     });
                   }}
                 >
-                  <Ionicons name="chatbubble-outline" size={24} color="#FFF" />
+                  <Ionicons name="chatbubble-outline" size={18} color="#FFF" />
                   <Text style={styles.chatBtnText}>Message</Text>
                 </TouchableOpacity>
 
@@ -562,20 +586,22 @@ export default function FriendsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Background Map - Same as Register for visual cohesion */}
-      <WebBackgroundMap region={{ latitude: 37.77, longitude: -122.42 }} />
-
-      <ScrollView contentContainerStyle={styles.scrollContent} scrollIndicatorInsets={{ top: 1 }}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        scrollIndicatorInsets={{ top: 1 }}
+      >
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
             hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           >
-            <Ionicons name="arrow-back" size={28} color="#111111" />
+            <Ionicons name="chevron-back" size={22} color="#0B0F13" />
           </TouchableOpacity>
-          <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>FRIENDS</Text>
-          <Text style={styles.subtitle}>Connect with fellow runners</Text>
+          <Text style={styles.title}>Crew</Text>
+          <Text style={styles.subtitle}>
+            Run together, cheer each other on, climb the board.
+          </Text>
         </View>
 
         <View style={styles.tabBar}>
