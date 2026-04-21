@@ -26,6 +26,29 @@ const { width } = Dimensions.get("window");
 const DEFAULT_WEEKLY_GOAL_KM = 20;
 const WEEKLY_GOAL_KEY = "siderun_weekly_goal_km";
 
+const WEATHER_ICON_MAP = (wid) => {
+  if (!wid) return 'partly-sunny';
+  if (wid >= 200 && wid < 300) return 'thunderstorm';
+  if (wid >= 300 && wid < 600) return 'rainy';
+  if (wid >= 600 && wid < 700) return 'snow';
+  if (wid >= 700 && wid < 800) return 'cloudy';
+  if (wid === 800) return 'sunny';
+  return 'partly-sunny';
+};
+
+const getRunCondition = (temp, wid) => {
+  if (wid == null) return ['Perfect Conditions', 'Low wind, great time for a run'];
+  if (wid >= 200 && wid < 300) return ['Storm — rest day', 'Thunder ahead, skip it'];
+  if (wid >= 300 && wid < 600) return ['Wet conditions', 'Rainy — bring waterproof gear'];
+  if (wid >= 600 && wid < 700) return ['Snow day', 'Careful on slippery roads'];
+  if (temp < 0) return ['Very cold', 'Layer up, keep it short'];
+  if (temp < 8) return ['Cool & crisp', 'Great for steady-pace runs'];
+  if (temp < 16) return ['Perfect Conditions', 'Ideal running weather'];
+  if (temp < 24) return ['Comfortable', 'Good conditions, stay hydrated'];
+  if (temp < 30) return ['Warm run', 'Go early, hydrate frequently'];
+  return ['Too hot', 'Prefer early AM or indoors'];
+};
+
 const hapticLight = () => {
   if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 };
@@ -42,6 +65,7 @@ export default function HomeScreen({ navigation }) {
   const [weekStats, setWeekStats] = useState({ km: 0, runs: 0, bestKm: 0 });
   const [weekSeries, setWeekSeries] = useState([0, 0, 0, 0, 0, 0, 0]);
   const [recentRun, setRecentRun] = useState(null);
+  const [weather, setWeather] = useState(null);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -53,6 +77,36 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => {
     if (isFocused) loadUserData();
   }, [isFocused]);
+
+  useEffect(() => {
+    fetchWeather();
+  }, []);
+
+  const fetchWeather = async () => {
+    try {
+      const apiKey = process.env.EXPO_PUBLIC_OPENWEATHER_API_KEY;
+      if (!apiKey) return;
+
+      // Try cached run coords first (no permission needed)
+      let lat = 31.2304;
+      let lon = 121.4737;
+      try {
+        const cached = await AsyncStorage.getItem('lastRunCoords');
+        if (cached) {
+          const { latitude, longitude } = JSON.parse(cached);
+          if (latitude && longitude) { lat = latitude; lon = longitude; }
+        }
+      } catch (_) {}
+
+      const resp = await fetch(
+        `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`
+      );
+      const data = await resp.json();
+      if (data?.main) setWeather(data);
+    } catch (e) {
+      console.warn('[HomeScreen] weather fetch failed', e);
+    }
+  };
 
   const loadUserData = async () => {
     try {
@@ -274,25 +328,28 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         {/* Weather preview */}
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={() => {
-            hapticLight();
-            navigation.navigate("Weather");
-          }}
-          style={styles.weatherCard}
-        >
-          <View style={styles.weatherIconContainer}>
-            <Ionicons name="partly-sunny" size={26} color="#1EA574" />
-          </View>
-          <View style={styles.weatherMeta}>
-            <Text style={styles.weatherTemp}>18°C · Perfect Conditions</Text>
-            <Text style={styles.weatherDesc}>
-              Low wind, great time for a run
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#9AA0A6" />
-        </TouchableOpacity>
+        {(() => {
+          const wid = weather?.weather?.[0]?.id;
+          const temp = weather?.main?.temp;
+          const [condLabel, condDesc] = getRunCondition(temp, wid);
+          const tempStr = temp != null ? `${Math.round(temp)}°C · ` : '';
+          return (
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => { hapticLight(); navigation.navigate("Weather"); }}
+              style={styles.weatherCard}
+            >
+              <View style={styles.weatherIconContainer}>
+                <Ionicons name={WEATHER_ICON_MAP(wid)} size={26} color="#1EA574" />
+              </View>
+              <View style={styles.weatherMeta}>
+                <Text style={styles.weatherTemp}>{tempStr}{condLabel}</Text>
+                <Text style={styles.weatherDesc}>{condDesc}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#9AA0A6" />
+            </TouchableOpacity>
+          );
+        })()}
 
         {/* Recent Run */}
         <View style={styles.sectionHeader}>

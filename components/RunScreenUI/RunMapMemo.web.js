@@ -15,6 +15,54 @@ L.Icon.Default.mergeOptions({
   shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
 });
 
+// Custom div icons — no external image dependency
+const startIcon = L.divIcon({
+  className: '',
+  html: '<div style="width:14px;height:14px;background:#24C789;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.35)"></div>',
+  iconSize: [14, 14],
+  iconAnchor: [7, 7],
+});
+
+const currentPosIcon = L.divIcon({
+  className: '',
+  html: '<div style="width:18px;height:18px;background:#0B0F13;border:3px solid white;border-radius:50%;box-shadow:0 2px 10px rgba(0,0,0,0.4)"></div>',
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+});
+
+// Colour-code a pace value (min/km) into a visible hue
+const paceColor = (pace) => {
+  if (pace <= 0 || !isFinite(pace)) return '#24C789';
+  if (pace < 4.5) return '#24C789';   // fast — green
+  if (pace < 5.5) return '#8AE676';   // medium — light green
+  if (pace < 6.5) return '#F5C842';   // moderate — yellow
+  if (pace < 8)   return '#FF7A36';   // slow — orange
+  return '#FF3B30';                    // walking — red
+};
+
+// Build pace-coloured polyline segments from coordinates array
+// Each coord needs { latitude, longitude, timestamp } for pace calc
+const buildPaceSegments = (coords) => {
+  if (coords.length < 2) return [{ positions: coords.map(c => [c.latitude, c.longitude]), color: '#24C789' }];
+  const segments = [];
+  for (let i = 1; i < coords.length; i++) {
+    const prev = coords[i - 1];
+    const curr = coords[i];
+    const dLat = curr.latitude - prev.latitude;
+    const dLon = curr.longitude - prev.longitude;
+    const distKm = Math.sqrt(dLat * dLat + dLon * dLon) * 111;
+    const dtMin = prev.timestamp && curr.timestamp
+      ? (curr.timestamp - prev.timestamp) / 60000
+      : 0;
+    const pace = distKm > 0 && dtMin > 0 ? dtMin / distKm : 0;
+    segments.push({
+      positions: [[prev.latitude, prev.longitude], [curr.latitude, curr.longitude]],
+      color: paceColor(pace),
+    });
+  }
+  return segments;
+};
+
 const FloatingEmoji = ({ emoji, onComplete }) => {
   const [anim] = React.useState(new Animated.Value(0));
 
@@ -88,7 +136,9 @@ const RunMapMemo = ({
     ? [currentLocation.latitude, currentLocation.longitude] 
     : (spectateFriend && spectateFriend.latitude !== undefined ? [spectateFriend.latitude, spectateFriend.longitude] : defaultCenter);
     
-  const polylinePositions = (runData?.coordinates || []).map(c => [c.latitude, c.longitude]);
+  const coords = runData?.coordinates || [];
+  const paceSegments = buildPaceSegments(coords);
+  const hasTsData = coords.length >= 2 && coords[0]?.timestamp != null;
 
   return (
     <View style={[styles.container, { flex: 1, height: '100vh', width: '100vw' }]}>
@@ -106,23 +156,30 @@ const RunMapMemo = ({
 
         {currentLocation && <RecenterControl location={currentLocation} />}
         
-        {/* Draw the user's route */}
-        {polylinePositions.length > 0 && (
-          <Polyline positions={polylinePositions} color="#24C789" weight={5} />
+        {/* Draw the user's route — pace-coloured if timestamps exist, solid green otherwise */}
+        {coords.length > 1 && (hasTsData
+          ? paceSegments.map((seg, i) => (
+              <Polyline key={i} positions={seg.positions} color={seg.color} weight={5} opacity={0.9} />
+            ))
+          : <Polyline positions={coords.map(c => [c.latitude, c.longitude])} color="#24C789" weight={5} />
+        )}
+
+        {/* Start marker */}
+        {coords.length > 0 && (
+          <Marker
+            position={[coords[0].latitude, coords[0].longitude]}
+            icon={startIcon}
+          />
         )}
 
         {/* Current user marker */}
         {currentLocation && mode !== 'spectate' && (
-          <Marker position={[currentLocation.latitude, currentLocation.longitude]}>
-            <Popup>{userAvatar ? `User: ${userAvatar}` : "You"}</Popup>
-          </Marker>
+          <Marker position={[currentLocation.latitude, currentLocation.longitude]} icon={currentPosIcon} />
         )}
 
         {/* Spectator target marker */}
         {mode === 'spectate' && currentLocation && (
-          <Marker position={[currentLocation.latitude, currentLocation.longitude]}>
-            <Popup>{spectateFriend?.name || 'Friend'}</Popup>
-          </Marker>
+          <Marker position={[currentLocation.latitude, currentLocation.longitude]} icon={currentPosIcon} />
         )}
         
         {/* Live friends */}

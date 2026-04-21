@@ -194,10 +194,10 @@ const RunSummaryModal = ({ durationInSeconds, runData, currentSpeed, closeRun })
                 </Text>
               </View>
               <View style={styles.statBox}>
-                <Text style={styles.statLabel}>SPEED</Text>
+                <Text style={styles.statLabel}>PACE</Text>
                 <Text style={styles.statValue}>
-                  {currentSpeed || '0.0'}
-                  <Text style={styles.statUnit}> m/s</Text>
+                  {formatPace(paceMinPerKm)}
+                  <Text style={styles.statUnit}> /km</Text>
                 </Text>
               </View>
               <View style={styles.statBox}>

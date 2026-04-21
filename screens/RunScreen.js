@@ -9,6 +9,7 @@ import {
   UIManager,
   PanResponder,
   Animated,
+  StyleSheet,
 } from "react-native";
 import styles from "../styles/RunScreenStyles";
 import useUserStore from '../store/useUserStore';
@@ -359,10 +360,36 @@ export default function RunScreen({ route, navigation }) {
       ? ((runData.distance * 1000) / durationInSeconds).toFixed(1)
       : "0.0";
 
+  const gpsAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!region) {
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(gpsAnim, { toValue: 1, duration: 1800, useNativeDriver: true }),
+          Animated.timing(gpsAnim, { toValue: 0, duration: 700, useNativeDriver: true }),
+        ])
+      );
+      loop.start();
+      return () => loop.stop();
+    }
+  }, [region]);
+
   if (!region) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Getting your location...</Text>
+      <View style={styles.gpsLoadingContainer}>
+        <Animated.View style={[styles.gpsPulse3, {
+          opacity: gpsAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.05, 0.14, 0.05] }),
+          transform: [{ scale: gpsAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.35] }) }],
+        }]} />
+        <Animated.View style={[styles.gpsPulse2, {
+          opacity: gpsAnim.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0.08, 0.22, 0.08] }),
+          transform: [{ scale: gpsAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.22] }) }],
+        }]} />
+        <View style={styles.gpsPulse1}>
+          <Ionicons name="navigate" size={34} color="#FFF" />
+        </View>
+        <Text style={styles.gpsLoadingTitle}>Finding your location</Text>
+        <Text style={styles.gpsLoadingDesc}>Make sure GPS is enabled</Text>
       </View>
     );
   }
