@@ -62,6 +62,7 @@ export default function HomeScreen({ navigation }) {
   const [weekStats, setWeekStats] = useState({ km: 0, runs: 0, bestKm: 0 });
   const [weekSeries, setWeekSeries] = useState([0, 0, 0, 0, 0, 0, 0]);
   const [recentRun, setRecentRun] = useState(null);
+  const [nextTarget, setNextTarget] = useState(null); // { km, label }
   const [weather, setWeather] = useState(null);
 
   const getGreeting = () => {
@@ -168,17 +169,51 @@ export default function HomeScreen({ navigation }) {
         setWeekSeries(series);
       }
 
-      const { data: latest } = await supabase
+      // Supabase: last run + last 4 for next-target calculation
+      const { data: latestRuns } = await supabase
         .from("runs")
-        .select("id, distance, duration_seconds, created_at")
+        .select("id, distance, duration_seconds, pace, created_at")
         .eq("user_id", c.id)
         .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      setRecentRun(latest || null);
+        .limit(4);
+
+      const latest = latestRuns?.[0] || null;
+
+      // Fall back to local cache if cloud is empty (offline / just finished).
+      let displayRun = latest;
+      if (!displayRun) {
+        try {
+          const localStr = await AsyncStorage.getItem('lastCompletedRun');
+          if (localStr) displayRun = JSON.parse(localStr);
+        } catch (_) {}
+      }
+      setRecentRun(displayRun || null);
+
+      // Compute next-target suggestion from recent history.
+      if (latestRuns && latestRuns.length > 0) {
+        const avgKm =
+          latestRuns.reduce((s, r) => s + (Number(r.distance) || 0), 0) /
+          latestRuns.length;
+        // Suggest 5–10 % more than average, rounded to nearest 0.5.
+        const suggested = Math.round((avgKm * 1.075) / 0.5) * 0.5;
+        const MILESTONES = [1, 2, 3, 5, 7, 10, 15, 21.1, 42.2];
+        // Nearest milestone above suggested.
+        const milestone = MILESTONES.find((m) => m >= suggested) || suggested;
+        if (milestone > avgKm + 0.1) {
+          setNextTarget({ km: milestone, label: getMilestoneLabel(milestone) });
+        }
+      }
     } catch (e) {
       console.log("Error loading user data:", e);
     }
+  };
+
+  const getMilestoneLabel = (km) => {
+    if (km >= 42) return 'Marathon';
+    if (km >= 21) return 'Half marathon';
+    if (km >= 10) return '10K';
+    if (km >= 5) return '5K';
+    return `${km.toFixed(1)} km`;
   };
 
   const formatDuration = (seconds) => {
@@ -341,46 +376,62 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         {recentRun ? (
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={() => navigation.navigate("RunHistory")}
-            style={styles.recentRunCard}
-          >
-            <View style={styles.runIconBg}>
-              <Ionicons name="footsteps" size={18} color="#FFF" />
-            </View>
-            <View style={styles.runInfo}>
-              <Text style={styles.runTitle}>
-                {Number(recentRun.distance).toFixed(2)} km
-              </Text>
-              <Text style={styles.runDate}>
-                {formatRelativeDate(recentRun.created_at)}
-              </Text>
-            </View>
-            <View style={styles.runStats}>
-              <Text style={styles.runDistance}>
-                {formatDuration(recentRun.duration_seconds)}
-              </Text>
-              {recentRun.pace != null && recentRun.pace > 0 ? (
-                <Text style={styles.runTime}>
-                  {(() => {
-                    const p = Number(recentRun.pace);
-                    const m = Math.floor(p);
-                    const s = Math.round((p - m) * 60);
-                    return `${m}:${s < 10 ? '0' : ''}${s} /km`;
-                  })()}
+          <>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate("RunHistory")}
+              style={styles.recentRunCard}
+            >
+              <View style={styles.runIconBg}>
+                <Ionicons name="footsteps" size={18} color="#FFF" />
+              </View>
+              <View style={styles.runInfo}>
+                <Text style={styles.runTitle}>
+                  {Number(recentRun.distance).toFixed(2)} km
                 </Text>
-              ) : (
-                <Text style={styles.runTime}>duration</Text>
-              )}
-            </View>
-          </TouchableOpacity>
+                <Text style={styles.runDate}>
+                  {formatRelativeDate(recentRun.created_at)}
+                </Text>
+              </View>
+              <View style={styles.runStats}>
+                <Text style={styles.runDistance}>
+                  {formatDuration(recentRun.duration_seconds)}
+                </Text>
+                {recentRun.pace != null && Number(recentRun.pace) > 0 ? (
+                  <Text style={styles.runTime}>
+                    {(() => {
+                      const p = Number(recentRun.pace);
+                      const m = Math.floor(p);
+                      const s = Math.round((p - m) * 60);
+                      return `${m}:${s < 10 ? '0' : ''}${s} /km`;
+                    })()}
+                  </Text>
+                ) : (
+                  <Text style={styles.runTime}>duration</Text>
+                )}
+              </View>
+            </TouchableOpacity>
+
+            {nextTarget && (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate("Run")}
+                style={styles.nextTargetChip}
+              >
+                <Ionicons name="trending-up" size={14} color="#24C789" />
+                <Text style={styles.nextTargetText}>
+                  Next target: <Text style={styles.nextTargetBold}>{nextTarget.label} ({nextTarget.km.toFixed(1)} km)</Text>
+                </Text>
+                <Ionicons name="chevron-forward" size={14} color="#9AA0A6" />
+              </TouchableOpacity>
+            )}
+          </>
         ) : (
           <EmptyState
             compact
             icon="footsteps-outline"
             title="No runs yet"
-            desc="Tap Start run to log your first one and light up the week ring."
+            desc="Tap the run button below to log your first one."
             accent="#FF5A36"
           />
         )}
@@ -619,6 +670,28 @@ const styles = StyleSheet.create({
   runTime: {
     ...T.label,
     marginTop: 2,
+  },
+  nextTargetChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: 'rgba(36,199,137,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(36,199,137,0.18)',
+    marginBottom: 8,
+  },
+  nextTargetText: {
+    flex: 1,
+    fontFamily: FONT.semibold,
+    fontSize: 13,
+    color: '#0B0F13',
+  },
+  nextTargetBold: {
+    fontFamily: FONT.extraBold,
+    color: '#1EA574',
   },
   startActionContainer: {
     position: "absolute",

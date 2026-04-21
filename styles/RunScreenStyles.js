@@ -484,4 +484,26 @@ export default StyleSheet.create({
     marginTop: 2,
     fontVariant: ['tabular-nums'],
   },
+
+  // Demo mode pill
+  demoBanner: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 54 : 32,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#0B0F13',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    zIndex: 200,
+    opacity: 0.85,
+  },
+  demoBannerText: {
+    fontFamily: FONT.bold,
+    fontSize: 10,
+    color: '#FFFFFF',
+    letterSpacing: 1,
+  },
 });

@@ -191,6 +191,8 @@ export default function RunScreen({ route, navigation }) {
     isFinished,
     closeRun,
     signalLost,
+    isDemoMode,
+    demoSpeed,
   } = useRunTracking(visibilityScope, userAvatar, navigation, mode);
 
   const recenterMap = () => {
@@ -356,10 +358,11 @@ export default function RunScreen({ route, navigation }) {
     setCheers((prev) => prev.filter((c) => c.id !== id));
   };
 
-  const currentSpeed = 
-    runData.distance > 0 && durationInSeconds > 0
-      ? ((runData.distance * 1000) / durationInSeconds).toFixed(1)
-      : "0.0";
+  const currentSpeed = isDemoMode
+    ? demoSpeed
+    : (runData.distance > 0 && durationInSeconds > 0
+        ? ((runData.distance * 1000) / durationInSeconds).toFixed(1)
+        : "0.0");
 
   const gpsAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -397,6 +400,12 @@ export default function RunScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
+      {isDemoMode && (
+        <View style={styles.demoBanner} pointerEvents="none">
+          <Ionicons name="flask" size={13} color="#FFF" />
+          <Text style={styles.demoBannerText}>DEMO MODE · Simulated GPS</Text>
+        </View>
+      )}
       <RunMapMemo mode={mode} spectateFriend={spectateFriend} 
         navigation={navigation}
         region={region}

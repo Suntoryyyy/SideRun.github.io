@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import ThreeRings from '../ThreeRings';
 import Sparkline from '../Sparkline';
+import RouteThumb from '../RouteThumb';
 import ShareCard, { SHARE_CARD_HEIGHT } from '../ShareCard';
 import useUserStore from '../../store/useUserStore';
 import { T, FONT } from '../../constants/typography';
@@ -306,13 +307,23 @@ const RunSummaryModal = ({ durationInSeconds, runData, currentSpeed, closeRun })
               </View>
             </View>
 
-            <View style={styles.metricRow}>
-              <Text style={styles.metricNum}>{distanceKm.toFixed(2)}</Text>
-              <Text style={styles.metricUnit}>km</Text>
+            {/* Distance + route map side by side */}
+            <View style={styles.heroRow}>
+              <View style={styles.heroLeft}>
+                <View style={styles.metricRow}>
+                  <Text style={styles.metricNum}>{distanceKm.toFixed(2)}</Text>
+                  <Text style={styles.metricUnit}>km</Text>
+                </View>
+                <Text style={styles.metricCaption}>
+                  {isPB ? 'Great run — new 5K PB.' : 'Run logged — keep the streak.'}
+                </Text>
+              </View>
+              <RouteThumb
+                coordinates={runData?.coordinates}
+                width={110}
+                height={80}
+              />
             </View>
-            <Text style={styles.metricCaption}>
-              {isPB ? 'Great run — you closed the 5K ring.' : 'Run logged — keep the streak.'}
-            </Text>
 
             <View style={styles.statsGrid}>
               <View style={styles.statBox}>
@@ -495,10 +506,21 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginTop: 2,
   },
+  heroRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    alignSelf: 'stretch',
+    marginTop: 14,
+    marginBottom: 18,
+    gap: 12,
+  },
+  heroLeft: {
+    flex: 1,
+  },
   metricRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    marginTop: 14,
   },
   metricNum: {
     ...T.displayL,
@@ -515,8 +537,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#9AA0A6',
     marginTop: 4,
-    marginBottom: 18,
-    textAlign: 'center',
   },
   statsGrid: {
     flexDirection: 'row',

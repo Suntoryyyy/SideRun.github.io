@@ -10,8 +10,18 @@ import { supabase } from "../services/supabase";
 import * as Haptics from "expo-haptics";
 import { getDistance } from "../utils/locationUtils";
 import { formatDuration } from "../utils/timeUtils";
+import useDemoMode from "./useDemoMode";
 
 export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
+  const {
+    isDemoMode,
+    demoRegion,
+    demoLocation,
+    demoSpeed,
+    demoCoordinates,
+    resetDemo,
+  } = useDemoMode();
+
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
@@ -20,7 +30,14 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
     distance: 0,
     calories: 0,
     coordinates: [],
+    splits: [], // Array of { km: number, paceMinPerKm: number, durationSec: number }
   });
+
+  // Tracks the cumulative duration at which the last whole-km was crossed.
+  const lastSplitDistRef = useRef(0); // km floored at last split
+  const lastSplitTimeRef = useRef(0); // durationInSeconds at last split
+  // Keep a live ref so the callback always sees the current duration.
+  const durationRef = useRef(0);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [region, setRegion] = useState(null);
   const [liveFriends, setLiveFriends] = useState([]);
@@ -85,20 +102,28 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
   useEffect(() => {
     let interval;
     if (isRunning && !isPaused) {
-      interval = setInterval(
-        () => setDurationInSeconds((prev) => prev + 1),
-        1000,
-      );
+      interval = setInterval(() => {
+        setDurationInSeconds((prev) => {
+          const next = prev + 1;
+          durationRef.current = next;
+          return next;
+        });
+      }, 1000);
     }
     return () => clearInterval(interval);
   }, [isRunning, isPaused]);
 
   useEffect(() => {
-    if (mode !== "spectate") requestLocationPermission();
+    if (mode !== "spectate" && !isDemoMode) requestLocationPermission();
+    if (isDemoMode && mode !== "spectate") {
+      // Seed the map with the demo start location immediately.
+      setCurrentLocation(demoLocation);
+      setRegion(demoRegion);
+    }
     return () => {
       if (watchId.current) watchId.current.remove();
     };
-  }, []);
+  }, [isDemoMode]);
 
   const requestLocationPermission = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -174,6 +199,46 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
     }
   }, [isRunning, isPaused]);
 
+  // Track demo GPS updates during an active run.
+  const prevDemoCoordLen = useRef(0);
+  useEffect(() => {
+    if (!isDemoMode || !isRunning || isPaused) return;
+    const newPts = demoCoordinates.slice(prevDemoCoordLen.current);
+    if (newPts.length === 0) return;
+    prevDemoCoordLen.current = demoCoordinates.length;
+
+    newPts.forEach((newLoc) => {
+      setCurrentLocation({ latitude: newLoc.latitude, longitude: newLoc.longitude });
+      const distFromLast = lastLocation.current
+        ? getDistance(lastLocation.current, newLoc)
+        : 0;
+      if (distFromLast > 0.001 && distFromLast < 1.0) {
+        lastLocation.current = newLoc;
+        setRunData((prev) => {
+          const newDist = prev.distance + distFromLast;
+          const crossedKm = Math.floor(newDist);
+          const prevKm = Math.floor(prev.distance);
+          let newSplits = prev.splits;
+          if (crossedKm > prevKm && crossedKm > 0) {
+            const splitDurSec = durationRef.current - lastSplitTimeRef.current;
+            const splitDistKm = crossedKm - lastSplitDistRef.current;
+            const paceMinPerKm = splitDistKm > 0 ? splitDurSec / 60 / splitDistKm : 0;
+            newSplits = [...prev.splits, { km: crossedKm, paceMinPerKm, durationSec: splitDurSec }];
+            lastSplitDistRef.current = crossedKm;
+            lastSplitTimeRef.current = durationRef.current;
+          }
+          return {
+            ...prev,
+            distance: newDist,
+            calories: newDist * 60,
+            coordinates: [...prev.coordinates, newLoc],
+            splits: newSplits,
+          };
+        });
+      }
+    });
+  }, [demoCoordinates, isDemoMode, isRunning, isPaused]);
+
   const startRun = async () => {
     requestWakeLock();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -207,8 +272,14 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
     setIsRunning(true);
     setIsPaused(false);
     setDurationInSeconds(0);
+    durationRef.current = 0;
+    lastSplitDistRef.current = 0;
+    lastSplitTimeRef.current = 0;
+    prevDemoCoordLen.current = demoCoordinates.length;
     lastLocation.current = currentLocation;
-    setRunData({ distance: 0, calories: 0, coordinates: [currentLocation] });
+    setRunData({ distance: 0, calories: 0, coordinates: [currentLocation], splits: [] });
+
+    if (isDemoMode) return; // demo location is fed via the useEffect above
 
     watchId.current = await Location.watchPositionAsync(
       {
@@ -238,12 +309,34 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
 
     if (distFromLast > 0.001 && distFromLast < 1.0) {
       lastLocation.current = newLocation;
-      setRunData((prev) => ({
-        ...prev,
-        distance: prev.distance + distFromLast,
-        calories: (prev.distance + distFromLast) * 60,
-        coordinates: [...prev.coordinates, newLocation],
-      }));
+      setRunData((prev) => {
+        const newDist = prev.distance + distFromLast;
+        const newCals = newDist * 60;
+
+        // Detect crossing each 1-km milestone and record a real split.
+        const crossedKm = Math.floor(newDist);
+        const prevKm = Math.floor(prev.distance);
+        let newSplits = prev.splits;
+        if (crossedKm > prevKm && crossedKm > 0) {
+          const splitDurSec = durationRef.current - lastSplitTimeRef.current;
+          const splitDistKm = crossedKm - lastSplitDistRef.current;
+          const paceMinPerKm = splitDistKm > 0 ? splitDurSec / 60 / splitDistKm : 0;
+          newSplits = [
+            ...prev.splits,
+            { km: crossedKm, paceMinPerKm, durationSec: splitDurSec },
+          ];
+          lastSplitDistRef.current = crossedKm;
+          lastSplitTimeRef.current = durationRef.current;
+        }
+
+        return {
+          ...prev,
+          distance: newDist,
+          calories: newCals,
+          coordinates: [...prev.coordinates, newLocation],
+          splits: newSplits,
+        };
+      });
     }
   };
 
@@ -299,6 +392,7 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
         pace: finalPace.toFixed(1),
         calories: Math.round(runData.calories),
         coordinates: runData.coordinates,
+        splits: runData.splits || [],
         scope: visibilityScope,
       };
 
@@ -365,6 +459,20 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
         } catch (_) {}
       }
 
+      // Persist the completed run locally so HomeScreen can show it instantly
+      // even before the Supabase query refreshes.
+      try {
+        await AsyncStorage.setItem('lastCompletedRun', JSON.stringify({
+          distance: runData.distance,
+          duration_seconds: durationInSeconds,
+          pace: finalPace,
+          calories: Math.round(runData.calories),
+          coordinates: runData.coordinates,
+          splits: runData.splits || [],
+          created_at: new Date().toISOString(),
+        }));
+      } catch (_) {}
+
       setIsFinished(true);
     } catch (error) {
       console.error("Error saving run:", error);
@@ -391,5 +499,7 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
     stopRun,
     isFinished,
     closeRun,
+    isDemoMode,
+    demoSpeed,
   };
 }

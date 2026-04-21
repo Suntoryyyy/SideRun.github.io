@@ -20,6 +20,7 @@ import { supabase } from "../services/supabase";
 import ImageCropperModal from "./ImageCropperModal";
 import CustomAlert from '../components/CustomAlert';
 import NativeFilePicker from "./NativeFilePicker";
+import DemoToggle from '../components/DemoToggle';
 import { T, FONT } from "../constants/typography";
 
 const isPhoto = (src) =>
@@ -280,6 +281,13 @@ export default function ProfileScreen({ navigation, handleLogout }) {
               thumbColor="#FFFFFF"
             />
           </View>
+        </View>
+
+        {/* ── Developer / Demo card ── */}
+        <View style={styles.card}>
+          <Text style={styles.cardSection}>DEVELOPER</Text>
+          <View style={styles.cardDivider} />
+          <DemoToggle />
         </View>
 
         {/* ── Action buttons ── */}
