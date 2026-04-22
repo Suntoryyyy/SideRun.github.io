@@ -54,13 +54,18 @@ import OnboardingWelcomeScreen from './screens/OnboardingWelcomeScreen';
 import OnboardingPermissionsScreen from './screens/OnboardingPermissionsScreen';
 import OnboardingGoalScreen, { ONBOARDING_KEY } from './screens/OnboardingGoalScreen';
 
-// Visual height of icon + label; actual bar size adds safe-area bottom inset.
-// 60pt = 8pt top padding + ~22pt icon + ~14pt label + 16pt internal breathing.
-const TAB_BAR_CONTENT_HEIGHT = 60;
+// Floating-dock design: the tab bar is a rounded island that sits above a
+// transparent strip of page background. TAB_BAR_CONTENT_HEIGHT is the fixed
+// height of that island; the safe-area / URL-bar reservation becomes the
+// `marginBottom` (i.e. the gap below the island), not padding inside it.
+const TAB_BAR_CONTENT_HEIGHT = 64;
 
-// Backwards-compat export for screens that position floating CTAs above the
-// bar (HomeScreen). We approximate here — the bar itself uses the live inset.
-export const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 86 : Platform.OS === 'android' ? 64 : 86;
+// Horizontal inset of the floating island.
+const TAB_BAR_H_INSET = 12;
+
+// Approximate total vertical footprint the tab bar reserves (island height
+// + a typical bottom gap). Screens that need to clear the tab bar use this.
+export const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 96 : Platform.OS === 'android' ? 76 : 96;
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -93,8 +98,11 @@ function MainTabNavigator({ handleLogout }) {
         tabBarStyle: [
           styles.tabBar,
           {
-            height: TAB_BAR_CONTENT_HEIGHT + bottomPad,
-            paddingBottom: bottomPad,
+            height: TAB_BAR_CONTENT_HEIGHT,
+            // The safe-area / URL-bar reservation becomes the gap below
+            // the island, so all four corners are visible on every device.
+            marginBottom: bottomPad,
+            marginHorizontal: TAB_BAR_H_INSET,
           },
         ],
         tabBarActiveTintColor: '#0B0F13',
@@ -254,14 +262,27 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  // Floating rounded-island tab bar. All four corners are rounded so the
+  // bar reads as a distinct surface floating over the page background,
+  // with clear visual separation from any browser chrome below.
   tabBar: {
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(11,15,19,0.07)',
-    elevation: 0,
-    shadowColor: 'transparent',
-    paddingTop: 8,
-    // height + paddingBottom applied dynamically from useSafeAreaInsets
+    borderRadius: 28,
+    borderTopWidth: 0,
+    borderWidth: 1,
+    borderColor: 'rgba(11,15,19,0.06)',
+    paddingTop: 10,
+    paddingBottom: 10,
+    // Soft drop shadow for lift. shadow* is respected on iOS & web;
+    // elevation covers Android.
+    shadowColor: '#0B0F13',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 10,
+    // Position overrides so React Navigation's default absolute/static
+    // styling doesn't clash with our margin-based island layout.
+    overflow: 'visible',
   },
   tabLabel: {
     fontFamily: 'Inter_600SemiBold',
@@ -284,11 +305,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#0B0F13',
     justifyContent: 'center',
     alignItems: 'center',
-    // without the label below, we can lift the button higher
-    marginBottom: Platform.OS === 'ios' ? 16 : Platform.OS === 'android' ? 8 : 16,
+    // With the shorter floating island (64pt) we lift the play button
+    // just enough to pop visually above the island's rounded top edge.
+    marginBottom: Platform.OS === 'ios' ? 8 : Platform.OS === 'android' ? 4 : 8,
     shadowColor: '#0B0F13',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.28,
     shadowRadius: 10,
     elevation: 6,
   },

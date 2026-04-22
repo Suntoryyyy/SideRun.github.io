@@ -63,6 +63,10 @@ export default function fixWebViewport() {
       height: 100dvh;
     }
 
+    /* Match the screen background so the strip beneath the floating
+       tab-bar island reads as part of the app surface, not empty space. */
+    html, body { background-color: #F7F8FA; }
+
     body {
       overscroll-behavior: none;
       -webkit-overflow-scrolling: touch;
