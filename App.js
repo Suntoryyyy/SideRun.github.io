@@ -45,6 +45,7 @@ import ProfileScreen from './screens/ProfileScreen';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import RunHistoryScreen from './screens/RunHistoryScreen';
+import TrainingInsightScreen from './screens/TrainingInsightScreen';
 import OnboardingWelcomeScreen from './screens/OnboardingWelcomeScreen';
 import OnboardingPermissionsScreen from './screens/OnboardingPermissionsScreen';
 import OnboardingGoalScreen, { ONBOARDING_KEY } from './screens/OnboardingGoalScreen';
@@ -230,6 +231,7 @@ export default function App() {
             <Stack.Screen name="Chat" component={ChatScreen} />
             <Stack.Screen name="RunHistory" component={RunHistoryScreen} />
             <Stack.Screen name="Badges" component={BadgesScreen} />
+            <Stack.Screen name="TrainingInsight" component={TrainingInsightScreen} />
           </>
         )}
       </Stack.Navigator>

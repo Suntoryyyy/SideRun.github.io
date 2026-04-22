@@ -136,7 +136,7 @@ const DURATION_TARGET_SEC = 1800; // 30 min
 const PACE_FLOOR = 8;  // min/km – slowest considered (0%)
 const PACE_CEIL = 4;   // min/km – fastest considered (100%)
 
-const RunSummaryModal = ({ durationInSeconds, runData, currentSpeed, closeRun }) => {
+const RunSummaryModal = ({ durationInSeconds, runData, currentSpeed, closeRun, navigation }) => {
   const shareRef = useRef(null);
   const [isSharing, setIsSharing] = useState(false);
   const username = useUserStore((s) => s.user?.username) || 'Runner';
@@ -161,14 +161,40 @@ const RunSummaryModal = ({ durationInSeconds, runData, currentSpeed, closeRun })
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  // Synthetic per-km splits data for sparkline (in absence of real splits).
-  const splitCount = Math.max(1, Math.ceil(distanceKm));
-  const splits = Array.from({ length: splitCount }, (_, i) => {
-    const wobble = (Math.sin(i * 1.7) + 1) * 0.25;
-    return paceMinPerKm + (wobble - 0.25);
-  });
-
   const isPB = distanceKm >= DISTANCE_TARGET_KM;
+
+  // Real splits from hook; fallback to synthetic for display.
+  const realSplits = runData?.splits ?? [];
+  const splitCount = realSplits.length > 0
+    ? realSplits.length
+    : Math.max(1, Math.ceil(distanceKm));
+
+  // Bar chart data: higher bar = faster (lower pace). Show last 5 km max.
+  const barSplits = (() => {
+    if (realSplits.length >= 2) return realSplits.slice(-5);
+    return Array.from({ length: Math.min(splitCount, 5) }, (_, i) => ({
+      km: i + 1,
+      paceMinPerKm: paceMinPerKm + (Math.sin(i * 1.7) + 1) * 0.2 - 0.2,
+    }));
+  })();
+
+  const fastestPace = barSplits.length
+    ? Math.min(...barSplits.map((s) => s.paceMinPerKm))
+    : paceMinPerKm;
+  const slowestPace = barSplits.length
+    ? Math.max(...barSplits.map((s) => s.paceMinPerKm))
+    : paceMinPerKm;
+  const paceRange = (slowestPace - fastestPace) || 0.01;
+  const BAR_MAX = 56;
+  const BAR_MIN = 20;
+
+  const getBarHeight = (pace) =>
+    BAR_MIN + ((slowestPace - pace) / paceRange) * (BAR_MAX - BAR_MIN);
+
+  // Leaderboard: how many mock crew members the user beat (fun social element).
+  const crewBeaten = distanceKm > 0
+    ? Math.min(11, Math.round((distProgress * 0.7 + paceProgress * 0.3) * 12))
+    : 0;
 
   const handleShare = async () => {
     if (isSharing) return;
@@ -266,6 +292,21 @@ const RunSummaryModal = ({ durationInSeconds, runData, currentSpeed, closeRun })
             contentContainerStyle={styles.scroll}
             showsVerticalScrollIndicator={false}
           >
+            {/* Personalised headline */}
+            <View style={styles.headlineRow}>
+              <Text style={styles.headline}>
+                {isPB ? `New PB, ${username}!` : `Great run, ${username}`}
+                {isPB ? ' 🎉' : ''}
+              </Text>
+              <Text style={styles.headlineSub}>
+                {new Date().toLocaleDateString(undefined, {
+                  weekday: 'long',
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </Text>
+            </View>
+
             <View style={styles.pillRow}>
               {isPB ? (
                 <View style={styles.pillPB}>
@@ -275,6 +316,11 @@ const RunSummaryModal = ({ durationInSeconds, runData, currentSpeed, closeRun })
               ) : (
                 <View style={styles.pillNeutral}>
                   <Text style={styles.pillNeutralText}>RUN COMPLETED</Text>
+                </View>
+              )}
+              {crewBeaten > 0 && (
+                <View style={styles.pillCrew}>
+                  <Text style={styles.pillCrewText}>TOP {Math.round((1 - crewBeaten / 12) * 100)}% CREW</Text>
                 </View>
               )}
               <View style={styles.pillGhost}>
@@ -352,23 +398,81 @@ const RunSummaryModal = ({ durationInSeconds, runData, currentSpeed, closeRun })
               </View>
             </View>
 
+            {/* Social row — "Beat X of 12 friends" */}
+            {crewBeaten > 0 && (
+              <View style={styles.socialRow}>
+                <Ionicons name="flame" size={14} color="#FF5A36" />
+                <Text style={styles.socialText}>
+                  Beat {crewBeaten} of 12 friends this week
+                </Text>
+                {/* Overlapping crew avatars */}
+                <View style={styles.avatarStack}>
+                  {['#FF5A36', '#24C789', '#00C2FF', '#F5A623', '#8AE676'].slice(0, Math.min(crewBeaten, 5)).map((c, i) => (
+                    <View
+                      key={i}
+                      style={[
+                        styles.avatarDot,
+                        { backgroundColor: c, marginLeft: i === 0 ? 0 : -8, zIndex: 5 - i },
+                      ]}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Per-km pace bar chart */}
             <View style={styles.splitsWrap}>
               <View style={styles.splitsHeader}>
                 <Text style={styles.splitsTitle}>PER-KM PACE</Text>
-                <Text style={styles.splitsHint}>
-                  {splitCount} split{splitCount > 1 ? 's' : ''}
-                </Text>
+                {fastestPace < 30 && (
+                  <View style={styles.fastestBadge}>
+                    <Ionicons name="star" size={9} color="#0B0F13" />
+                    <Text style={styles.splitsHint}>
+                      Fastest {formatPace(fastestPace)} @ km {barSplits.findIndex(s => s.paceMinPerKm === fastestPace) + 1}
+                    </Text>
+                  </View>
+                )}
               </View>
-              <Sparkline
-                data={splits.map((p) => -p)}
-                width={width * 0.85 - 48}
-                height={36}
-                color="#8AE676"
-                fillOpacity={0.16}
-                highlightLast
-                strokeWidth={2}
-              />
+              <View style={styles.barsRow}>
+                {barSplits.map((s, i) => {
+                  const h = getBarHeight(s.paceMinPerKm);
+                  const isFastest = s.paceMinPerKm === fastestPace;
+                  return (
+                    <View key={i} style={styles.barCol}>
+                      <View
+                        style={[
+                          styles.barFill,
+                          { height: h },
+                          isFastest && styles.barFillFastest,
+                        ]}
+                      />
+                      <Text style={[styles.barLabel, isFastest && styles.barLabelFastest]}>
+                        km {s.km}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
             </View>
+
+            {/* See training insight */}
+            {distanceKm > 0 && (
+              <TouchableOpacity
+                style={styles.insightLink}
+                activeOpacity={0.75}
+                onPress={() => {
+                  if (navigation) {
+                    navigation.navigate('TrainingInsight', {
+                      runData,
+                      durationInSeconds: duration,
+                    });
+                  }
+                }}
+              >
+                <Text style={styles.insightLinkText}>See training insight</Text>
+                <Ionicons name="arrow-forward" size={13} color="#24C789" />
+              </TouchableOpacity>
+            )}
 
             <View style={styles.actionsRow}>
               <TouchableOpacity
@@ -620,6 +724,20 @@ const styles = StyleSheet.create({
     height: SHARE_CARD_HEIGHT,
     opacity: 0,
   },
+  insightLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 8,
+    alignSelf: 'stretch',
+  },
+  insightLinkText: {
+    fontFamily: FONT.bold,
+    fontSize: 13,
+    color: '#24C789',
+    letterSpacing: 0.2,
+  },
   doneButton: {
     flex: 1.3,
     height: 54,
@@ -637,6 +755,111 @@ const styles = StyleSheet.create({
     ...T.button,
     fontSize: 17,
     letterSpacing: 0.5,
+  },
+
+  // Personalised headline
+  headlineRow: {
+    alignSelf: 'stretch',
+    paddingHorizontal: 4,
+    marginBottom: 4,
+  },
+  headline: {
+    fontFamily: FONT.extraBold,
+    fontSize: 24,
+    letterSpacing: -0.5,
+    color: '#FFFFFF',
+  },
+  headlineSub: {
+    fontFamily: FONT.medium,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.45)',
+    marginTop: 2,
+  },
+
+  // Crew pill
+  pillCrew: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 99,
+    backgroundColor: 'rgba(255,90,54,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,90,54,0.3)',
+  },
+  pillCrewText: {
+    fontFamily: FONT.bold,
+    fontSize: 10,
+    letterSpacing: 0.8,
+    color: '#FF5A36',
+    textTransform: 'uppercase',
+  },
+
+  // Social row
+  socialRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    gap: 6,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
+  },
+  socialText: {
+    fontFamily: FONT.medium,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.6)',
+    flex: 1,
+  },
+  avatarStack: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#0B0F13',
+  },
+
+  // Bar chart
+  barsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-around',
+    height: 70,
+    marginTop: 8,
+    gap: 4,
+  },
+  barCol: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+    justifyContent: 'flex-end',
+  },
+  barFill: {
+    width: '60%',
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  barFillFastest: {
+    backgroundColor: '#8AE676',
+  },
+  barLabel: {
+    fontFamily: FONT.bold,
+    fontSize: 9,
+    letterSpacing: 0.3,
+    color: 'rgba(255,255,255,0.4)',
+    textTransform: 'uppercase',
+  },
+  barLabelFastest: {
+    color: '#8AE676',
+  },
+  fastestBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
   },
 });
 

@@ -322,8 +322,80 @@ export default function FriendsScreen({ navigation }) {
     Alert.alert("Cheer sent", `You sent a cheer to ${friendName}.`);
   };
 
-  const renderFriendsTab = () => (
+  // Hero bubble colours — cycled deterministically per friend index.
+  const BUBBLE_COLORS = [
+    '#24C789', '#FF5A36', '#00C2FF', '#F5A623', '#8AE676',
+    '#A78BFA', '#FB7185', '#34D399', '#60A5FA', '#FBBF24',
+  ];
+
+  const renderFriendsTab = () => {
+    // Simulate "active now" — real apps would use presence channels.
+    const activeFriends = friends.slice(0, Math.min(friends.length, 5));
+    return (
     <View style={styles.tabContent}>
+
+      {/* ── Active hero section ── */}
+      {friends.length > 0 && (
+        <View style={styles.heroSection}>
+          <View style={styles.heroTop}>
+            <View>
+              <Text style={styles.heroEyebrow}>ACTIVE NOW</Text>
+              <Text style={styles.heroHeading}>
+                {activeFriends.length > 0 ? `${activeFriends.length} crew members` : 'No one active'}
+              </Text>
+            </View>
+            <TouchableOpacity style={styles.cheerBtn} activeOpacity={0.8}>
+              <Ionicons name="heart" size={13} color="#FF5A36" />
+              <Text style={styles.cheerBtnText}>Cheer all</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.bubblesRow}
+          >
+            {activeFriends.map((friend, idx) => {
+              const color = BUBBLE_COLORS[idx % BUBBLE_COLORS.length];
+              return (
+                <TouchableOpacity
+                  key={friend.id}
+                  style={[styles.bubble, { borderColor: color }]}
+                  activeOpacity={0.8}
+                  onPress={() => openFriendProfile(friend)}
+                >
+                  {/* Coloured accent ring */}
+                  <View style={[styles.bubbleRing, { backgroundColor: `${color}22` }]}>
+                    {isImageAvatar(friend.avatar) ? (
+                      <Image
+                        source={{ uri: friend.avatar }}
+                        style={styles.bubbleAvatar}
+                      />
+                    ) : (
+                      <View style={[styles.bubbleAvatarFallback, { backgroundColor: `${color}33` }]}>
+                        <Text style={[styles.bubbleInitial, { color }]}>
+                          {avatarInitial(friend.name)}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  {/* Active dot */}
+                  <View style={[styles.bubbleDot, { backgroundColor: color }]} />
+                  <Text style={styles.bubbleName} numberOfLines={1}>
+                    {friend.name.split(' ')[0]}
+                  </Text>
+                  {friend.weeklyDistance > 0 && (
+                    <Text style={styles.bubbleSub}>
+                      {friend.weeklyDistance.toFixed(1)} km
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
       <View style={styles.friendsHeader}>
         <Text style={styles.sectionTitle}>Your Friends ({friends.length})</Text>
         <TouchableOpacity
@@ -417,7 +489,7 @@ export default function FriendsScreen({ navigation }) {
         />
       )}
     </View>
-  );
+  );};
 
   const handleLike = async (id) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

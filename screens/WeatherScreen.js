@@ -196,6 +196,45 @@ export default function WeatherScreen({ navigation }) {
     return 'Good conditions for a run. Check wind and humidity.';
   };
 
+  /**
+   * Compute a 0–100 Run Score from weather conditions.
+   * Ideal: 14–20°C, humidity 40–60%, wind < 5 m/s, clear sky.
+   */
+  const computeRunScore = () => {
+    if (!weather) return null;
+    const temp = weather.main.temp;
+    const humidity = weather.main.humidity;
+    const wind = weather.wind.speed;
+    const cond = weather.weather[0].main.toLowerCase();
+
+    // Temperature sub-score (peaks around 16°C)
+    const tempScore = Math.max(0, 100 - Math.abs(temp - 16) * 5);
+
+    // Humidity sub-score (peaks around 50%)
+    const humScore = Math.max(0, 100 - Math.abs(humidity - 50) * 1.5);
+
+    // Wind sub-score (under 5 m/s is great, over 15 is bad)
+    const windScore = Math.max(0, Math.min(100, 100 - (wind - 5) * 10));
+
+    // Condition penalty
+    let condPenalty = 0;
+    if (cond.includes('rain') || cond.includes('drizzle')) condPenalty = 35;
+    else if (cond.includes('thunder')) condPenalty = 60;
+    else if (cond.includes('snow')) condPenalty = 30;
+    else if (cond.includes('fog') || cond.includes('mist')) condPenalty = 10;
+
+    const raw = (tempScore * 0.4 + humScore * 0.25 + windScore * 0.35) - condPenalty;
+    return Math.max(0, Math.min(100, Math.round(raw)));
+  };
+
+  const getRunScoreLabel = (score) => {
+    if (score === null) return { text: '—', color: '#9AA0A6' };
+    if (score >= 80) return { text: 'Excellent', color: '#24C789' };
+    if (score >= 60) return { text: 'Good', color: '#8AE676' };
+    if (score >= 40) return { text: 'Fair', color: '#E0A93A' };
+    return { text: 'Poor', color: '#FF5A36' };
+  };
+
   const getBestRunTimes = () => {
     if (!forecast.length) return [];
 
@@ -341,6 +380,57 @@ export default function WeatherScreen({ navigation }) {
             </View>
           );
         })()}
+
+      {/* ── Run Score card ── */}
+      {weather && (() => {
+        const score = computeRunScore();
+        const { text: scoreLabel, color: scoreColor } = getRunScoreLabel(score);
+        const barPct = (score ?? 0) / 100;
+        return (
+          <View style={styles.runScoreCard}>
+            <View style={styles.runScoreHeader}>
+              <View>
+                <Text style={styles.runScoreEyebrow}>RUN SCORE</Text>
+                <Text style={styles.runScoreTitle}>
+                  Conditions right now
+                </Text>
+              </View>
+              <View style={[styles.runScoreBadge, { backgroundColor: `${scoreColor}22` }]}>
+                <Text style={[styles.runScoreBadgeNum, { color: scoreColor }]}>
+                  {score ?? '—'}
+                </Text>
+                <Text style={[styles.runScoreBadgeLabel, { color: scoreColor }]}>
+                  {scoreLabel}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.runScoreTrack}>
+              <View
+                style={[
+                  styles.runScoreFill,
+                  { width: `${Math.round(barPct * 100)}%`, backgroundColor: scoreColor },
+                ]}
+              />
+            </View>
+            <View style={styles.runScoreFactors}>
+              {[
+                { label: 'Temp', val: `${Math.round(weather.main.temp)}°C`, ok: weather.main.temp >= 12 && weather.main.temp <= 24 },
+                { label: 'Humidity', val: `${weather.main.humidity}%`, ok: weather.main.humidity <= 70 },
+                { label: 'Wind', val: `${weather.wind.speed.toFixed(1)} m/s`, ok: weather.wind.speed < 10 },
+                { label: 'Sky', val: weather.weather[0].main, ok: !['Rain','Thunderstorm','Snow'].includes(weather.weather[0].main) },
+              ].map(({ label, val, ok }) => (
+                <View key={label} style={styles.runScoreFactor}>
+                  <Ionicons name={ok ? 'checkmark-circle' : 'alert-circle'} size={14} color={ok ? '#24C789' : '#FF5A36'} />
+                  <View>
+                    <Text style={styles.runScoreFactorLabel}>{label}</Text>
+                    <Text style={styles.runScoreFactorVal}>{val}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        );
+      })()}
 
       <View style={styles.recommendationCard}>
         <Text style={styles.cardTitle}>Running Recommendation</Text>
@@ -534,6 +624,88 @@ const styles = StyleSheet.create({
   },
   heroStatUnit: {
     ...T.metricUnit,
+  },
+  // Run Score card
+  runScoreCard: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 20,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  runScoreHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  runScoreEyebrow: {
+    fontFamily: FONT.semibold,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    color: '#9AA0A6',
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  runScoreTitle: {
+    fontFamily: FONT.semibold,
+    fontSize: 17,
+    color: '#0B0F13',
+    letterSpacing: -0.2,
+  },
+  runScoreBadge: {
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 14,
+  },
+  runScoreBadgeNum: {
+    fontFamily: FONT.black,
+    fontSize: 26,
+    lineHeight: 28,
+    letterSpacing: -1,
+  },
+  runScoreBadgeLabel: {
+    fontFamily: FONT.semibold,
+    fontSize: 10,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  runScoreTrack: {
+    height: 10,
+    backgroundColor: 'rgba(11,15,19,0.06)',
+    borderRadius: 99,
+    overflow: 'hidden',
+  },
+  runScoreFill: {
+    height: '100%',
+    borderRadius: 99,
+  },
+  runScoreFactors: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  runScoreFactor: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 4,
+  },
+  runScoreFactorLabel: {
+    fontFamily: FONT.semibold,
+    fontSize: 9,
+    letterSpacing: 0.5,
+    color: '#9AA0A6',
+    textTransform: 'uppercase',
+  },
+  runScoreFactorVal: {
+    fontFamily: FONT.semibold,
+    fontSize: 12,
+    color: '#0B0F13',
   },
   recommendationCard: {
     backgroundColor: '#FFFFFF',

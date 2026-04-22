@@ -523,6 +523,7 @@ export default function RunScreen({ route, navigation }) {
           runData={runData}
           currentSpeed={currentSpeed}
           closeRun={closeRun}
+          navigation={navigation}
         />
       )}
     </View>
