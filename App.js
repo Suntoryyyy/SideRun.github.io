@@ -265,9 +265,17 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 10,
+    // Safari on iOS has a known rendering bug where fontSize <= 10 with
+    // no explicit lineHeight clips the bottom of letter descenders inside
+    // a flex child. Bumping to 11 and pinning lineHeight to 16 gives the
+    // glyph box enough room on every browser.
+    fontSize: 11,
+    lineHeight: 16,
     letterSpacing: 0.2,
-    marginTop: 2,
+    marginTop: 3,
+    includeFontPadding: false,
+    // Ensure the label isn't clipped by parent overflow on web.
+    ...(Platform.OS === 'web' ? { overflow: 'visible' } : null),
   },
   runTab: {
     width: 52,

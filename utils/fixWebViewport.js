@@ -38,20 +38,20 @@ export default function fixWebViewport() {
   }
 
   // 2 ─── CSS layer ──────────────────────────────────────────────────────
-  // Why `svh` (small viewport height)?
+  // Why `dvh` (dynamic viewport height)?
   //
-  //   On iOS 15+ (and especially iOS 26), Safari's bottom URL bar is treated
-  //   as a translucent OVERLAY rather than layout-taking chrome. That means
-  //   `100vh` *and* `100dvh` both include the area behind the URL bar, so
-  //   content at `bottom: 0` visually sits UNDER the URL bar. `visualViewport`
-  //   does not reliably report the URL bar height either.
+  //   Previous iterations used `100svh` to guarantee the app stayed above
+  //   iOS Safari's floating URL bar. That worked, but left a visible gap
+  //   between the tab bar and the screen bottom whenever the URL bar was
+  //   collapsed into its compact state — so the bar never truly sat at
+  //   the bottom of the screen.
   //
-  //   `100svh` = the smallest possible visible viewport, i.e. the state when
-  //   all browser chrome is showing. Pinning the app to `100svh` means the
-  //   bottom edge of `#root` is always ABOVE the URL bar, regardless of
-  //   whether it's currently shown, hidden, or animating.
+  //   `100dvh` tracks the CURRENT visible viewport: it shrinks as the URL
+  //   bar expands and grows as it collapses. Combined with the per-
+  //   platform bottom-floor in `useWebBottomGuard`, labels always have
+  //   enough breathing room regardless of URL-bar state.
   //
-  //   Fallback chain: 100vh → JS-driven --app-height → 100svh.
+  //   Fallback chain: 100vh → JS-driven --app-height → 100dvh.
   const style = document.createElement('style');
   style.id = '__siderun_viewport_fix__';
   style.textContent = `
@@ -60,7 +60,7 @@ export default function fixWebViewport() {
     html, body, #root {
       height: 100vh;
       height: var(--app-height, 100vh);
-      height: 100svh;
+      height: 100dvh;
     }
 
     body {
