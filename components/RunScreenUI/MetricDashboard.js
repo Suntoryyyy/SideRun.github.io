@@ -86,8 +86,8 @@ export default MetricDashboard;
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 28,
-    paddingTop: 4,
-    paddingBottom: 8,
+    paddingTop: 6,
+    paddingBottom: 16,
   },
 
   /* primary distance */
@@ -95,14 +95,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   primaryValue: {
     fontFamily: FONT.extraBold,
-    fontSize: 72,
+    fontSize: 68,
     letterSpacing: -3,
     color: '#0B0F13',
-    lineHeight: 78,
+    lineHeight: 74,
     fontVariant: ['tabular-nums'],
   },
   primaryUnit: {

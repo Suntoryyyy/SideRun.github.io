@@ -163,23 +163,25 @@ export default StyleSheet.create({
     fontSize: 22,
   },
 
-  // Bottom sheet
+  // Bottom sheet — deliberately shorter so map stays prominent.
+  // The extra 200 px below bottom: -200 is a paint buffer so the white
+  // panel never shows a gap during bounce animations on iOS.
   dashboardContainer: {
     position: 'absolute',
-    bottom: -400,
+    bottom: -200,
     left: 0,
     right: 0,
-    height: height * 0.75 + 400,
+    height: height * 0.58 + 200,
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     shadowColor: '#0B0F13',
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.07,
+    shadowRadius: 18,
     elevation: 8,
-    paddingTop: 10,
-    paddingBottom: 425,
+    paddingTop: 8,
+    paddingBottom: 220,
     justifyContent: 'flex-start',
   },
   dashboardCollapsed: {
@@ -189,22 +191,23 @@ export default StyleSheet.create({
   },
   dragHandleContainer: {
     width: '100%',
-    height: 32,
+    height: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 4,
   },
   dragHandle: {
-    width: 40,
+    width: 36,
     height: 4,
     backgroundColor: '#E4E6EA',
     borderRadius: 2,
   },
-  dragHandleHint: {
-    fontFamily: FONT.semibold,
-    fontSize: 10,
-    color: '#9AA0A6',
-    letterSpacing: 0.4,
+
+  // Hairline between stats zone and action buttons in the bottom panel
+  panelDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(11,15,19,0.07)',
+    marginHorizontal: 24,
+    marginBottom: 16,
   },
 
   // Map avatar halo (around the runner dot)
@@ -282,62 +285,82 @@ export default StyleSheet.create({
   },
 
   // Control zone
-  controlsContainer: {
-    paddingHorizontal: 20,
+  // ─── Pre-run controls ─────────────────────────────────────────────────
+  // Clean hierarchy: visibility chips → GO button, no orphaned sections.
+  preRunWrapper: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingBottom: Platform.OS === 'ios' ? 20 : 0,
+    paddingHorizontal: 24,
+    paddingTop: 4,
+    paddingBottom: 8,
+    gap: 20,
   },
-  preRunControls: {
-    alignItems: 'center',
-    width: '100%',
-  },
-  scopeSelectorContainer: {
+  scopeRow: {
     flexDirection: 'row',
     backgroundColor: '#F4F5F7',
-    borderRadius: 24,
-    marginBottom: 24,
-    padding: 4,
-    width: '86%',
-    justifyContent: 'space-between',
-  },
-  scopeBtn: {
-    flex: 1,
-    paddingVertical: 10,
     borderRadius: 20,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 6,
+    padding: 3,
+    gap: 2,
   },
-  scopeBtnActive: {
+  scopeChip: {
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 17,
+  },
+  scopeChipActive: {
     backgroundColor: '#FFFFFF',
     shadowColor: '#0B0F13',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 5,
     elevation: 2,
   },
-  scopeBtnText: {
+  scopeChipText: {
     fontFamily: FONT.semibold,
     fontSize: 13,
-    color: '#6B6F76',
+    color: '#9AA0A6',
     letterSpacing: 0.2,
   },
-  scopeBtnTextActive: {
-    fontFamily: FONT.extraBold,
+  scopeChipTextActive: {
+    fontFamily: FONT.bold,
     color: '#0B0F13',
   },
-  circleStartButton: {
+  goButton: {
     backgroundColor: '#0B0F13',
-    width: 92,
-    height: 92,
-    borderRadius: 46,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#0B0F13',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
+    elevation: 8,
+  },
+  goButtonText: {
+    color: '#FFFFFF',
+    fontFamily: FONT.extraBold,
+    fontSize: 20,
+    letterSpacing: 3,
+    textTransform: 'uppercase',
+  },
+  // Legacy aliases kept for the running / finished / spectate states
+  controlsContainer: {
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingBottom: Platform.OS === 'ios' ? 12 : 0,
+  },
+  circleStartButton: {
+    backgroundColor: '#0B0F13',
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#0B0F13',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.28,
     shadowRadius: 18,
     elevation: 8,
   },

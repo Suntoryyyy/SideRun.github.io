@@ -107,47 +107,41 @@ const SpectatorControls = ({
 
   if (!isRunning) {
     return (
-      <View style={styles.controlsContainer}>
-        <View style={styles.preRunControls}>
-          <Animated.View
-            style={[
-              styles.scopeSelectorContainer,
-              { opacity: contentOpacity },
-            ]}
-          >
-            {['public', 'friends', 'private'].map((scope) => (
-              <TouchableOpacity
-                key={scope}
+      <View style={styles.preRunWrapper}>
+        {/* Visibility row — sits directly above GO, compact */}
+        <View style={styles.scopeRow}>
+          {['public', 'friends', 'private'].map((scope) => (
+            <TouchableOpacity
+              key={scope}
+              style={[
+                styles.scopeChip,
+                visibilityScope === scope && styles.scopeChipActive,
+              ]}
+              onPress={() => setVisibilityScope(scope)}
+              activeOpacity={0.8}
+            >
+              <Text
                 style={[
-                  styles.scopeBtn,
-                  visibilityScope === scope && styles.scopeBtnActive,
+                  styles.scopeChipText,
+                  visibilityScope === scope && styles.scopeChipTextActive,
                 ]}
-                onPress={() => setVisibilityScope(scope)}
-                activeOpacity={0.85}
               >
-                <Text
-                  style={[
-                    styles.scopeBtnText,
-                    visibilityScope === scope && styles.scopeBtnTextActive,
-                  ]}
-                >
-                  {scope.charAt(0).toUpperCase() + scope.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </Animated.View>
-
-          <TouchableOpacity
-            style={styles.circleStartButton}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-              startRun();
-            }}
-            activeOpacity={0.9}
-          >
-            <Text style={styles.circleStartText}>GO</Text>
-          </TouchableOpacity>
+                {scope.charAt(0).toUpperCase() + scope.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
+
+        <TouchableOpacity
+          style={styles.goButton}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            startRun();
+          }}
+          activeOpacity={0.9}
+        >
+          <Text style={styles.goButtonText}>GO</Text>
+        </TouchableOpacity>
       </View>
     );
   }

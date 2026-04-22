@@ -463,16 +463,11 @@ export default function RunScreen({ route, navigation }) {
       >
         <TouchableOpacity
           style={styles.dragHandleContainer}
-          activeOpacity={0.8}
+          activeOpacity={0.7}
           onPress={togglePanel}
-          hitSlop={{ top: 10, bottom: 10, left: 60, right: 60 }}
+          hitSlop={{ top: 12, bottom: 12, left: 80, right: 80 }}
         >
           <View style={styles.dragHandle} />
-          {Platform.OS === 'web' && (
-            <Text style={styles.dragHandleHint}>
-              {isPanelCollapsed ? '▲ Show stats' : '▼ Hide'}
-            </Text>
-          )}
         </TouchableOpacity>
 
               <MetricDashboard
@@ -486,10 +481,10 @@ export default function RunScreen({ route, navigation }) {
           signalLost={signalLost}
         />
 
-        {/* Live extras between primary stats and action row — replaces the
-            empty flex spacer so the expanded panel feels intentional. */}
-        {mode !== 'spectate' && (
-          <Animated.View style={{ opacity: contentOpacity, flex: 1 }}>
+        {/* Live extras — only shown WHILE running so the pre-run panel
+            stays clean (no empty milestone/pace placeholders). */}
+        {mode !== 'spectate' && isRunning && (
+          <Animated.View style={{ opacity: contentOpacity }}>
             <RunLivePanel
               runData={runData}
               durationInSeconds={durationInSeconds}
@@ -498,7 +493,10 @@ export default function RunScreen({ route, navigation }) {
             />
           </Animated.View>
         )}
-        {mode === 'spectate' && <View style={{ height: 12 }} />}
+        {mode === 'spectate' && <View style={{ height: 8 }} />}
+
+        {/* Subtle hairline between stats/live panel and action buttons */}
+        <View style={styles.panelDivider} />
 
         <SpectatorControls
           mode={mode}
