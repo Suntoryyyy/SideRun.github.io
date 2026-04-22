@@ -8,7 +8,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "predeploy": "expo export -p web -c && node -e \"require('fs').writeFileSync('dist/.nojekyll', ''); let h=require('fs').readFileSync('dist/index.html','utf8'); h=h.replace('</head>','<meta http-equiv=\\\"Cache-Control\\\" content=\\\"no-cache, no-store, must-revalidate\\\" /><meta http-equiv=\\\"Pragma\\\" content=\\\"no-cache\\\" /><meta http-equiv=\\\"Expires\\\" content=\\\"0\\\" /></head>'); require('fs').writeFileSync('dist/index.html',h);\"",
+    "predeploy": "expo export -p web -c && node scripts/postbuild-html.js",
     "deploy": "gh-pages -d dist --dotfiles",
     "figma:connect": "figma connect publish --skip-update-check --exit-on-unreadable-files",
     "figma:connect:dry": "figma connect publish --dry-run --skip-update-check --exit-on-unreadable-files"

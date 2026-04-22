@@ -57,9 +57,14 @@ export default function useWebBottomGuard() {
         );
       }
 
-      // iOS PWA home-indicator floor. Covers the case where `env(...)`
-      // isn't populated (some iOS versions don't until after first tap).
-      const pwaFloor = standalone && ios ? 24 : 0;
+      // iOS PWA home-indicator floor. 34pt is the standard height used by
+      // UIKit for the home indicator on iPhone X / 11 / 12 / 13 / 14 / 15
+      // / 16 / 17. We apply this floor whenever we detect an iOS PWA in
+      // standalone mode, as a defence against `env(safe-area-inset-bottom)`
+      // being 0 — which happens on iOS versions that cache the initial
+      // viewport meta, or when the PWA was installed before the app's
+      // HTML shipped `viewport-fit=cover`.
+      const pwaFloor = standalone && ios ? 34 : 0;
 
       // Universal visual buffer so labels never sit flush against the bottom.
       const visualBuffer = chrome > 0 ? 8 : 4;
