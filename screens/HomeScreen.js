@@ -169,6 +169,15 @@ export default function HomeScreen({ navigation }) {
         setWeekSeries(series);
       }
 
+      // Always read the local seed / cache FIRST, before touching Supabase.
+      // This ensures "Seed a completed run" on the Demo toggle always shows
+      // up on this screen, even if the Supabase call fails or is slow.
+      let localRun = null;
+      try {
+        const localStr = await AsyncStorage.getItem('lastCompletedRun');
+        if (localStr) localRun = JSON.parse(localStr);
+      } catch (_) {}
+
       // Supabase: last run + last 4 for next-target calculation
       const { data: latestRuns } = await supabase
         .from("runs")
@@ -177,15 +186,19 @@ export default function HomeScreen({ navigation }) {
         .order("created_at", { ascending: false })
         .limit(4);
 
-      const latest = latestRuns?.[0] || null;
-
-      // Fall back to local cache if cloud is empty (offline / just finished).
-      let displayRun = latest;
-      if (!displayRun) {
-        try {
-          const localStr = await AsyncStorage.getItem('lastCompletedRun');
-          if (localStr) displayRun = JSON.parse(localStr);
-        } catch (_) {}
+      // Merge: prefer whichever entry has the MORE RECENT created_at so
+      // that seeded demo runs always appear even when Supabase is empty,
+      // but real completed runs correctly replace them once uploaded.
+      const supabaseRun = latestRuns?.[0] || null;
+      let displayRun = supabaseRun;
+      if (
+        localRun &&
+        (
+          !supabaseRun ||
+          new Date(localRun.created_at) > new Date(supabaseRun.created_at)
+        )
+      ) {
+        displayRun = localRun;
       }
       setRecentRun(displayRun || null);
 

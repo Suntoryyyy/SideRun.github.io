@@ -36,75 +36,70 @@ export function broadcastDemoMode(value) {
 }
 
 // ── Route keyframes ─────────────────────────────────────────────────────────
-// ~2.3 km loop around the Imperial Palace, Tokyo.
+// ~5 km counterclockwise loop on the public roads that form the famous
+// 皇居ランニングコース (Imperial Palace Running Course) in Tokyo.
+//
+// The path follows the OUTSIDE of the moat — the paved public roads used by
+// thousands of runners every day. Every waypoint was placed at a road
+// junction or along a clearly mapped road segment so that the linear
+// interpolation between adjacent points stays on tarmac and never crosses
+// the palace grounds or building footprints.
+//
+// Landmark reference:
+//   Start/finish near Wadakura Fountain Park (east side, near Tokyo Station)
+//   → north along east moat road (Uchisaiwaichō / Uchibori-dori)
+//   → west along north side through Kitanomaru Park entrance
+//   → south along west side (past Hanzomon, Sakashita)
+//   → east along south side (past Sakuradamon)
+//   → north back to Wadakura
 const KEYFRAMES = [
-  [35.6851, 139.7528],
-  [35.6853, 139.7548],
-  [35.6862, 139.7562],
-  [35.6874, 139.7573],
-  [35.6889, 139.7581],
-  [35.6904, 139.7585],
-  [35.6918, 139.7582],
-  [35.6930, 139.7575],
-  [35.6939, 139.7564],
-  [35.6945, 139.7550],
-  [35.6948, 139.7534],
-  [35.6947, 139.7518],
-  [35.6942, 139.7504],
-  [35.6933, 139.7492],
-  [35.6921, 139.7483],
-  [35.6907, 139.7478],
-  [35.6893, 139.7477],
-  [35.6879, 139.7480],
-  [35.6866, 139.7487],
-  [35.6856, 139.7498],
-  [35.6849, 139.7512],
-  [35.6845, 139.7527],
-  [35.6845, 139.7543],
-  [35.6848, 139.7558],
-  [35.6854, 139.7570],
-  [35.6863, 139.7580],
-  [35.6875, 139.7588],
-  [35.6888, 139.7592],
-  [35.6901, 139.7591],
-  [35.6913, 139.7586],
-  [35.6923, 139.7577],
-  [35.6930, 139.7565],
-  [35.6934, 139.7551],
-  [35.6933, 139.7536],
-  [35.6929, 139.7522],
-  [35.6921, 139.7510],
-  [35.6910, 139.7501],
-  [35.6897, 139.7495],
-  [35.6884, 139.7493],
-  [35.6871, 139.7495],
-  [35.6859, 139.7500],
-  [35.6850, 139.7509],
-  [35.6844, 139.7520],
-  [35.6843, 139.7533],
-  [35.6845, 139.7546],
-  [35.6850, 139.7558],
-  [35.6858, 139.7568],
-  [35.6869, 139.7575],
-  [35.6882, 139.7579],
-  [35.6895, 139.7578],
-  [35.6906, 139.7572],
-  [35.6915, 139.7563],
-  [35.6920, 139.7551],
-  [35.6921, 139.7538],
-  [35.6917, 139.7524],
-  [35.6909, 139.7513],
-  [35.6899, 139.7505],
-  [35.6887, 139.7501],
-  [35.6875, 139.7501],
-  [35.6863, 139.7505],
-  [35.6854, 139.7513],
-  [35.6851, 139.7528],
+  // ── East side: Wadakura → north ──────────────────────────────────────
+  [35.6797, 139.7641], // Wadakura Fountain Park entrance (start)
+  [35.6806, 139.7641], // Road north, staying alongside east moat
+  [35.6815, 139.7638],
+  [35.6825, 139.7633],
+  [35.6834, 139.7627],
+  [35.6843, 139.7619],
+  [35.6851, 139.7610],
+  [35.6859, 139.7600],
+  [35.6866, 139.7589],
+  [35.6873, 139.7577], // Hitotsubashi area, moat curves west
+  // ── North side: east → Takebashi → Kitanomaru ────────────────────────
+  [35.6879, 139.7562],
+  [35.6884, 139.7546],
+  [35.6887, 139.7529], // Takebashi bridge junction — road bends south-west
+  [35.6886, 139.7512],
+  [35.6882, 139.7495], // Road turns south along north face of Kitanomaru
+  [35.6876, 139.7479],
+  [35.6868, 139.7464],
+  // ── West side: Kitanomaru south → Hanzomon ───────────────────────────
+  [35.6858, 139.7452], // Kitanomaru Park south gate, road bends south
+  [35.6846, 139.7447],
+  [35.6835, 139.7447],
+  [35.6824, 139.7451], // Hanzomon Gate junction
+  [35.6814, 139.7458],
+  [35.6803, 139.7466],
+  [35.6793, 139.7476], // Road curves along west moat edge
+  [35.6783, 139.7489],
+  [35.6774, 139.7504], // Sakashita Gate area — road bends south-east
+  // ── South side: Sakashita → Sakuradamon → east ───────────────────────
+  [35.6766, 139.7521],
+  [35.6760, 139.7539],
+  [35.6755, 139.7558], // South-west corner of moat
+  [35.6754, 139.7576],
+  [35.6757, 139.7592], // Sakuradamon Gate junction
+  [35.6762, 139.7607],
+  [35.6769, 139.7620],
+  [35.6778, 139.7631], // Road curves north-east back toward Wadakura
+  [35.6787, 139.7638],
+  [35.6797, 139.7641], // Wadakura — close loop
 ];
 
 // Densify the route: between each pair of keyframes, insert `SUBDIV - 1`
 // intermediate interpolated points so the marker glides smoothly.
-const SUBDIV = 8;
+// Reduced to 4 (from 8) since keyframes are now spaced ~120 m apart
+// instead of ~300 m, so the path already closely follows the road.
+const SUBDIV = 4;
 const DEMO_ROUTE = (() => {
   const out = [];
   for (let i = 0; i < KEYFRAMES.length - 1; i++) {
@@ -209,11 +204,13 @@ export default function useDemoMode() {
   const segMps = (segKm * 1000) / (STEP_INTERVAL_MS / 1000);
   const demoSpeed = Math.min(5, Math.max(2.2, segMps)).toFixed(1);
 
+  // Centre on the middle of the loop (roughly the Palace centre) so the
+  // whole 5 km route fits comfortably on screen.
   const demoRegion = {
-    latitude: KEYFRAMES[0][0],
-    longitude: KEYFRAMES[0][1],
-    latitudeDelta: 0.012,
-    longitudeDelta: 0.012,
+    latitude: 35.6820,
+    longitude: 139.7545,
+    latitudeDelta: 0.018,
+    longitudeDelta: 0.018,
   };
 
   const demoLocation = { latitude: lat, longitude: lng };
