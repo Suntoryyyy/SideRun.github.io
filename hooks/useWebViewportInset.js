@@ -1,51 +1,90 @@
 /**
- * useWebViewportInset — web-only hook that reports the height of the
- * browser chrome sitting below the visible viewport.
+ * useWebBottomGuard — returns the total number of pixels that must be
+ * reserved below content on web, so absolute/fixed elements like the bottom
+ * tab bar are never hidden by browser chrome or the iOS home indicator.
  *
- * On iOS Safari, the floating URL bar at the bottom takes ~85 px when
- * expanded, but `env(safe-area-inset-bottom)` only reports the home-
- * indicator inset (~34 px) and misses the URL bar entirely. Without
- * accounting for this, absolute/fixed-positioned elements at the bottom
- * of the page (like our bottom tab bar) get clipped.
+ * It combines THREE signals and returns the maximum, because no single
+ * signal is reliable across all devices/modes:
  *
- * We compute the chrome height as `window.innerHeight - visualViewport.height`
- * and listen for resize/scroll events on `visualViewport` so we update live
- * as the URL bar expands or collapses.
+ *   - `env(safe-area-inset-bottom)` from react-native-safe-area-context
+ *     (works in PWA on notched iPhones, may be 0 in plain Safari)
+ *
+ *   - `innerHeight − visualViewport.height` — the live height of the
+ *     floating browser chrome (Safari URL bar, Android Chrome bar).
+ *     Non-zero only when the URL bar is visible.
+ *
+ *   - `display-mode: standalone` detection — when an iOS device runs
+ *     the app as a PWA but `env()` still reports 0 (some iOS versions),
+ *     apply a conservative home-indicator floor of 24pt.
+ *
+ * Callers should use `useSafeAreaInsets().bottom` AND this value, taking
+ * the maximum of the two.
  */
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
-export default function useWebViewportInset() {
-  const [chrome, setChrome] = useState(0);
+function isStandalone() {
+  if (typeof window === 'undefined') return false;
+  // iOS uses `navigator.standalone`, everyone else uses `display-mode`.
+  return (
+    window.navigator?.standalone === true ||
+    (window.matchMedia &&
+      window.matchMedia('(display-mode: standalone)').matches)
+  );
+}
+
+function isIOS() {
+  if (typeof navigator === 'undefined') return false;
+  return /iP(hone|od|ad)/.test(navigator.platform || navigator.userAgent || '');
+}
+
+export default function useWebBottomGuard() {
+  const [guard, setGuard] = useState(0);
 
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
 
+    const standalone = isStandalone();
+    const ios = isIOS();
+
     const measure = () => {
-      if (typeof window.visualViewport !== 'undefined' && window.visualViewport) {
-        const diff = window.innerHeight - window.visualViewport.height;
-        setChrome(Math.max(0, Math.round(diff)));
+      // Browser chrome (Safari URL bar or similar).
+      let chrome = 0;
+      if (window.visualViewport) {
+        chrome = Math.max(
+          0,
+          Math.round(window.innerHeight - window.visualViewport.height),
+        );
       }
+
+      // iOS PWA home-indicator floor. Covers the case where `env(...)`
+      // isn't populated (some iOS versions don't until after first tap).
+      const pwaFloor = standalone && ios ? 24 : 0;
+
+      // Universal visual buffer so labels never sit flush against the bottom.
+      const visualBuffer = chrome > 0 ? 8 : 4;
+
+      setGuard(Math.max(chrome + visualBuffer, pwaFloor));
     };
 
     measure();
 
+    window.addEventListener('resize', measure);
+    window.addEventListener('orientationchange', measure);
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', measure);
       window.visualViewport.addEventListener('scroll', measure);
     }
-    window.addEventListener('resize', measure);
-    window.addEventListener('orientationchange', measure);
 
     return () => {
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('orientationchange', measure);
       if (window.visualViewport) {
         window.visualViewport.removeEventListener('resize', measure);
         window.visualViewport.removeEventListener('scroll', measure);
       }
-      window.removeEventListener('resize', measure);
-      window.removeEventListener('orientationchange', measure);
     };
   }, []);
 
-  return chrome;
+  return guard;
 }

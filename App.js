@@ -35,7 +35,7 @@ import {
 } from '@expo-google-fonts/inter';
 import patchTextFonts from './utils/patchTextFonts';
 import fixWebViewport from './utils/fixWebViewport';
-import useWebViewportInset from './hooks/useWebViewportInset';
+import useWebBottomGuard from './hooks/useWebViewportInset';
 
 fixWebViewport();
 
@@ -66,20 +66,23 @@ const Stack = createStackNavigator();
 
 function MainTabNavigator({ handleLogout }) {
   const insets = useSafeAreaInsets();
-  // `webChrome` is the height of iOS Safari's floating URL bar (or equivalent
-  // on other mobile browsers). Measured live from `visualViewport`.
-  const webChrome = useWebViewportInset();
+  // `webGuard` combines safe-area, visualViewport chrome height, and
+  // standalone-PWA detection into a single bottom-reserve value. It is 0
+  // on native platforms.
+  const webGuard = useWebBottomGuard();
 
-  // iOS: home indicator inset (24–34pt).
-  // Android: nothing special — software nav is already below.
-  // Web: safe-area-inset-bottom rarely reports anything on Safari, so we use
-  // the live browser-chrome measurement, plus a small visual buffer so labels
-  // never sit flush against the URL bar.
+  // Final bottom padding for the tab bar across every mode we support:
+  //   • iOS native          → home indicator (24–34pt via insets.bottom)
+  //   • Android native      → 8pt above gesture bar / 3-button nav
+  //   • iOS Safari browser  → URL-bar height from visualViewport + buffer
+  //   • iOS standalone PWA  → insets.bottom (34) OR conservative 24pt floor
+  //   • Android browser PWA → insets.bottom OR gesture nav floor
+  //   • Desktop             → 12pt visual buffer
   const bottomPad =
     Platform.OS === 'android'
-      ? 8
+      ? Math.max(insets.bottom, 8)
       : Platform.OS === 'web'
-      ? Math.max(insets.bottom, webChrome + 8, 12)
+      ? Math.max(insets.bottom, webGuard, 12)
       : Math.max(insets.bottom, 12);
 
   return (
