@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import MapView, { Polyline, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import MapStyle from '../../screens/MapStyle.json';
 import { Image } from 'expo-image';
+import useDemoMode, { DEMO_ROUTE_COORDS } from '../../hooks/useDemoMode';
 import styles from '../../styles/RunScreenStyles';
 
 const FloatingEmoji = ({ emoji, onComplete }) => {
@@ -64,6 +65,7 @@ const RunMapMemo = React.memo(({
   recenterMap,
   setLiveEmojis
 }) => {
+  const { isDemoMode } = useDemoMode();
   return (
     <View style={styles.mapContainer}>
         {/* Floating Back Button */}
@@ -121,6 +123,15 @@ const RunMapMemo = React.memo(({
               followsUserLocation={false} // Detach forced follow
               customMapStyle={MapStyle}
             >
+              {/* Demo-mode preview of the Tokyo loop — dashed, low opacity */}
+              {isDemoMode && (
+                <Polyline
+                  coordinates={DEMO_ROUTE_COORDS}
+                  strokeColor="rgba(11,15,19,0.25)"
+                  strokeWidth={2}
+                  lineDashPattern={[6, 8]}
+                />
+              )}
               {runData.coordinates.length > 1 && (
                 <Polyline
                   coordinates={runData.coordinates}

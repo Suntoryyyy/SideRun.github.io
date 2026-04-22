@@ -34,6 +34,10 @@ import {
   Inter_900Black,
 } from '@expo-google-fonts/inter';
 import patchTextFonts from './utils/patchTextFonts';
+import fixWebViewport from './utils/fixWebViewport';
+import useWebViewportInset from './hooks/useWebViewportInset';
+
+fixWebViewport();
 
 import HomeScreen from './screens/HomeScreen';
 import FriendsScreen from './screens/FriendsScreen';
@@ -62,15 +66,20 @@ const Stack = createStackNavigator();
 
 function MainTabNavigator({ handleLogout }) {
   const insets = useSafeAreaInsets();
-  // iOS Safari's floating URL bar eats 40–50pt depending on scroll state, but
-  // `env(safe-area-inset-bottom)` underreports it. Use a generous web floor so
-  // labels never clip. Native iOS uses the real inset (24–34pt for the home
-  // indicator). Android sits above the software nav bar so a small pad is fine.
+  // `webChrome` is the height of iOS Safari's floating URL bar (or equivalent
+  // on other mobile browsers). Measured live from `visualViewport`.
+  const webChrome = useWebViewportInset();
+
+  // iOS: home indicator inset (24–34pt).
+  // Android: nothing special — software nav is already below.
+  // Web: safe-area-inset-bottom rarely reports anything on Safari, so we use
+  // the live browser-chrome measurement, plus a small visual buffer so labels
+  // never sit flush against the URL bar.
   const bottomPad =
     Platform.OS === 'android'
       ? 8
       : Platform.OS === 'web'
-      ? Math.max(insets.bottom, 24)
+      ? Math.max(insets.bottom, webChrome + 8, 12)
       : Math.max(insets.bottom, 12);
 
   return (

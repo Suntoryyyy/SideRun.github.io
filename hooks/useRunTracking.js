@@ -114,15 +114,26 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
   }, [isRunning, isPaused]);
 
   useEffect(() => {
-    if (mode !== "spectate" && !isDemoMode) requestLocationPermission();
-    if (isDemoMode && mode !== "spectate") {
-      // Seed the map with the demo start location immediately.
+    if (mode === "spectate") return;
+
+    if (isDemoMode) {
+      // Stop any active real-GPS watcher and seed the map with Tokyo.
+      if (watchId.current) {
+        watchId.current.remove();
+        watchId.current = null;
+      }
       setCurrentLocation(demoLocation);
       setRegion(demoRegion);
+    } else {
+      requestLocationPermission();
     }
+
     return () => {
       if (watchId.current) watchId.current.remove();
     };
+    // demoLocation/demoRegion are recomputed on every render; we intentionally
+    // only re-seed when the isDemoMode *flag* flips, not on every tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDemoMode]);
 
   const requestLocationPermission = async () => {
@@ -242,11 +253,19 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
   const startRun = async () => {
     requestWakeLock();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    if (!currentLocation)
+
+    // In demo mode, always use the current simulated location so the run
+    // starts on the Tokyo loop regardless of real GPS availability.
+    const seedLocation = isDemoMode ? demoLocation : currentLocation;
+    if (!seedLocation)
       return Alert.alert(
         "Location not available",
         "Please wait for location to be determined.",
       );
+    if (isDemoMode) {
+      setCurrentLocation(demoLocation);
+      setRegion(demoRegion);
+    }
 
     if (visibilityScope !== "private") {
       setLiveFriends([
@@ -254,15 +273,15 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
           id: 1,
           name: "Alice",
           avatar: "👩‍💼",
-          latitude: currentLocation.latitude + 0.002,
-          longitude: currentLocation.longitude + 0.001,
+          latitude: seedLocation.latitude + 0.002,
+          longitude: seedLocation.longitude + 0.001,
         },
         {
           id: 2,
           name: "Charlie",
           avatar: "👨‍🎨",
-          latitude: currentLocation.latitude - 0.001,
-          longitude: currentLocation.longitude - 0.003,
+          latitude: seedLocation.latitude - 0.001,
+          longitude: seedLocation.longitude - 0.003,
         },
       ]);
     } else {
@@ -276,8 +295,8 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
     lastSplitDistRef.current = 0;
     lastSplitTimeRef.current = 0;
     prevDemoCoordLen.current = demoCoordinates.length;
-    lastLocation.current = currentLocation;
-    setRunData({ distance: 0, calories: 0, coordinates: [currentLocation], splits: [] });
+    lastLocation.current = seedLocation;
+    setRunData({ distance: 0, calories: 0, coordinates: [seedLocation], splits: [] });
 
     if (isDemoMode) return; // demo location is fed via the useEffect above
 

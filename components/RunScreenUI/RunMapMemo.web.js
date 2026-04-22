@@ -6,6 +6,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import useDemoMode, { DEMO_ROUTE_COORDS } from '../../hooks/useDemoMode';
 
 // Fix leaflet icon paths
 delete L.Icon.Default.prototype._getIconUrl;
@@ -140,6 +141,14 @@ const RunMapMemo = ({
   const paceSegments = buildPaceSegments(coords);
   const hasTsData = coords.length >= 2 && coords[0]?.timestamp != null;
 
+  // When demo mode is on, draw a faint "preview" of the full Tokyo loop so
+  // the user can see exactly where the simulation will run — especially
+  // helpful for course-work demos when no real GPS is available.
+  const { isDemoMode } = useDemoMode();
+  const previewPositions = isDemoMode
+    ? DEMO_ROUTE_COORDS.map((c) => [c.latitude, c.longitude])
+    : null;
+
   return (
     <View style={[styles.container, { flex: 1, height: '100vh', width: '100vw' }]}>
       <MapContainer 
@@ -155,7 +164,19 @@ const RunMapMemo = ({
         />
 
         {currentLocation && <RecenterControl location={currentLocation} />}
-        
+
+        {/* Demo-mode route preview — faint dashed loop showing where the
+            simulated run will go. Only visible when demo mode is on. */}
+        {previewPositions && (
+          <Polyline
+            positions={previewPositions}
+            color="#0B0F13"
+            weight={2}
+            opacity={0.25}
+            dashArray="6 8"
+          />
+        )}
+
         {/* Draw the user's route — pace-coloured if timestamps exist, solid green otherwise */}
         {coords.length > 1 && (hasTsData
           ? paceSegments.map((seg, i) => (
