@@ -48,7 +48,10 @@ export default function useWebBottomGuard() {
     const ios = isIOS();
 
     const measure = () => {
-      // Browser chrome (Safari URL bar or similar).
+      // Browser chrome (Safari URL bar or similar) — as reported by the
+      // Visual Viewport API. iOS 26 Safari sometimes returns 0 here even
+      // while the floating URL bar is visible, because the bar is treated
+      // as a translucent overlay rather than layout-taking chrome.
       let chrome = 0;
       if (window.visualViewport) {
         chrome = Math.max(
@@ -66,10 +69,19 @@ export default function useWebBottomGuard() {
       // HTML shipped `viewport-fit=cover`.
       const pwaFloor = standalone && ios ? 34 : 0;
 
+      // iOS Safari browser floor. The floating URL bar is ~50–60pt tall
+      // and `visualViewport` doesn't always report this on iOS 26+. We
+      // reserve a conservative 12pt even in the best case — in practice
+      // the `100svh` CSS rule in fixWebViewport.js keeps the app above
+      // the URL bar, so this is just a visual buffer for the labels.
+      const safariFloor = ios && !standalone ? 12 : 0;
+
       // Universal visual buffer so labels never sit flush against the bottom.
       const visualBuffer = chrome > 0 ? 8 : 4;
 
-      setGuard(Math.max(chrome + visualBuffer, pwaFloor));
+      setGuard(
+        Math.max(chrome + visualBuffer, pwaFloor, safariFloor),
+      );
     };
 
     measure();

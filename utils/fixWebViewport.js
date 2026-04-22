@@ -38,23 +38,35 @@ export default function fixWebViewport() {
   }
 
   // 2 ─── CSS layer ──────────────────────────────────────────────────────
+  // Why `svh` (small viewport height)?
+  //
+  //   On iOS 15+ (and especially iOS 26), Safari's bottom URL bar is treated
+  //   as a translucent OVERLAY rather than layout-taking chrome. That means
+  //   `100vh` *and* `100dvh` both include the area behind the URL bar, so
+  //   content at `bottom: 0` visually sits UNDER the URL bar. `visualViewport`
+  //   does not reliably report the URL bar height either.
+  //
+  //   `100svh` = the smallest possible visible viewport, i.e. the state when
+  //   all browser chrome is showing. Pinning the app to `100svh` means the
+  //   bottom edge of `#root` is always ABOVE the URL bar, regardless of
+  //   whether it's currently shown, hidden, or animating.
+  //
+  //   Fallback chain: 100vh → JS-driven --app-height → 100svh.
   const style = document.createElement('style');
   style.id = '__siderun_viewport_fix__';
   style.textContent = `
     html, body { margin: 0; padding: 0; }
 
-    /* Fallback chain: 100vh → JS-driven --app-height → 100dvh */
-    html, body {
-      min-height: 100vh;
-      min-height: var(--app-height, 100vh);
-      min-height: 100dvh;
+    html, body, #root {
+      height: 100vh;
+      height: var(--app-height, 100vh);
+      height: 100svh;
     }
 
-    /* Disable iOS rubber-band bounce so the tab bar doesn't visually
-       detach from the bottom when the user over-scrolls. */
-    html, body {
+    body {
       overscroll-behavior: none;
       -webkit-overflow-scrolling: touch;
+      overflow: hidden;
     }
   `;
   document.head.appendChild(style);
