@@ -69,18 +69,32 @@ export default function useWebBottomGuard() {
       // HTML shipped `viewport-fit=cover`.
       const pwaFloor = standalone && ios ? 34 : 0;
 
-      // iOS Safari browser floor. The floating URL bar is ~50–60pt tall
-      // and `visualViewport` doesn't always report this on iOS 26+. We
-      // reserve a conservative 12pt even in the best case — in practice
-      // the `100svh` CSS rule in fixWebViewport.js keeps the app above
-      // the URL bar, so this is just a visual buffer for the labels.
-      const safariFloor = ios && !standalone ? 12 : 0;
+      // iOS browser floor (Safari + Chrome — iOS Chrome is WebKit too).
+      // The floating bottom URL bar is ~50–60pt tall; `100svh` keeps the
+      // app above it, but label bottoms still visually touched the
+      // browser-chrome boundary with only a small buffer. 24pt gives a
+      // clear gap between labels and browser chrome on every iOS browser.
+      const safariFloor = ios && !standalone ? 24 : 0;
+
+      // Android mobile browser floor — Chrome's bottom bar can appear
+      // dynamically and `visualViewport` lags one frame behind. 16pt is
+      // enough to keep labels visually clear without wasting space.
+      const androidBrowserFloor =
+        !ios && !standalone && typeof navigator !== 'undefined' &&
+        /Android/i.test(navigator.userAgent || '')
+          ? 16
+          : 0;
 
       // Universal visual buffer so labels never sit flush against the bottom.
       const visualBuffer = chrome > 0 ? 8 : 4;
 
       setGuard(
-        Math.max(chrome + visualBuffer, pwaFloor, safariFloor),
+        Math.max(
+          chrome + visualBuffer,
+          pwaFloor,
+          safariFloor,
+          androidBrowserFloor,
+        ),
       );
     };
 

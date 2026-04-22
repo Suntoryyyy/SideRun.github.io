@@ -54,8 +54,9 @@ import OnboardingWelcomeScreen from './screens/OnboardingWelcomeScreen';
 import OnboardingPermissionsScreen from './screens/OnboardingPermissionsScreen';
 import OnboardingGoalScreen, { ONBOARDING_KEY } from './screens/OnboardingGoalScreen';
 
-// Visual height of icon + label; actual bar size adds safe-area bottom inset
-const TAB_BAR_CONTENT_HEIGHT = 56;
+// Visual height of icon + label; actual bar size adds safe-area bottom inset.
+// 60pt = 8pt top padding + ~22pt icon + ~14pt label + 16pt internal breathing.
+const TAB_BAR_CONTENT_HEIGHT = 60;
 
 // Backwards-compat export for screens that position floating CTAs above the
 // bar (HomeScreen). We approximate here — the bar itself uses the live inset.
