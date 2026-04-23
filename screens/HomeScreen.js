@@ -80,6 +80,21 @@ export default function HomeScreen({ navigation }) {
     fetchWeather();
   }, []);
 
+  const getStoredCurrentUser = async () => {
+    if (Platform.OS === "web") {
+      try {
+        const sessionUser = sessionStorage.getItem("currentUser");
+        if (sessionUser) return sessionUser;
+      } catch (_) {}
+    }
+
+    try {
+      return await AsyncStorage.getItem("currentUser");
+    } catch (_) {
+      return null;
+    }
+  };
+
   const fetchWeather = async () => {
     try {
       const apiKey = process.env.EXPO_PUBLIC_OPENWEATHER_API_KEY;
@@ -116,13 +131,33 @@ export default function HomeScreen({ navigation }) {
         }
       } catch (_) {}
 
-      const cStr = await AsyncStorage.getItem("currentUser");
-      if (!cStr) return;
+      // Read the local seed/cache FIRST so Demo Mode works even while signed out.
+      let localRun = null;
+      try {
+        const localStr = await AsyncStorage.getItem("lastCompletedRun");
+        if (localStr) localRun = JSON.parse(localStr);
+      } catch (_) {}
+      setRecentRun(localRun || null);
+
+      const cStr = await getStoredCurrentUser();
+      if (!cStr) {
+        setUsername("Runner");
+        setAvatar("");
+        setWeekStats({ km: 0, runs: 0, bestKm: 0 });
+        setWeekSeries([0, 0, 0, 0, 0, 0, 0]);
+        setNextTarget(null);
+        return;
+      }
       const c = JSON.parse(cStr);
       if (c.username) setUsername(c.username);
       if (c.avatar) setAvatar(c.avatar);
 
-      if (!c.id) return;
+      if (!c.id) {
+        setWeekStats({ km: 0, runs: 0, bestKm: 0 });
+        setWeekSeries([0, 0, 0, 0, 0, 0, 0]);
+        setNextTarget(null);
+        return;
+      }
 
       const { data: profile } = await supabase
         .from("users")
@@ -168,15 +203,6 @@ export default function HomeScreen({ navigation }) {
         setWeekStats({ km: totalKm, runs: weekRuns.length, bestKm });
         setWeekSeries(series);
       }
-
-      // Always read the local seed / cache FIRST, before touching Supabase.
-      // This ensures "Seed a completed run" on the Demo toggle always shows
-      // up on this screen, even if the Supabase call fails or is slow.
-      let localRun = null;
-      try {
-        const localStr = await AsyncStorage.getItem('lastCompletedRun');
-        if (localStr) localRun = JSON.parse(localStr);
-      } catch (_) {}
 
       // Supabase: last run + last 4 for next-target calculation
       const { data: latestRuns } = await supabase
