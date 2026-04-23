@@ -495,26 +495,62 @@ export default function RunScreen({ route, navigation }) {
         )}
         {mode === 'spectate' && <View style={{ height: 8 }} />}
 
-        {/* Subtle hairline between stats/live panel and action buttons */}
-        <View style={styles.panelDivider} />
-
-        <SpectatorControls
-          mode={mode}
-          isRunning={isRunning}
-          isPaused={isPaused}
-          isFinished={isFinished}
-          visibilityScope={visibilityScope}
-          setVisibilityScope={setVisibilityScope}
-          startRun={startRun}
-          pauseRun={pauseRun}
-          resumeRun={resumeRun}
-          stopRun={stopRun}
-          closeRun={closeRun}
-          sendCheer={sendCheer}
-          contentOpacity={contentOpacity}
-        />
+        {/* Pre-run controls (GO + visibility selector) stay inside the panel
+            so they animate with it. Running controls (Pause/Stop) are
+            rendered in a FIXED overlay below so they are never hidden by
+            the panel position or tab bar. */}
+        {(!isRunning || mode === 'spectate') && (
+          <>
+            <View style={styles.panelDivider} />
+            <SpectatorControls
+              mode={mode}
+              isRunning={isRunning}
+              isPaused={isPaused}
+              isFinished={isFinished}
+              visibilityScope={visibilityScope}
+              setVisibilityScope={setVisibilityScope}
+              startRun={startRun}
+              pauseRun={pauseRun}
+              resumeRun={resumeRun}
+              stopRun={stopRun}
+              closeRun={closeRun}
+              sendCheer={sendCheer}
+              contentOpacity={contentOpacity}
+            />
+          </>
+        )}
         
       </Animated.View>
+      {/* Fixed running controls — always visible above the tab bar,
+          independent of the sliding stats panel position. */}
+      {isRunning && mode !== 'spectate' && (
+        <View style={styles.fixedControls} pointerEvents="box-none">
+          <View style={styles.fixedControlsRow}>
+            <TouchableOpacity
+              style={isPaused ? styles.resumeBtn : styles.pauseBtn}
+              onPress={() => {
+                if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                isPaused ? resumeRun() : pauseRun();
+              }}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.fixedBtnText}>{isPaused ? 'Resume' : 'Pause'}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.stopBtn}
+              onPress={() => {
+                if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                stopRun();
+              }}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.fixedBtnText}>Stop</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       {isFinished && (
         <RunSummaryModal
           durationInSeconds={durationInSeconds}

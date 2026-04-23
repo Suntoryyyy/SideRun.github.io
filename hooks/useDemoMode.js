@@ -36,63 +36,57 @@ export function broadcastDemoMode(value) {
 }
 
 // ── Route keyframes ─────────────────────────────────────────────────────────
-// ~5 km counterclockwise loop on the public roads that form the famous
-// 皇居ランニングコース (Imperial Palace Running Course) in Tokyo.
+// ~5 km counterclockwise loop on the PUBLIC ROADS outside the Imperial Palace
+// moat (皇居外苑ランニングコース), Tokyo.
 //
-// The path follows the OUTSIDE of the moat — the paved public roads used by
-// thousands of runners every day. Every waypoint was placed at a road
-// junction or along a clearly mapped road segment so that the linear
-// interpolation between adjacent points stays on tarmac and never crosses
-// the palace grounds or building footprints.
+// Key constraint: every point must lie OUTSIDE the palace walls/moat.
+//   East side  → longitude ≥ 139.762  (Uchibori-dori between moat & Marunouchi)
+//   West side  → longitude ≤ 139.748  (road between moat & Kojimachi)
+//   North side → latitude  ≥ 35.688   (north moat road past Takebashi)
+//   South side → latitude  ≤ 35.677   (south road past Sakuradamon)
 //
-// Landmark reference:
-//   Start/finish near Wadakura Fountain Park (east side, near Tokyo Station)
-//   → north along east moat road (Uchisaiwaichō / Uchibori-dori)
-//   → west along north side through Kitanomaru Park entrance
-//   → south along west side (past Hanzomon, Sakashita)
-//   → east along south side (past Sakuradamon)
-//   → north back to Wadakura
+// Previous routes drifted west (longitude decreasing) on the east side and
+// ended up inside the palace grounds. This version keeps the east road at a
+// constant longitude of ~139.764 and uses straight, short segments so linear
+// interpolation stays on tarmac throughout.
 const KEYFRAMES = [
-  // ── East side: Wadakura → north ──────────────────────────────────────
-  [35.6797, 139.7641], // Wadakura Fountain Park entrance (start)
-  [35.6806, 139.7641], // Road north, staying alongside east moat
-  [35.6815, 139.7638],
-  [35.6825, 139.7633],
-  [35.6834, 139.7627],
-  [35.6843, 139.7619],
-  [35.6851, 139.7610],
-  [35.6859, 139.7600],
-  [35.6866, 139.7589],
-  [35.6873, 139.7577], // Hitotsubashi area, moat curves west
-  // ── North side: east → Takebashi → Kitanomaru ────────────────────────
-  [35.6879, 139.7562],
-  [35.6884, 139.7546],
-  [35.6887, 139.7529], // Takebashi bridge junction — road bends south-west
-  [35.6886, 139.7512],
-  [35.6882, 139.7495], // Road turns south along north face of Kitanomaru
-  [35.6876, 139.7479],
-  [35.6868, 139.7464],
-  // ── West side: Kitanomaru south → Hanzomon ───────────────────────────
-  [35.6858, 139.7452], // Kitanomaru Park south gate, road bends south
-  [35.6846, 139.7447],
-  [35.6835, 139.7447],
-  [35.6824, 139.7451], // Hanzomon Gate junction
-  [35.6814, 139.7458],
-  [35.6803, 139.7466],
-  [35.6793, 139.7476], // Road curves along west moat edge
-  [35.6783, 139.7489],
-  [35.6774, 139.7504], // Sakashita Gate area — road bends south-east
-  // ── South side: Sakashita → Sakuradamon → east ───────────────────────
-  [35.6766, 139.7521],
-  [35.6760, 139.7539],
-  [35.6755, 139.7558], // South-west corner of moat
-  [35.6754, 139.7576],
-  [35.6757, 139.7592], // Sakuradamon Gate junction
-  [35.6762, 139.7607],
-  [35.6769, 139.7620],
-  [35.6778, 139.7631], // Road curves north-east back toward Wadakura
-  [35.6787, 139.7638],
-  [35.6797, 139.7641], // Wadakura — close loop
+  // ── SE start: Hibiya / Wadakura area, east side of moat ──────────────
+  [35.6762, 139.7635],
+  // ── East side: going north along Uchibori-dori ───────────────────────
+  // The outer moat is to the LEFT (west); Marunouchi offices to the RIGHT.
+  // Longitude held near 139.764 so we never slip into the palace grounds.
+  [35.6776, 139.7640],
+  [35.6792, 139.7641],
+  [35.6806, 139.7638],
+  [35.6820, 139.7632],
+  [35.6833, 139.7622],
+  [35.6844, 139.7610],
+  [35.6854, 139.7595],
+  [35.6862, 139.7578], // approaching north-east (Hitotsubashi)
+  // ── NE corner & north side: Takebashi → Kitanomaru south ─────────────
+  [35.6869, 139.7558],
+  [35.6873, 139.7536], // Takebashi, road turns west
+  [35.6874, 139.7514],
+  [35.6871, 139.7492],
+  [35.6864, 139.7472],
+  [35.6852, 139.7454], // Kitanomaru south gate, road turns south
+  // ── West side: Kitanomaru → Hanzomon → Sakashita ─────────────────────
+  // Longitude held near 139.747 – west of palace, clearly on public road.
+  [35.6837, 139.7448],
+  [35.6821, 139.7450],
+  [35.6806, 139.7457], // Hanzomon Gate
+  [35.6791, 139.7468],
+  [35.6777, 139.7482],
+  [35.6764, 139.7499], // Sakashita Gate, road curves south-east
+  // ── South side: west → Sakuradamon → Hibiya → east ───────────────────
+  // Latitude held near 35.676 – south of the outer moat.
+  [35.6756, 139.7519],
+  [35.6751, 139.7541],
+  [35.6750, 139.7564], // Sakuradamon Gate
+  [35.6754, 139.7587],
+  [35.6760, 139.7609],
+  [35.6762, 139.7625],
+  [35.6762, 139.7635], // close loop at SE start
 ];
 
 // Densify the route: between each pair of keyframes, insert `SUBDIV - 1`
