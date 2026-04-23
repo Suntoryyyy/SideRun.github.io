@@ -23,6 +23,8 @@ const { width } = Dimensions.get("window");
 
 const DEFAULT_WEEKLY_GOAL_KM = 20;
 const WEEKLY_GOAL_KEY = "siderun_weekly_goal_km";
+const EMPTY_WEEK_STATS = { km: 0, runs: 0, bestKm: 0 };
+const EMPTY_WEEK_SERIES = [0, 0, 0, 0, 0, 0, 0];
 
 const WEATHER_ICON_MAP = (wid) => {
   if (!wid) return 'partly-sunny';
@@ -54,13 +56,62 @@ const hapticHeavy = () => {
   if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 };
 
+const isSameRun = (a, b) => {
+  if (!a || !b) return false;
+  return (
+    a.created_at &&
+    b.created_at &&
+    a.created_at === b.created_at &&
+    Number(a.distance || 0) === Number(b.distance || 0)
+  );
+};
+
+const mergeLocalRun = (runs = [], localRun = null) => {
+  if (!localRun) return runs;
+  if (runs.some((run) => isSameRun(run, localRun))) return runs;
+  return [...runs, localRun];
+};
+
+const buildWeekSummary = (runs = []) => {
+  const series = [...EMPTY_WEEK_SERIES];
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setHours(0, 0, 0, 0);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+
+  const inWindow = runs.filter((r) => {
+    if (!r?.created_at) return false;
+    return new Date(r.created_at) >= sevenDaysAgo;
+  });
+
+  const totalKm = inWindow.reduce((sum, r) => sum + (Number(r.distance) || 0), 0);
+  const bestKm = inWindow.reduce((max, r) => Math.max(max, Number(r.distance) || 0), 0);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  inWindow.forEach((r) => {
+    const d = new Date(r.created_at);
+    d.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((today - d) / 86400000);
+    const idx = 6 - diffDays;
+    if (idx >= 0 && idx <= 6) {
+      series[idx] += Number(r.distance) || 0;
+    }
+  });
+
+  return {
+    stats: { km: totalKm, runs: inWindow.length, bestKm },
+    series,
+  };
+};
+
 export default function HomeScreen({ navigation }) {
   const isFocused = useIsFocused();
   const [username, setUsername] = useState("Runner");
   const [avatar, setAvatar] = useState("");
   const [weeklyGoalKm, setWeeklyGoalKm] = useState(DEFAULT_WEEKLY_GOAL_KM);
-  const [weekStats, setWeekStats] = useState({ km: 0, runs: 0, bestKm: 0 });
-  const [weekSeries, setWeekSeries] = useState([0, 0, 0, 0, 0, 0, 0]);
+  const [weekStats, setWeekStats] = useState(EMPTY_WEEK_STATS);
+  const [weekSeries, setWeekSeries] = useState(EMPTY_WEEK_SERIES);
   const [recentRun, setRecentRun] = useState(null);
   const [nextTarget, setNextTarget] = useState(null); // { km, label }
   const [weather, setWeather] = useState(null);
@@ -139,12 +190,14 @@ export default function HomeScreen({ navigation }) {
       } catch (_) {}
       setRecentRun(localRun || null);
 
+      const localWeek = buildWeekSummary(localRun ? [localRun] : []);
+      setWeekStats(localWeek.stats);
+      setWeekSeries(localWeek.series);
+
       const cStr = await getStoredCurrentUser();
       if (!cStr) {
         setUsername("Runner");
         setAvatar("");
-        setWeekStats({ km: 0, runs: 0, bestKm: 0 });
-        setWeekSeries([0, 0, 0, 0, 0, 0, 0]);
         setNextTarget(null);
         return;
       }
@@ -153,8 +206,6 @@ export default function HomeScreen({ navigation }) {
       if (c.avatar) setAvatar(c.avatar);
 
       if (!c.id) {
-        setWeekStats({ km: 0, runs: 0, bestKm: 0 });
-        setWeekSeries([0, 0, 0, 0, 0, 0, 0]);
         setNextTarget(null);
         return;
       }
@@ -178,30 +229,10 @@ export default function HomeScreen({ navigation }) {
         .eq("user_id", c.id)
         .gte("created_at", sevenDaysAgo.toISOString());
       if (Array.isArray(weekRuns)) {
-        const totalKm = weekRuns.reduce(
-          (sum, r) => sum + (Number(r.distance) || 0),
-          0
-        );
-        const bestKm = weekRuns.reduce(
-          (max, r) => Math.max(max, Number(r.distance) || 0),
-          0
-        );
-
-        const series = Array(7).fill(0);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        weekRuns.forEach((r) => {
-          const d = new Date(r.created_at);
-          d.setHours(0, 0, 0, 0);
-          const diffDays = Math.round((today - d) / 86400000);
-          const idx = 6 - diffDays;
-          if (idx >= 0 && idx <= 6) {
-            series[idx] += Number(r.distance) || 0;
-          }
-        });
-
-        setWeekStats({ km: totalKm, runs: weekRuns.length, bestKm });
-        setWeekSeries(series);
+        const mergedWeekRuns = mergeLocalRun(weekRuns, localRun);
+        const weekSummary = buildWeekSummary(mergedWeekRuns);
+        setWeekStats(weekSummary.stats);
+        setWeekSeries(weekSummary.series);
       }
 
       // Supabase: last run + last 4 for next-target calculation
@@ -215,24 +246,16 @@ export default function HomeScreen({ navigation }) {
       // Merge: prefer whichever entry has the MORE RECENT created_at so
       // that seeded demo runs always appear even when Supabase is empty,
       // but real completed runs correctly replace them once uploaded.
-      const supabaseRun = latestRuns?.[0] || null;
-      let displayRun = supabaseRun;
-      if (
-        localRun &&
-        (
-          !supabaseRun ||
-          new Date(localRun.created_at) > new Date(supabaseRun.created_at)
-        )
-      ) {
-        displayRun = localRun;
-      }
-      setRecentRun(displayRun || null);
+      const mergedRecentRuns = mergeLocalRun(latestRuns || [], localRun)
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 4);
+      setRecentRun(mergedRecentRuns[0] || null);
 
       // Compute next-target suggestion from recent history.
-      if (latestRuns && latestRuns.length > 0) {
+      if (mergedRecentRuns.length > 0) {
         const avgKm =
-          latestRuns.reduce((s, r) => s + (Number(r.distance) || 0), 0) /
-          latestRuns.length;
+          mergedRecentRuns.reduce((s, r) => s + (Number(r.distance) || 0), 0) /
+          mergedRecentRuns.length;
         // Suggest 5–10 % more than average, rounded to nearest 0.5.
         const suggested = Math.round((avgKm * 1.075) / 0.5) * 0.5;
         const MILESTONES = [1, 2, 3, 5, 7, 10, 15, 21.1, 42.2];

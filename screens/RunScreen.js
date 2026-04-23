@@ -47,14 +47,6 @@ const formatDuration = (totalSeconds) => {
   return `${m < 10 ? "0" + m : m}:${s < 10 ? "0" + s : s}`;
 };
 
-const formatPaceMmSs = (distKm, durationSec) => {
-  if (!distKm || distKm < 0.05 || !durationSec) return "--'--\"";
-  const secPerKm = durationSec / distKm;
-  const m = Math.floor(secPerKm / 60);
-  const s = Math.round(secPerKm % 60);
-  return `${m}'${s < 10 ? '0' : ''}${s}"`;
-};
-
 export default function RunScreen({ route, navigation }) {
   const { mode = "solo", spectateFriend = null } = route?.params || {};
   const user = useUserStore((s) => s.user);
@@ -312,6 +304,7 @@ export default function RunScreen({ route, navigation }) {
   }, [isRunning, isPaused, mode]);
 
   const togglePanel = () => {
+    if (isActiveRun) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setIsPanelCollapsed(!isPanelCollapsed);
   };
@@ -421,8 +414,16 @@ export default function RunScreen({ route, navigation }) {
   }
 
   const isActiveRun = isRunning && !isPaused && mode !== 'spectate';
+  const isPausedRun = isRunning && isPaused && mode !== 'spectate';
+  const isPreRun = !isRunning && mode !== 'spectate';
+  const showDashboard = mode === 'spectate' || isPreRun || isPausedRun;
+  const dashboardStateStyle =
+    mode === 'spectate'
+      ? styles.dashboardSpectate
+      : isPausedRun
+      ? styles.dashboardPaused
+      : styles.dashboardPreRun;
   const glanceDist = (runData?.distance ?? 0).toFixed(2);
-  const glancePace = formatPaceMmSs(runData?.distance ?? 0, durationInSeconds);
 
   return (
     <View style={styles.container}>
@@ -434,14 +435,10 @@ export default function RunScreen({ route, navigation }) {
       )}
 
       {/* ── Glance pill ───────────────────────────────────────────────
-          Tiny always-visible read-out at the top while actively running.
-          Tap to peek at the full stats panel without pausing. */}
+          Running state: only distance + time, no drill-down cards. */}
       {isActiveRun && (
-        <TouchableOpacity
+        <View
           style={[styles.glancePill, isDemoMode && styles.glancePillBelowBanner]}
-          activeOpacity={0.85}
-          onPress={togglePanel}
-          hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
         >
           <View style={styles.glancePillCol}>
             <Text style={styles.glancePillValue}>{glanceDist}</Text>
@@ -452,13 +449,9 @@ export default function RunScreen({ route, navigation }) {
             <Text style={styles.glancePillValue}>{formatDuration(durationInSeconds)}</Text>
             <Text style={styles.glancePillLabel}>TIME</Text>
           </View>
-          <View style={styles.glancePillSep} />
-          <View style={styles.glancePillCol}>
-            <Text style={styles.glancePillValue}>{glancePace}</Text>
-            <Text style={styles.glancePillLabel}>PACE</Text>
-          </View>
-        </TouchableOpacity>
+        </View>
       )}
+
       <RunMapMemo mode={mode} spectateFriend={spectateFriend} 
         navigation={navigation}
         region={region}
@@ -506,100 +499,112 @@ export default function RunScreen({ route, navigation }) {
         </View>
       )}
 
-      {/* On web PanResponder fights with Leaflet touch events — tap-only there */}
-      <Animated.View
-        style={[
-          styles.dashboardContainer,
-          { transform: [{ translateY: panY }] },
-        ]}
-        {...(Platform.OS !== 'web' ? panResponder.panHandlers : {})}
-      >
-        <TouchableOpacity
-          style={styles.dragHandleContainer}
-          activeOpacity={0.7}
-          onPress={togglePanel}
-          hitSlop={{ top: 12, bottom: 12, left: 80, right: 80 }}
+      {showDashboard && (
+        <Animated.View
+          style={[
+            styles.dashboardContainer,
+            dashboardStateStyle,
+            { transform: [{ translateY: panY }] },
+          ]}
+          {...(Platform.OS !== 'web' ? panResponder.panHandlers : {})}
         >
-          <View style={styles.dragHandle} />
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.dragHandleContainer}
+            activeOpacity={0.7}
+            onPress={togglePanel}
+            hitSlop={{ top: 12, bottom: 12, left: 80, right: 80 }}
+          >
+            <View style={styles.dragHandle} />
+          </TouchableOpacity>
 
-              <MetricDashboard
-          mode={mode}
-          spectateFriend={spectateFriend}
-          runData={runData}
-          durationInSeconds={durationInSeconds}
-          currentSpeed={currentSpeed}
-          contentOpacity={contentOpacity}
-          friendsWatching={friendsWatching}
-          signalLost={signalLost}
-        />
+          <MetricDashboard
+            mode={mode}
+            spectateFriend={spectateFriend}
+            runData={runData}
+            durationInSeconds={durationInSeconds}
+            currentSpeed={currentSpeed}
+            contentOpacity={contentOpacity}
+            friendsWatching={friendsWatching}
+            signalLost={signalLost}
+          />
 
-        {/* Live extras — only shown WHILE running so the pre-run panel
-            stays clean (no empty milestone/pace placeholders). */}
-        {mode !== 'spectate' && isRunning && (
-          <Animated.View style={{ opacity: contentOpacity }}>
-            <RunLivePanel
-              runData={runData}
-              durationInSeconds={durationInSeconds}
-              currentSpeed={currentSpeed}
-              isRunning={isRunning}
-            />
-          </Animated.View>
-        )}
-        {mode === 'spectate' && <View style={{ height: 8 }} />}
+          {/* Pause state = expanded stats review. Active running intentionally
+              removes these detail cards so the phone can stay in-pocket. */}
+          {isPausedRun && (
+            <Animated.View style={{ opacity: contentOpacity }}>
+              <RunLivePanel
+                runData={runData}
+                durationInSeconds={durationInSeconds}
+                currentSpeed={currentSpeed}
+                isRunning={isRunning}
+              />
+            </Animated.View>
+          )}
+          {mode === 'spectate' && <View style={{ height: 8 }} />}
 
-        {/* Pre-run controls (GO + visibility selector) stay inside the panel
-            so they animate with it. Running controls (Pause/Stop) are
-            rendered in a FIXED overlay below so they are never hidden by
-            the panel position or tab bar. */}
-        {(!isRunning || mode === 'spectate') && (
-          <>
-            <View style={styles.panelDivider} />
-            <SpectatorControls
-              mode={mode}
-              isRunning={isRunning}
-              isPaused={isPaused}
-              isFinished={isFinished}
-              visibilityScope={visibilityScope}
-              setVisibilityScope={setVisibilityScope}
-              startRun={startRun}
-              pauseRun={pauseRun}
-              resumeRun={resumeRun}
-              stopRun={stopRun}
-              closeRun={closeRun}
-              sendCheer={sendCheer}
-              contentOpacity={contentOpacity}
-            />
-          </>
-        )}
-        
-      </Animated.View>
+          {(isPreRun || mode === 'spectate') && (
+            <>
+              <View style={styles.panelDivider} />
+              <SpectatorControls
+                mode={mode}
+                isRunning={isRunning}
+                isPaused={isPaused}
+                isFinished={isFinished}
+                visibilityScope={visibilityScope}
+                setVisibilityScope={setVisibilityScope}
+                startRun={startRun}
+                pauseRun={pauseRun}
+                resumeRun={resumeRun}
+                stopRun={stopRun}
+                closeRun={closeRun}
+                sendCheer={sendCheer}
+                contentOpacity={contentOpacity}
+              />
+            </>
+          )}
+        </Animated.View>
+      )}
       {/* Fixed running controls — always visible above the tab bar,
           independent of the sliding stats panel position. */}
       {isRunning && mode !== 'spectate' && (
         <View style={styles.fixedControls} pointerEvents="box-none">
-          <View style={styles.fixedControlsRow}>
-            <TouchableOpacity
-              style={isPaused ? styles.resumeBtn : styles.pauseBtn}
-              onPress={() => {
-                if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                isPaused ? resumeRun() : pauseRun();
-              }}
-              activeOpacity={0.9}
-            >
-              <Text style={styles.fixedBtnText}>{isPaused ? 'Resume' : 'Pause'}</Text>
-            </TouchableOpacity>
+          <View style={isPausedRun ? styles.fixedControlsRow : styles.fixedControlsSingle}>
+            {isActiveRun ? (
+              <TouchableOpacity
+                style={styles.pauseBtn}
+                onPress={() => {
+                  if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  pauseRun();
+                }}
+                activeOpacity={0.9}
+              >
+                <Text style={styles.fixedBtnText}>Pause</Text>
+              </TouchableOpacity>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={styles.resumeBtn}
+                  onPress={() => {
+                    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    resumeRun();
+                  }}
+                  activeOpacity={0.9}
+                >
+                  <Text style={styles.fixedBtnText}>Resume</Text>
+                </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.stopBtn}
-              onPress={() => {
-                if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-                stopRun();
-              }}
-              activeOpacity={0.9}
-            >
-              <Text style={styles.fixedBtnText}>Stop</Text>
-            </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.stopBtn}
+                  onPress={() => {
+                    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                    stopRun();
+                  }}
+                  activeOpacity={0.9}
+                >
+                  <Text style={styles.fixedBtnText}>Stop</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
       )}

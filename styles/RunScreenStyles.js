@@ -184,6 +184,15 @@ export default StyleSheet.create({
     paddingBottom: 220,
     justifyContent: 'flex-start',
   },
+  dashboardPreRun: {
+    height: height * 0.6 + 200,
+  },
+  dashboardPaused: {
+    height: height * 0.5 + 200,
+  },
+  dashboardSpectate: {
+    height: height * 0.38 + 200,
+  },
   dashboardCollapsed: {
     flex: 0,
     height: 180,
@@ -386,6 +395,9 @@ export default StyleSheet.create({
   fixedControlsRow: {
     flexDirection: 'row',
     gap: 12,
+  },
+  fixedControlsSingle: {
+    flexDirection: 'row',
   },
   pauseBtn: {
     flex: 1,
@@ -605,7 +617,6 @@ export default StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.15)',
     marginHorizontal: 14,
   },
-
   // Demo mode pill
   demoBanner: {
     position: 'absolute',
