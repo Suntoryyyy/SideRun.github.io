@@ -47,6 +47,14 @@ const formatDuration = (totalSeconds) => {
   return `${m < 10 ? "0" + m : m}:${s < 10 ? "0" + s : s}`;
 };
 
+const formatPaceMmSs = (distKm, durationSec) => {
+  if (!distKm || distKm < 0.05 || !durationSec) return "--'--\"";
+  const secPerKm = durationSec / distKm;
+  const m = Math.floor(secPerKm / 60);
+  const s = Math.round(secPerKm % 60);
+  return `${m}'${s < 10 ? '0' : ''}${s}"`;
+};
+
 export default function RunScreen({ route, navigation }) {
   const { mode = "solo", spectateFriend = null } = route?.params || {};
   const user = useUserStore((s) => s.user);
@@ -289,6 +297,20 @@ export default function RunScreen({ route, navigation }) {
     }).start();
   }, [isPanelCollapsed]);
 
+  // ── Glance Mode (Scheme A) ──────────────────────────────────────────
+  // Drive the sliding panel automatically based on run state:
+  //   • Active running   → collapse panel, show map + minimal top pill
+  //   • Paused           → auto-expand panel so user can review stats
+  //   • Pre-run / spectate → leave whatever the user last set
+  useEffect(() => {
+    if (mode === 'spectate') return;
+    if (isRunning && !isPaused) {
+      setIsPanelCollapsed(true);
+    } else if (isRunning && isPaused) {
+      setIsPanelCollapsed(false);
+    }
+  }, [isRunning, isPaused, mode]);
+
   const togglePanel = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setIsPanelCollapsed(!isPanelCollapsed);
@@ -398,6 +420,10 @@ export default function RunScreen({ route, navigation }) {
     );
   }
 
+  const isActiveRun = isRunning && !isPaused && mode !== 'spectate';
+  const glanceDist = (runData?.distance ?? 0).toFixed(2);
+  const glancePace = formatPaceMmSs(runData?.distance ?? 0, durationInSeconds);
+
   return (
     <View style={styles.container}>
       {isDemoMode && (
@@ -405,6 +431,33 @@ export default function RunScreen({ route, navigation }) {
           <Ionicons name="flask" size={13} color="#FFF" />
           <Text style={styles.demoBannerText}>DEMO MODE · Simulated GPS</Text>
         </View>
+      )}
+
+      {/* ── Glance pill ───────────────────────────────────────────────
+          Tiny always-visible read-out at the top while actively running.
+          Tap to peek at the full stats panel without pausing. */}
+      {isActiveRun && (
+        <TouchableOpacity
+          style={[styles.glancePill, isDemoMode && styles.glancePillBelowBanner]}
+          activeOpacity={0.85}
+          onPress={togglePanel}
+          hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
+        >
+          <View style={styles.glancePillCol}>
+            <Text style={styles.glancePillValue}>{glanceDist}</Text>
+            <Text style={styles.glancePillLabel}>KM</Text>
+          </View>
+          <View style={styles.glancePillSep} />
+          <View style={styles.glancePillCol}>
+            <Text style={styles.glancePillValue}>{formatDuration(durationInSeconds)}</Text>
+            <Text style={styles.glancePillLabel}>TIME</Text>
+          </View>
+          <View style={styles.glancePillSep} />
+          <View style={styles.glancePillCol}>
+            <Text style={styles.glancePillValue}>{glancePace}</Text>
+            <Text style={styles.glancePillLabel}>PACE</Text>
+          </View>
+        </TouchableOpacity>
       )}
       <RunMapMemo mode={mode} spectateFriend={spectateFriend} 
         navigation={navigation}

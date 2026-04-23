@@ -556,6 +556,56 @@ export default StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
 
+  // ─── Glance pill (Scheme A — minimal running UI) ─────────────────────
+  // Floating top-of-screen read-out shown only while actively running.
+  // Three columns (km · time · pace) so the user gets one-glance answer
+  // without unfolding the bottom panel.
+  glancePill: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : Platform.OS === 'web' ? 22 : 36,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(11,15,19,0.92)',
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 22,
+    zIndex: 150,
+    shadowColor: '#0B0F13',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  glancePillBelowBanner: {
+    // Push down a bit when the demo banner is showing in the same area
+    top: Platform.OS === 'ios' ? 92 : Platform.OS === 'web' ? 56 : 68,
+  },
+  glancePillCol: {
+    alignItems: 'center',
+    minWidth: 64,
+  },
+  glancePillValue: {
+    fontFamily: FONT.extraBold,
+    fontSize: 17,
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
+    fontVariant: ['tabular-nums'],
+  },
+  glancePillLabel: {
+    fontFamily: FONT.bold,
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.55)',
+    letterSpacing: 1.4,
+    marginTop: 2,
+  },
+  glancePillSep: {
+    width: 1,
+    height: 22,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    marginHorizontal: 14,
+  },
+
   // Demo mode pill
   demoBanner: {
     position: 'absolute',
