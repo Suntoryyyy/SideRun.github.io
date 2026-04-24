@@ -187,8 +187,13 @@ export default StyleSheet.create({
   dashboardPreRun: {
     height: height * 0.6 + 200,
   },
+  // Paused state also renders the fixed Resume / Stop buttons at screen
+  // bottom: 96 (56 tall). The panel buffer adds 200 below screen bottom,
+  // so we need paddingBottom ≥ 96 + 56 + 16 + 200 = 368 for the inner
+  // content to clear the buttons. Round up to 384 for a comfortable gap.
   dashboardPaused: {
     height: height * 0.5 + 200,
+    paddingBottom: 384,
   },
   dashboardSpectate: {
     height: height * 0.38 + 200,
