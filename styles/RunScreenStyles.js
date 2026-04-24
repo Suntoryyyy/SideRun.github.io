@@ -187,12 +187,18 @@ export default StyleSheet.create({
   dashboardPreRun: {
     height: height * 0.6 + 200,
   },
-  // Paused state now hosts the Resume / Stop CIRCULAR buttons INSIDE the
-  // panel (under RunLivePanel), so we extend the visible height to 0.66
-  // of the viewport — gives room for: MetricDashboard + RunLivePanel +
-  // a circular control row, with the map occupying the top ~34%.
+  // Paused state hosts drag handle + MetricDashboard + RunLivePanel +
+  // a circular Resume/Stop control row (~580pt of content). We OVERRIDE
+  // the base bottom:-200 / paddingBottom:220 bounce buffer here, because
+  //   (a) the paused panel doesn't spring-overshoot (it's user-parked)
+  //   (b) the buffer was eating 200pt and hiding the circular buttons
+  //       behind the tab bar.
+  // Anchoring to bottom:0 with a tall enough height + modest paddingBottom
+  // guarantees every control sits above the dock on every modern phone.
   dashboardPaused: {
-    height: height * 0.66 + 200,
+    bottom: 0,
+    height: height * 0.82,
+    paddingBottom: 20,
   },
   dashboardSpectate: {
     height: height * 0.38 + 200,
