@@ -187,13 +187,12 @@ export default StyleSheet.create({
   dashboardPreRun: {
     height: height * 0.6 + 200,
   },
-  // Paused state also renders the fixed Resume / Stop buttons at screen
-  // bottom: 96 (56 tall). The panel buffer adds 200 below screen bottom,
-  // so we need paddingBottom ≥ 96 + 56 + 16 + 200 = 368 for the inner
-  // content to clear the buttons. Round up to 384 for a comfortable gap.
+  // Paused state now hosts the Resume / Stop CIRCULAR buttons INSIDE the
+  // panel (under RunLivePanel), so we extend the visible height to 0.66
+  // of the viewport — gives room for: MetricDashboard + RunLivePanel +
+  // a circular control row, with the map occupying the top ~34%.
   dashboardPaused: {
-    height: height * 0.5 + 200,
-    paddingBottom: 384,
+    height: height * 0.66 + 200,
   },
   dashboardSpectate: {
     height: height * 0.38 + 200,
@@ -385,16 +384,18 @@ export default StyleSheet.create({
     letterSpacing: 3,
     textTransform: 'uppercase',
   },
-  // ─── Fixed running controls (Pause / Stop) ───────────────────────────
-  // Rendered OUTSIDE the animated sliding panel so they are always visible
-  // regardless of panel position or tab-bar layout.
+  // ─── Fixed PAUSE button (active-run only) ────────────────────────────
+  // Rendered OUTSIDE the animated sliding panel so the Pause affordance is
+  // always thumb-reachable while the phone is in-hand. Only shown while
+  // actively running — when paused, Resume/Stop live inside the expanded
+  // panel as circular buttons, not as a bottom-floating row.
   fixedControls: {
     position: 'absolute',
     left: 0,
     right: 0,
-    // Sits just above the floating tab-bar island (64pt) + its bottom gap.
-    // 96 = island height (64) + typical bottom guard (32).
-    bottom: 96,
+    // 128 = tab-bar island (64) + typical bottom guard (32) + half-button
+    // breathing room (32). Gives the Pause pill a clean gap above the dock.
+    bottom: 128,
     paddingHorizontal: 24,
   },
   fixedControlsRow: {
@@ -449,6 +450,65 @@ export default StyleSheet.create({
     fontSize: 14,
     letterSpacing: 1.6,
     textTransform: 'uppercase',
+  },
+
+  // ─── Paused-state circular controls (Figma round-button style) ───────
+  // Sits INSIDE the dashboard panel under RunLivePanel. Two big round
+  // buttons so the thumb always lands on one — no more overlap with the
+  // pace chart.
+  pausedCircleRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 48,
+    paddingTop: 18,
+    paddingBottom: 8,
+  },
+  pausedCircleLabel: {
+    fontFamily: FONT.bold,
+    fontSize: 10,
+    letterSpacing: 1.4,
+    color: '#6B6F76',
+    textTransform: 'uppercase',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  pausedCircleStack: {
+    alignItems: 'center',
+  },
+  resumeCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#24C789',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#24C789',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  stopCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: 'rgba(11,15,19,0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#0B0F13',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 3,
+  },
+  stopCircleInner: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    backgroundColor: '#FF5A36',
   },
   // Legacy aliases kept for spectate mode Done button
   activeControls: {

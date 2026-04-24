@@ -36,65 +36,64 @@ export function broadcastDemoMode(value) {
 }
 
 // ── Route geometry ─────────────────────────────────────────────────────────
-// ~5 km counterclockwise loop generated as a rounded rectangle that hugs the
-// public roads around the Imperial Palace outer moat (皇居外苑ランニングコース).
+// Strictly-orthogonal ~5 km loop around the Imperial Palace outer moat.
 //
-// Each edge sits at the actual outer-road latitude/longitude:
-//   • ROAD_N  — Daikancho-dori (north of moat, past Takebashi → Kitanomaru)
-//   • ROAD_S  — Sakurada-dori  (south of moat, Hibiya → Sakuradamon)
-//   • ROAD_E  — Uchibori-dori east side (Wadakura-mon → Hitotsubashi)
-//   • ROAD_W  — Uchibori-dori west side (Kitanomaru → Hanzomon → Sakashita)
-// Corners are rounded with a real ~280 m radius that matches the moat
-// geometry, so the generated polyline traces the curbside instead of cutting
-// through palace grounds.
-const ROAD_N = 35.6890;
-const ROAD_S = 35.6758;
-const ROAD_E = 139.7625;
-const ROAD_W = 139.7467;
-const CORNER_R = 0.0028; // ≈ 280 m at 35.68° N
+// Every segment is PURELY north-south or PURELY east-west — no diagonals —
+// so linear interpolation between waypoints always lies along an actual
+// road axis (Marunouchi's street grid is orthogonal, and the four roads
+// around the palace moat run on the cardinal directions).
+//
+// Rectangle edges picked so each full edge lives on a real thoroughfare:
+//   • ROAD_N  lat 35.6886 — Daikancho-dori (north moat, east of Takebashi)
+//   • ROAD_S  lat 35.6762 — Sakurada-dori  (south moat, east of Sakuradamon)
+//   • ROAD_E  lng 139.7623 — Uchibori-dori east (Wadakura → Otemon)
+//   • ROAD_W  lng 139.7477 — Uchibori-dori west (Sakashita → Hanzomon)
+//
+// Corners are HARD 90° turns so the rendered polyline never diagonals
+// through a building. Each straight is dense-sampled at ~40 m intervals.
+const ROAD_N = 35.6886;
+const ROAD_S = 35.6762;
+const ROAD_E = 139.7623;
+const ROAD_W = 139.7477;
 
-// Generator: walks the perimeter counterclockwise, sampling straight edges
-// and 90° corner arcs at uniform intervals. 12 × 4 straight samples + 8 × 4
-// corner samples yield ~80 tightly-spaced waypoints (~65 m apart).
+// Generator: emits samples along axis-aligned straight segments only. Going
+// CCW starting on the south road heading east.
 function buildImperialPalaceLoop() {
-  const N = ROAD_N, S = ROAD_S, E = ROAD_E, W = ROAD_W, r = CORNER_R;
+  const N = ROAD_N, S = ROAD_S, E = ROAD_E, W = ROAD_W;
   const pts = [];
+  // Sample a straight segment with `steps` intermediate points. One of the
+  // two coord deltas is always 0, so every sample shares a coord with both
+  // endpoints — guarantees the polyline stays on a single road axis.
   const line = (la0, ln0, la1, ln1, steps) => {
+    if ((la1 - la0) !== 0 && (ln1 - ln0) !== 0) {
+      throw new Error('buildImperialPalaceLoop: segment must be axis-aligned');
+    }
     for (let i = 0; i < steps; i++) {
       const t = i / steps;
       pts.push([la0 + (la1 - la0) * t, ln0 + (ln1 - ln0) * t]);
     }
   };
-  // Arc center (cLat, cLng), swept from a0 → a1 at radius r.
-  // Point = (cLat + r*sin(a), cLng + r*cos(a)).
-  const arc = (cLat, cLng, a0, a1, steps) => {
-    for (let i = 0; i < steps; i++) {
-      const t = i / steps;
-      const a = a0 + (a1 - a0) * t;
-      pts.push([cLat + r * Math.sin(a), cLng + r * Math.cos(a)]);
-    }
-  };
-  const STR = 12; // samples per straight edge
-  const CUR = 8;  // samples per corner arc
 
-  // CCW, starting on the south road near Sakuradamon, heading east.
-  line(S,     W + r, S,     E - r, STR);            // south straight
-  arc (S + r, E - r, -Math.PI / 2, 0,      CUR);    // SE corner
-  line(S + r, E,     N - r, E,     STR);            // east straight
-  arc (N - r, E - r,  0,     Math.PI / 2, CUR);     // NE corner (Takebashi)
-  line(N,     E - r, N,     W + r, STR);            // north straight
-  arc (N - r, W + r,  Math.PI / 2, Math.PI, CUR);   // NW corner (Kudanshita)
-  line(N - r, W,     S + r, W,     STR);            // west straight (Hanzomon)
-  arc (S + r, W + r,  Math.PI, 3 * Math.PI / 2, CUR); // SW corner (Sakashita)
-  // Close the loop cleanly on the start point.
-  pts.push([S, W + r]);
+  const STR_H = 22; // horizontal edges: longer (lng spans ~1.5 km)
+  const STR_V = 20; // vertical edges
+
+  // 1. South road — heading east along Sakurada-dori
+  line(S, W, S, E, STR_H);
+  // 2. East road — heading north along Uchibori-dori east (Babasaki → Otemon)
+  line(S, E, N, E, STR_V);
+  // 3. North road — heading west along Daikancho-dori
+  line(N, E, N, W, STR_H);
+  // 4. West road — heading south along Uchibori-dori west (Hanzomon → Miyakezaka)
+  line(N, W, S, W, STR_V);
+  // Close cleanly on the start.
+  pts.push([S, W]);
   return pts;
 }
 
 const KEYFRAMES = buildImperialPalaceLoop();
 
-// Keep a small sub-step densification so the marker glides between already
-// close waypoints. 2 sub-steps ≈ 32 m per tick — smooth without over-sampling.
+// Keyframes are already dense (~40 m apart), so a single sub-step is plenty
+// to smooth the marker between ticks without over-sampling.
 const SUBDIV = 2;
 const DEMO_ROUTE = (() => {
   const out = [];

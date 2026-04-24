@@ -538,6 +538,40 @@ export default function RunScreen({ route, navigation }) {
                 currentSpeed={currentSpeed}
                 isRunning={isRunning}
               />
+
+              {/* Figma-style circular controls — sit INSIDE the panel under
+                  the pace data so they never overlap the content above. */}
+              <View style={styles.pausedCircleRow}>
+                <View style={styles.pausedCircleStack}>
+                  <TouchableOpacity
+                    style={styles.resumeCircle}
+                    onPress={() => {
+                      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      resumeRun();
+                    }}
+                    activeOpacity={0.85}
+                    accessibilityLabel="Resume run"
+                  >
+                    <Ionicons name="play" size={28} color="#FFFFFF" />
+                  </TouchableOpacity>
+                  <Text style={styles.pausedCircleLabel}>Resume</Text>
+                </View>
+
+                <View style={styles.pausedCircleStack}>
+                  <TouchableOpacity
+                    style={styles.stopCircle}
+                    onPress={() => {
+                      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                      stopRun();
+                    }}
+                    activeOpacity={0.85}
+                    accessibilityLabel="Stop run"
+                  >
+                    <View style={styles.stopCircleInner} />
+                  </TouchableOpacity>
+                  <Text style={styles.pausedCircleLabel}>Stop</Text>
+                </View>
+              </View>
             </Animated.View>
           )}
           {mode === 'spectate' && <View style={{ height: 8 }} />}
@@ -564,47 +598,22 @@ export default function RunScreen({ route, navigation }) {
           )}
         </Animated.View>
       )}
-      {/* Fixed running controls — always visible above the tab bar,
-          independent of the sliding stats panel position. */}
-      {isRunning && mode !== 'spectate' && (
+      {/* Active-run only: floating Pause pill above the tab bar.
+          Paused state renders Resume / Stop as circular buttons INSIDE
+          the expanded dashboard so they don't float over pace data. */}
+      {isActiveRun && mode !== 'spectate' && (
         <View style={styles.fixedControls} pointerEvents="box-none">
-          <View style={isPausedRun ? styles.fixedControlsRow : styles.fixedControlsSingle}>
-            {isActiveRun ? (
-              <TouchableOpacity
-                style={styles.pauseBtn}
-                onPress={() => {
-                  if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  pauseRun();
-                }}
-                activeOpacity={0.9}
-              >
-                <Text style={styles.fixedBtnText}>Pause</Text>
-              </TouchableOpacity>
-            ) : (
-              <>
-                <TouchableOpacity
-                  style={styles.resumeBtn}
-                  onPress={() => {
-                    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    resumeRun();
-                  }}
-                  activeOpacity={0.9}
-                >
-                  <Text style={styles.fixedBtnText}>Resume</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.stopBtn}
-                  onPress={() => {
-                    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-                    stopRun();
-                  }}
-                  activeOpacity={0.9}
-                >
-                  <Text style={styles.fixedBtnText}>Stop</Text>
-                </TouchableOpacity>
-              </>
-            )}
+          <View style={styles.fixedControlsSingle}>
+            <TouchableOpacity
+              style={styles.pauseBtn}
+              onPress={() => {
+                if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                pauseRun();
+              }}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.fixedBtnText}>Pause</Text>
+            </TouchableOpacity>
           </View>
         </View>
       )}

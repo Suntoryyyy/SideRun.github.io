@@ -283,7 +283,9 @@ const styles = StyleSheet.create({
   },
   badgeContainer: {
     position: 'absolute',
-    top: 20,
+    // Align with demoBanner so the pill never sits under the status bar /
+    // dynamic island on iPhone PWA.
+    top: Platform.OS === 'ios' ? 60 : Platform.OS === 'web' ? 48 : 36,
     left: 20,
     backgroundColor: 'transparent',
     overflow: 'hidden',
