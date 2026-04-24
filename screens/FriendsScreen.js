@@ -20,6 +20,8 @@ import ActivityFeed from "../components/ActivityFeed";
 import CustomAlert from "../components/CustomAlert";
 import Leaderboard from "../components/Leaderboard";
 import EmptyState from "../components/EmptyState";
+import { DEMO_MODE_KEY } from "../hooks/useDemoMode";
+import { DEMO_FRIENDS } from "../hooks/useDemoSocial";
 
 const isImageAvatar = (a) =>
   typeof a === "string" &&
@@ -49,6 +51,34 @@ export default function FriendsScreen({ navigation }) {
   useEffect(() => {
     loadFriendsData();
   }, []);
+
+  // When Demo Mode is on we surface 3 fake online crew members so the
+  // showcase can demonstrate the spectate + emoji-cheer loop end-to-end
+  // without any real backend friends. These get merged into whatever
+  // real friends exist (real ones win on ID collision, which won't
+  // happen because demo IDs are namespaced "demo-…").
+  const mergeDemoFriendsIfEnabled = async (existing) => {
+    try {
+      const v = await AsyncStorage.getItem(DEMO_MODE_KEY);
+      if (v !== '1') return existing;
+      const demos = DEMO_FRIENDS.map((f) => ({
+        id: f.id,
+        name: f.name,
+        phone: 'Demo',
+        weeklyDistance: 8.4 + Math.random() * 12,
+        totalRuns: 18 + Math.floor(Math.random() * 30),
+        isOnline: true,
+        lastRun: 'Live now',
+        avatar: f.avatar,
+        _isDemo: true,
+        color: f.color,
+      }));
+      const existingIds = new Set(existing.map((f) => f.id));
+      return [...demos.filter((d) => !existingIds.has(d.id)), ...existing];
+    } catch (_) {
+      return existing;
+    }
+  };
 
   const loadFriendsData = async () => {
     try {
@@ -119,10 +149,11 @@ export default function FriendsScreen({ navigation }) {
       }
 
         if (!dbFailed && dbFriends.length > 0) {
-          setFriends(dbFriends);
+          setFriends(await mergeDemoFriendsIfEnabled(dbFriends));
         } else {
           const friendsData = await AsyncStorage.getItem("friends");
-          setFriends(friendsData ? JSON.parse(friendsData) : []);
+          const local = friendsData ? JSON.parse(friendsData) : [];
+          setFriends(await mergeDemoFriendsIfEnabled(local));
         }
 
       if (!dbFailed && feedData.length > 0) {

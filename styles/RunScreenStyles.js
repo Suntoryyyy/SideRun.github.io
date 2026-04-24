@@ -711,4 +711,87 @@ export default StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 1,
   },
+
+  // ─── Demo-mode "sender toast" ────────────────────────────────────────
+  // Slim pill that appears under the demo banner when an inbound demo
+  // cheer arrives (solo) or when a demo runner replies to your cheer
+  // (spectate). 2.4s fade handled in JS.
+  senderToast: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 90 : 68,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: 'rgba(11,15,19,0.10)',
+    shadowColor: '#0B0F13',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.10,
+    shadowRadius: 12,
+    elevation: 6,
+    zIndex: 250,
+    maxWidth: '88%',
+  },
+  senderToastBelowBanner: {
+    top: Platform.OS === 'ios' ? 92 : 70,
+  },
+  senderToastEmoji: {
+    fontSize: 18,
+  },
+  senderToastText: {
+    fontFamily: FONT.semibold,
+    fontSize: 13,
+    color: '#0B0F13',
+    flexShrink: 1,
+  },
+  senderToastName: {
+    fontFamily: FONT.bold,
+  },
+
+  // ─── Demo "Spectate a friend" chips (pre-run panel) ──────────────────
+  demoSpectateRow: {
+    paddingHorizontal: 24,
+    paddingBottom: 14,
+    gap: 10,
+  },
+  demoSpectateLabel: {
+    fontFamily: FONT.bold,
+    fontSize: 10,
+    letterSpacing: 1.4,
+    color: '#9AA0A6',
+    textTransform: 'uppercase',
+  },
+  demoSpectateChips: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  demoSpectateChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 99,
+    borderWidth: 1.5,
+    backgroundColor: '#FFFFFF',
+  },
+  demoSpectateChipAvatar: {
+    fontSize: 16,
+  },
+  demoSpectateChipName: {
+    fontFamily: FONT.bold,
+    fontSize: 13,
+    color: '#0B0F13',
+  },
+  demoSpectateChipDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
 });

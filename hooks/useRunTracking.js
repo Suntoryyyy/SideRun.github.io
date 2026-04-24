@@ -48,55 +48,113 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
   const lastLocation = useRef(null);
 
   useEffect(() => {
-    if (mode === "spectate" && navigation && navigation.getState) {
-      // Mock tracking a friend
+    if (mode !== "spectate" || !navigation || !navigation.getState) return undefined;
+
+    // Demo spectate: ride the actual demo loop so the marker visibly
+    // traces the Imperial Palace route — same path the user just saw in
+    // their own demo solo run. This makes "join a friend's run" feel
+    // identical to running yourself, which is the entire point of the
+    // class showcase.
+    if (isDemoMode) {
       setIsRunning(true);
-      const mockStartLat = 37.7674; // Kezar Stadium
-      const mockStartLng = -122.4554;
-      
+      setRegion(demoRegion);
+      setCurrentLocation(demoLocation);
+      // Seed the panel with a believable mid-run snapshot so the metrics
+      // aren't all zero before the demo coordinates start streaming in.
+      setDurationInSeconds(742); // 12:22
+      setRunData({
+        distance: 2.4,
+        calories: 144,
+        coordinates: [demoLocation],
+        splits: [
+          { km: 1, paceMinPerKm: 5.18, durationSec: 311 },
+          { km: 2, paceMinPerKm: 5.04, durationSec: 302 },
+        ],
+      });
+      const heartbeat = setInterval(() => {
+        setSignalLost(Date.now() - lastUpdateTime.current > 10000);
+      }, 5000);
+      lastUpdateTime.current = Date.now();
+      return () => clearInterval(heartbeat);
+    }
+
+    // Non-demo spectate (legacy mock around Kezar Stadium SF) — kept so
+    // the spectate path still does *something* visible if a real flow
+    // ever calls it without demo mode on.
+    setIsRunning(true);
+    const mockStartLat = 37.7674;
+    const mockStartLng = -122.4554;
+
     const heartbeat = setInterval(() => {
-      if (Date.now() - lastUpdateTime.current > 10000) {
-        setSignalLost(true);
-      } else {
-        setSignalLost(false);
-      }
+      setSignalLost(Date.now() - lastUpdateTime.current > 10000);
     }, 5000);
 
-      setCurrentLocation({ latitude: mockStartLat + 0.0004 * Math.sin(0), longitude: mockStartLng + 0.0008 * Math.cos(0) });
-      setRegion({
-        latitude: mockStartLat,
-        longitude: mockStartLng,
-        latitudeDelta: 0.005,
-        longitudeDelta: 0.005,
+    setCurrentLocation({ latitude: mockStartLat, longitude: mockStartLng });
+    setRegion({
+      latitude: mockStartLat,
+      longitude: mockStartLng,
+      latitudeDelta: 0.005,
+      longitudeDelta: 0.005,
+    });
+    setDurationInSeconds(1240);
+    setRunData({
+      distance: 4.5,
+      calories: 320,
+      coordinates: [{ latitude: mockStartLat, longitude: mockStartLng }],
+    });
+
+    let simTime = 0;
+    const interval = setInterval(() => {
+      simTime += 0.05;
+      setRunData(prev => {
+        const newLoc = {
+          latitude: mockStartLat + 0.0004 * Math.sin(simTime),
+          longitude: mockStartLng + 0.0008 * Math.cos(simTime),
+        };
+        setCurrentLocation(newLoc);
+        lastUpdateTime.current = Date.now();
+        return {
+          ...prev,
+          distance: prev.distance + 0.015,
+          calories: prev.calories + 1,
+          coordinates: [...prev.coordinates, newLoc],
+        };
       });
-      setDurationInSeconds(1240); // 20 minutes in
-      setRunData({
-        distance: 4.5,
-        calories: 320,
-        coordinates: [{ latitude: mockStartLat + 0.0004 * Math.sin(0), longitude: mockStartLng + 0.0008 * Math.cos(0) }],
-      });
-      
-      let simTime = 0;
-      const interval = setInterval(() => {
-        simTime += 0.05;
-        setRunData(prev => {
-          const newLoc = {
-            latitude: mockStartLat + 0.0004 * Math.sin(simTime),
-            longitude: mockStartLng + 0.0008 * Math.cos(simTime)
-          };
-          setCurrentLocation(newLoc);
-          lastUpdateTime.current = Date.now();
-          return {
-            ...prev,
-            distance: prev.distance + 0.015,
-            calories: prev.calories + 1,
-            coordinates: [...prev.coordinates, newLoc]
-          };
-        });
-      }, 3000);
-      return () => { clearInterval(interval); clearInterval(heartbeat); };
-    }
-  }, [mode]);
+    }, 3000);
+    return () => { clearInterval(interval); clearInterval(heartbeat); };
+    // demoLocation/demoRegion update on every demo tick; we only want
+    // the seeding logic to run when the spectate session is established.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, isDemoMode]);
+
+  // Demo spectate: stream the friend's position from the demo route as
+  // it advances. Distance accumulation mirrors the solo demo path.
+  const prevSpectateDemoLen = useRef(0);
+  useEffect(() => {
+    if (mode !== 'spectate' || !isDemoMode) return;
+    const newPts = demoCoordinates.slice(prevSpectateDemoLen.current);
+    if (newPts.length === 0) return;
+    prevSpectateDemoLen.current = demoCoordinates.length;
+
+    newPts.forEach((newLoc) => {
+      setCurrentLocation({ latitude: newLoc.latitude, longitude: newLoc.longitude });
+      lastUpdateTime.current = Date.now();
+      const distFromLast = lastLocation.current
+        ? getDistance(lastLocation.current, newLoc)
+        : 0;
+      if (distFromLast > 0.001 && distFromLast < 1.0) {
+        lastLocation.current = newLoc;
+        setRunData((prev) => ({
+          ...prev,
+          distance: prev.distance + distFromLast,
+          calories: prev.calories + distFromLast * 60,
+          coordinates: [...prev.coordinates, newLoc],
+        }));
+      } else if (!lastLocation.current) {
+        lastLocation.current = newLoc;
+      }
+    });
+  }, [demoCoordinates, isDemoMode, mode]);
 
 
   useEffect(() => {

@@ -23,6 +23,7 @@ import MetricDashboard from "../components/RunScreenUI/MetricDashboard";
 import RunLivePanel from "../components/RunScreenUI/RunLivePanel";
 import SpectatorControls from "../components/RunScreenUI/SpectatorControls";
 import RunSummaryModal from "../components/RunScreenUI/RunSummaryModal";
+import { DEMO_FRIENDS, useDemoIncomingCheers, pickDemoReply } from "../hooks/useDemoSocial";
 
 if (
   Platform.OS === "android" &&
@@ -341,11 +342,27 @@ export default function RunScreen({ route, navigation }) {
   };
 
 
+  // Top-of-screen ephemeral notification: "🔥 from Maya" or "Maya: thanks!"
+  // Used by both the inbound demo-cheer feed and the demo-spectate reply
+  // path. State is just a single slot — newer messages replace older ones.
+  const [senderToast, setSenderToast] = useState(null);
+  const senderToastTimerRef = useRef(null);
+  const showSenderToast = (toast) => {
+    if (senderToastTimerRef.current) clearTimeout(senderToastTimerRef.current);
+    setSenderToast(toast);
+    senderToastTimerRef.current = setTimeout(() => setSenderToast(null), 2400);
+  };
+  useEffect(() => () => {
+    if (senderToastTimerRef.current) clearTimeout(senderToastTimerRef.current);
+  }, []);
+
   const sendCheer = async (specificEmoji = null) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    }
     const emojis = ["💪", "🔥", "🏃‍♂️", "🎉", "👍", "⚡️", "🚀"];
     const emojiToUse = specificEmoji || emojis[Math.floor(Math.random() * emojis.length)];
-    
+
     // Render locally for instant feedback
     const cheerId = Date.now().toString() + Math.random();
     setLiveEmojis((prev) => {
@@ -353,10 +370,17 @@ export default function RunScreen({ route, navigation }) {
       return [...limited, { id: cheerId, emoji: emojiToUse }];
     });
 
+    // Demo spectate: skip the Supabase round-trip (it would silently fail
+    // for un-signed-in demo sessions anyway), and instead surface a fake
+    // "delivered + reply" loop so the showcase feels bidirectional.
+    if (isDemoMode && mode === 'spectate' && spectateFriend?._isDemo) {
+      const friendName = spectateFriend.name || 'Demo runner';
+      showSenderToast({ kind: 'reply', name: friendName, text: pickDemoReply(emojiToUse) });
+      return;
+    }
+
     if (mode === "spectate" && spectateFriend) {
       let myId = myIdRef.current;
-
-      // Only mock insertion, or try but don't crash
       const { error } = await supabase.from("live_cheers").insert([
         {
           sender_id: myId,
@@ -372,6 +396,21 @@ export default function RunScreen({ route, navigation }) {
   const removeCheer = (id) => {
     setCheers((prev) => prev.filter((c) => c.id !== id));
   };
+
+  // Inbound demo cheers: while you're actively demo-running solo, fake
+  // crew members periodically send you emoji cheers. Each one shows on
+  // the FloatingEmoji surface (same render path real cheers use) plus a
+  // top-screen toast naming the sender so it's clear who reacted.
+  useDemoIncomingCheers({
+    active: isDemoMode && isRunning && !isPaused && mode !== 'spectate',
+    onCheer: ({ id, emoji, sender }) => {
+      setLiveEmojis((prev) => {
+        const limited = prev.length > 15 ? prev.slice(-14) : prev;
+        return [...limited, { id, emoji }];
+      });
+      showSenderToast({ kind: 'incoming', name: sender.name, emoji, color: sender.color });
+    },
+  });
 
   const currentSpeed = isDemoMode
     ? demoSpeed
@@ -431,6 +470,38 @@ export default function RunScreen({ route, navigation }) {
         <View style={styles.demoBanner} pointerEvents="none">
           <Ionicons name="flask" size={13} color="#FFF" />
           <Text style={styles.demoBannerText}>DEMO MODE · Simulated GPS</Text>
+        </View>
+      )}
+
+      {/* Sender toast — shows under the demo banner so it never collides
+          with the GPS pill. Driven by inbound demo cheers (solo run) AND
+          the demo runner's reply when YOU cheer them (spectate). */}
+      {senderToast && (
+        <View
+          style={[
+            styles.senderToast,
+            isDemoMode && styles.senderToastBelowBanner,
+            senderToast.color && { borderColor: senderToast.color },
+          ]}
+          pointerEvents="none"
+        >
+          {senderToast.kind === 'incoming' ? (
+            <>
+              <Text style={styles.senderToastEmoji}>{senderToast.emoji}</Text>
+              <Text style={styles.senderToastText}>
+                <Text style={styles.senderToastName}>{senderToast.name}</Text>
+                {' cheered you on!'}
+              </Text>
+            </>
+          ) : (
+            <>
+              <Ionicons name="chatbubble-ellipses" size={14} color="#0B0F13" />
+              <Text style={styles.senderToastText}>
+                <Text style={styles.senderToastName}>{senderToast.name}: </Text>
+                {senderToast.text}
+              </Text>
+            </>
+          )}
         </View>
       )}
 
@@ -579,6 +650,39 @@ export default function RunScreen({ route, navigation }) {
           {(isPreRun || mode === 'spectate') && (
             <>
               <View style={styles.panelDivider} />
+
+              {/* Demo-only entry point: lets the user jump into a fake
+                  spectate session against a demo crew member, so the
+                  spectator-side cheer flow can be shown end-to-end
+                  without needing real online friends. */}
+              {isPreRun && isDemoMode && (
+                <View style={styles.demoSpectateRow}>
+                  <Text style={styles.demoSpectateLabel}>Or watch a demo friend</Text>
+                  <View style={styles.demoSpectateChips}>
+                    {DEMO_FRIENDS.map((friend) => (
+                      <TouchableOpacity
+                        key={friend.id}
+                        style={[styles.demoSpectateChip, { borderColor: friend.color }]}
+                        activeOpacity={0.85}
+                        onPress={() => {
+                          if (Platform.OS !== 'web') {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          }
+                          navigation.navigate('Run', {
+                            mode: 'spectate',
+                            spectateFriend: friend,
+                          });
+                        }}
+                      >
+                        <Text style={styles.demoSpectateChipAvatar}>{friend.avatar}</Text>
+                        <Text style={styles.demoSpectateChipName}>{friend.name}</Text>
+                        <View style={[styles.demoSpectateChipDot, { backgroundColor: friend.color }]} />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+
               <SpectatorControls
                 mode={mode}
                 isRunning={isRunning}
