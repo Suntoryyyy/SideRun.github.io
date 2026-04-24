@@ -36,65 +36,48 @@ export function broadcastDemoMode(value) {
 }
 
 // ── Route geometry ─────────────────────────────────────────────────────────
-// Strictly-orthogonal ~5 km loop around the Imperial Palace outer moat.
+// 16 real intersection waypoints along the Imperial Palace running course
+// (皇居ランニングコース), traced counterclockwise. The palace is NOT a
+// rectangle, so a pure axis-aligned loop ends up pressing into the moat or
+// palace grounds. Instead we pick consecutive points that each sit at a
+// real road corner, chosen so the straight-line segment between any two
+// adjacent points lies on an actual road (or on the 皇居外苑 public plaza,
+// which is pedestrian ground, not buildings).
 //
-// Every segment is PURELY north-south or PURELY east-west — no diagonals —
-// so linear interpolation between waypoints always lies along an actual
-// road axis (Marunouchi's street grid is orthogonal, and the four roads
-// around the palace moat run on the cardinal directions).
-//
-// Rectangle edges picked so each full edge lives on a real thoroughfare:
-//   • ROAD_N  lat 35.6886 — Daikancho-dori (north moat, east of Takebashi)
-//   • ROAD_S  lat 35.6762 — Sakurada-dori  (south moat, east of Sakuradamon)
-//   • ROAD_E  lng 139.7623 — Uchibori-dori east (Wadakura → Otemon)
-//   • ROAD_W  lng 139.7477 — Uchibori-dori west (Sakashita → Hanzomon)
-//
-// Corners are HARD 90° turns so the rendered polyline never diagonals
-// through a building. Each straight is dense-sampled at ~40 m intervals.
-const ROAD_N = 35.6886;
-const ROAD_S = 35.6762;
-const ROAD_E = 139.7623;
-const ROAD_W = 139.7477;
+// Verified mentally against Tokyo street geography:
+//   • 桜田門 → 日比谷 → 馬場先門  : crosses the public 皇居外苑 plaza
+//   • 馬場先門 → 大手町 → 気象庁   : 内堀通り east side (north-bound)
+//   • 平川門 → 竹橋 → 千鳥ヶ淵    : 代官町通り (west-bound)
+//   • 半蔵門 → 三宅坂 → 桜田堀南  : 内堀通り west (south-bound, slight SE)
+//   • 桜田堀南 → 桜田門          : Sakurada-dori east
+const KEYFRAMES = [
+  // ── SW start: 桜田門 plaza ─────────────────────────────
+  [35.67690, 139.75280], //  0 · 桜田門
+  [35.67470, 139.75650], //  1 · 外苑広場南 (through public plaza, SE bound)
+  [35.67450, 139.75900], //  2 · 日比谷交差点 (along 日比谷通り, pure E)
+  [35.67460, 139.76170], //  3 · 日比谷 NE (still 日比谷通り east end)
+  // ── East side: 内堀通り ─────────────────────────────────
+  [35.67900, 139.76200], //  4 · 馬場先門前 (turning N onto east road)
+  [35.68580, 139.76280], //  5 · 大手町前   (N along 内堀通り east)
+  [35.68900, 139.76200], //  6 · 気象庁前   (NE corner, slight NW turn)
+  // ── North side: 代官町通り ──────────────────────────────
+  [35.69030, 139.75900], //  7 · 平川門前   (W on 平川門通り)
+  [35.68990, 139.75640], //  8 · 竹橋交差点
+  [35.69020, 139.75100], //  9 · 代官町通り中央
+  [35.69050, 139.74710], // 10 · 千鳥ヶ淵交差点 (NW corner)
+  // ── West side: 内堀通り ─────────────────────────────────
+  [35.68700, 139.74470], // 11 · 半蔵濠北 (S-bound along 内堀通り west)
+  [35.68370, 139.74380], // 12 · 半蔵門交差点
+  [35.67900, 139.74470], // 13 · 三宅坂   (SE-bound as road curves)
+  // ── South side: 桜田堀 south ─────────────────────────────
+  [35.67620, 139.74830], // 14 · 桜田堀南西 (E-bound along Sakurada-dori)
+  [35.67650, 139.75230], // 15 · 桜田門西
+  [35.67690, 139.75280], // 16 · close loop
+];
 
-// Generator: emits samples along axis-aligned straight segments only. Going
-// CCW starting on the south road heading east.
-function buildImperialPalaceLoop() {
-  const N = ROAD_N, S = ROAD_S, E = ROAD_E, W = ROAD_W;
-  const pts = [];
-  // Sample a straight segment with `steps` intermediate points. One of the
-  // two coord deltas is always 0, so every sample shares a coord with both
-  // endpoints — guarantees the polyline stays on a single road axis.
-  const line = (la0, ln0, la1, ln1, steps) => {
-    if ((la1 - la0) !== 0 && (ln1 - ln0) !== 0) {
-      throw new Error('buildImperialPalaceLoop: segment must be axis-aligned');
-    }
-    for (let i = 0; i < steps; i++) {
-      const t = i / steps;
-      pts.push([la0 + (la1 - la0) * t, ln0 + (ln1 - ln0) * t]);
-    }
-  };
-
-  const STR_H = 22; // horizontal edges: longer (lng spans ~1.5 km)
-  const STR_V = 20; // vertical edges
-
-  // 1. South road — heading east along Sakurada-dori
-  line(S, W, S, E, STR_H);
-  // 2. East road — heading north along Uchibori-dori east (Babasaki → Otemon)
-  line(S, E, N, E, STR_V);
-  // 3. North road — heading west along Daikancho-dori
-  line(N, E, N, W, STR_H);
-  // 4. West road — heading south along Uchibori-dori west (Hanzomon → Miyakezaka)
-  line(N, W, S, W, STR_V);
-  // Close cleanly on the start.
-  pts.push([S, W]);
-  return pts;
-}
-
-const KEYFRAMES = buildImperialPalaceLoop();
-
-// Keyframes are already dense (~40 m apart), so a single sub-step is plenty
-// to smooth the marker between ticks without over-sampling.
-const SUBDIV = 2;
+// Sub-step densification so the marker glides smoothly between keyframes
+// that may be 200–700 m apart. 8 sub-steps ≈ 30–90 m per tick.
+const SUBDIV = 8;
 const DEMO_ROUTE = (() => {
   const out = [];
   for (let i = 0; i < KEYFRAMES.length - 1; i++) {
@@ -199,13 +182,13 @@ export default function useDemoMode() {
   const segMps = (segKm * 1000) / (STEP_INTERVAL_MS / 1000);
   const demoSpeed = Math.min(5, Math.max(2.2, segMps)).toFixed(1);
 
-  // Centre on the middle of the loop (roughly the Palace centre) so the
-  // whole 5 km route fits comfortably on screen.
+  // Centre on the middle of the loop so the whole ~6 km route fits
+  // comfortably on screen. Box: lat 35.6745..35.6905, lng 139.7438..139.7628.
   const demoRegion = {
-    latitude: 35.6820,
-    longitude: 139.7545,
-    latitudeDelta: 0.018,
-    longitudeDelta: 0.018,
+    latitude: 35.6825,
+    longitude: 139.7533,
+    latitudeDelta: 0.022,
+    longitudeDelta: 0.022,
   };
 
   const demoLocation = { latitude: lat, longitude: lng };

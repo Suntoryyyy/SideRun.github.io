@@ -389,13 +389,15 @@ export default StyleSheet.create({
   // always thumb-reachable while the phone is in-hand. Only shown while
   // actively running — when paused, Resume/Stop live inside the expanded
   // panel as circular buttons, not as a bottom-floating row.
+  //
+  // bottom is measured inside the Run tab's content area (above the tab
+  // bar island). 72pt keeps it sitting ~one thumb's reach above the dock
+  // on iPhone PWA where the URL bar still adds 80-120pt of chrome.
   fixedControls: {
     position: 'absolute',
     left: 0,
     right: 0,
-    // 128 = tab-bar island (64) + typical bottom guard (32) + half-button
-    // breathing room (32). Gives the Pause pill a clean gap above the dock.
-    bottom: 128,
+    bottom: 72,
     paddingHorizontal: 24,
   },
   fixedControlsRow: {
