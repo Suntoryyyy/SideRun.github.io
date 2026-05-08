@@ -204,7 +204,7 @@ export default StyleSheet.create({
     height: height * 0.28 + 200,
   },
   dashboardSpectateExpanded: {
-    height: height * 0.45 + 200,
+    height: height * 0.54 + 200,
   },
   dashboardCollapsed: {
     flex: 0,
