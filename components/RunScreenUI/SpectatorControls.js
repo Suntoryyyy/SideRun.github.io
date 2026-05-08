@@ -1,6 +1,7 @@
 import React from 'react';
 import * as Haptics from 'expo-haptics';
-import { View, Text, TouchableOpacity, Animated, Alert, Platform } from 'react-native';
+import BouncyButton from '../BouncyButton';
+import { View, Text, Animated, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import styles from '../../styles/RunScreenStyles';
@@ -27,7 +28,7 @@ const SpectatorControls = ({
       <View style={[styles.controlsContainer, { paddingTop: 10 }]}>
         <View style={styles.spectatorTray}>
           {CHEER_EMOJIS.map((emoji) => (
-            <TouchableOpacity
+            <BouncyButton
               key={emoji}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -37,9 +38,9 @@ const SpectatorControls = ({
               activeOpacity={0.8}
             >
               <Text style={styles.spectatorCheerEmoji}>{emoji}</Text>
-            </TouchableOpacity>
+            </BouncyButton>
           ))}
-          <TouchableOpacity
+          <BouncyButton
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               if (Platform.OS === 'web') {
@@ -69,8 +70,8 @@ const SpectatorControls = ({
             activeOpacity={0.85}
           >
             <Ionicons name="chatbubble-outline" size={18} color="#FFFFFF" />
-          </TouchableOpacity>
-          <TouchableOpacity
+          </BouncyButton>
+          <BouncyButton
             onPress={async () => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               const result = await ImagePicker.launchImageLibraryAsync({
@@ -89,7 +90,7 @@ const SpectatorControls = ({
             activeOpacity={0.85}
           >
             <Ionicons name="image-outline" size={18} color="#0B0F13" />
-          </TouchableOpacity>
+          </BouncyButton>
         </View>
       </View>
     );
@@ -98,7 +99,7 @@ const SpectatorControls = ({
   if (isFinished) {
     return (
       <View style={styles.controlsContainer}>
-        <TouchableOpacity
+        <BouncyButton
           style={styles.circleStartButton}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -107,7 +108,7 @@ const SpectatorControls = ({
           activeOpacity={0.9}
         >
           <Text style={styles.circleStartText}>Done</Text>
-        </TouchableOpacity>
+        </BouncyButton>
       </View>
     );
   }
@@ -118,7 +119,7 @@ const SpectatorControls = ({
         {/* Visibility row — sits directly above GO, compact */}
         <View style={styles.scopeRow}>
           {['public', 'friends', 'private'].map((scope) => (
-            <TouchableOpacity
+            <BouncyButton
               key={scope}
               style={[
                 styles.scopeChip,
@@ -135,11 +136,11 @@ const SpectatorControls = ({
               >
                 {scope.charAt(0).toUpperCase() + scope.slice(1)}
               </Text>
-            </TouchableOpacity>
+            </BouncyButton>
           ))}
         </View>
 
-        <TouchableOpacity
+        <BouncyButton
           style={styles.goButton}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -148,7 +149,7 @@ const SpectatorControls = ({
           activeOpacity={0.9}
         >
           <Text style={styles.goButtonText}>GO</Text>
-        </TouchableOpacity>
+        </BouncyButton>
       </View>
     );
   }
@@ -156,7 +157,7 @@ const SpectatorControls = ({
   return (
     <View style={styles.controlsContainer}>
       <View style={styles.activeControls}>
-        <TouchableOpacity
+        <BouncyButton
           style={
             isPaused ? styles.circleResumeButton : styles.circlePauseButton
           }
@@ -173,9 +174,9 @@ const SpectatorControls = ({
           <Text style={styles.circleButtonText}>
             {isPaused ? 'Resume' : 'Pause'}
           </Text>
-        </TouchableOpacity>
+        </BouncyButton>
 
-        <TouchableOpacity
+        <BouncyButton
           style={styles.circleStopButton}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -184,7 +185,7 @@ const SpectatorControls = ({
           activeOpacity={0.9}
         >
           <Text style={styles.circleButtonText}>Stop</Text>
-        </TouchableOpacity>
+        </BouncyButton>
       </View>
     </View>
   );

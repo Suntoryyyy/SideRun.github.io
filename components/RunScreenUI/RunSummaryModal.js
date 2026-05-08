@@ -9,10 +9,10 @@
  *   3. What the user sees in-app matches the PNG they'll get out.
  */
 import React, { useRef, useState } from 'react';
+import BouncyButton from '../BouncyButton';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   Modal,
   Dimensions,
@@ -811,7 +811,7 @@ const RunSummaryModal = ({
 
             {/* Training insight link */}
             {distanceKm > 0 && (
-              <TouchableOpacity
+              <BouncyButton
                 style={styles.insightLink}
                 activeOpacity={0.75}
                 onPress={() => {
@@ -825,12 +825,12 @@ const RunSummaryModal = ({
               >
                 <Text style={styles.insightLinkText}>See training insight</Text>
                 <Ionicons name="arrow-forward" size={13} color="#24C789" />
-              </TouchableOpacity>
+              </BouncyButton>
             )}
 
             {/* Save actions */}
             <View style={styles.saveRow}>
-              <TouchableOpacity
+              <BouncyButton
                 style={[styles.saveBtn, busy === 'card' && styles.saveBtnBusy]}
                 activeOpacity={0.85}
                 onPress={() => handleShare('card')}
@@ -847,9 +847,9 @@ const RunSummaryModal = ({
                     </View>
                   </>
                 )}
-              </TouchableOpacity>
+              </BouncyButton>
 
-              <TouchableOpacity
+              <BouncyButton
                 style={[styles.saveBtn, busy === 'story' && styles.saveBtnBusy]}
                 activeOpacity={0.85}
                 onPress={() => handleShare('story')}
@@ -866,10 +866,10 @@ const RunSummaryModal = ({
                     </View>
                   </>
                 )}
-              </TouchableOpacity>
+              </BouncyButton>
             </View>
 
-            <TouchableOpacity
+            <BouncyButton
               style={styles.doneButton}
               activeOpacity={0.85}
               onPress={() => {
@@ -880,7 +880,7 @@ const RunSummaryModal = ({
               }}
             >
               <Text style={styles.doneButtonText}>Done</Text>
-            </TouchableOpacity>
+            </BouncyButton>
           </ScrollView>
         </View>
       </BlurView>

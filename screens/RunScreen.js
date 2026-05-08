@@ -1,9 +1,9 @@
 import * as Haptics from 'expo-haptics';
 import React, { useState, useEffect, useRef } from "react";
+import BouncyButton from "../components/BouncyButton";
 import {
   View,
   Text,
-  TouchableOpacity,
   Dimensions,
   Platform,
   UIManager,
@@ -544,13 +544,13 @@ export default function RunScreen({ route, navigation }) {
           style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 150, zIndex: 100 }}
           pointerEvents="box-none"
         >
-          <TouchableOpacity
+          <BouncyButton
             style={styles.backButton}
             onPress={() => navigation.goBack()}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name="chevron-back" size={20} color="#0B0F13" />
-          </TouchableOpacity>
+          </BouncyButton>
 
           {spectateFriend && (
             <View style={styles.spectatorBadge}>
@@ -579,14 +579,14 @@ export default function RunScreen({ route, navigation }) {
           ]}
           {...(Platform.OS !== 'web' ? panResponder.panHandlers : {})}
         >
-          <TouchableOpacity
+          <BouncyButton
             style={styles.dragHandleContainer}
             activeOpacity={0.7}
             onPress={togglePanel}
             hitSlop={{ top: 12, bottom: 12, left: 80, right: 80 }}
           >
             <View style={styles.dragHandle} />
-          </TouchableOpacity>
+          </BouncyButton>
 
           <MetricDashboard
             mode={mode}
@@ -614,7 +614,7 @@ export default function RunScreen({ route, navigation }) {
                   the pace data so they never overlap the content above. */}
               <View style={styles.pausedCircleRow}>
                 <View style={styles.pausedCircleStack}>
-                  <TouchableOpacity
+                  <BouncyButton
                     style={styles.resumeCircle}
                     onPress={() => {
                       if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -624,12 +624,12 @@ export default function RunScreen({ route, navigation }) {
                     accessibilityLabel="Resume run"
                   >
                     <Ionicons name="play" size={28} color="#FFFFFF" />
-                  </TouchableOpacity>
+                  </BouncyButton>
                   <Text style={styles.pausedCircleLabel}>Resume</Text>
                 </View>
 
                 <View style={styles.pausedCircleStack}>
-                  <TouchableOpacity
+                  <BouncyButton
                     style={styles.stopCircle}
                     onPress={() => {
                       if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -639,7 +639,7 @@ export default function RunScreen({ route, navigation }) {
                     accessibilityLabel="Stop run"
                   >
                     <View style={styles.stopCircleInner} />
-                  </TouchableOpacity>
+                  </BouncyButton>
                   <Text style={styles.pausedCircleLabel}>Stop</Text>
                 </View>
               </View>
@@ -660,7 +660,7 @@ export default function RunScreen({ route, navigation }) {
                   <Text style={styles.demoSpectateLabel}>Or watch a demo friend</Text>
                   <View style={styles.demoSpectateChips}>
                     {DEMO_FRIENDS.map((friend) => (
-                      <TouchableOpacity
+                      <BouncyButton
                         key={friend.id}
                         style={[styles.demoSpectateChip, { borderColor: friend.color }]}
                         activeOpacity={0.85}
@@ -677,7 +677,7 @@ export default function RunScreen({ route, navigation }) {
                         <Text style={styles.demoSpectateChipAvatar}>{friend.avatar}</Text>
                         <Text style={styles.demoSpectateChipName}>{friend.name}</Text>
                         <View style={[styles.demoSpectateChipDot, { backgroundColor: friend.color }]} />
-                      </TouchableOpacity>
+                      </BouncyButton>
                     ))}
                   </View>
                 </View>
@@ -708,7 +708,7 @@ export default function RunScreen({ route, navigation }) {
       {isActiveRun && mode !== 'spectate' && (
         <View style={styles.fixedControls} pointerEvents="box-none">
           <View style={styles.fixedControlsSingle}>
-            <TouchableOpacity
+            <BouncyButton
               style={styles.pauseBtn}
               onPress={() => {
                 if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -717,7 +717,7 @@ export default function RunScreen({ route, navigation }) {
               activeOpacity={0.9}
             >
               <Text style={styles.fixedBtnText}>Pause</Text>
-            </TouchableOpacity>
+            </BouncyButton>
           </View>
         </View>
       )}

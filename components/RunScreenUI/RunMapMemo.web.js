@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Platform, TouchableOpacity, Animated } from 'react-native';
+import BouncyButton from '../BouncyButton';
+import { View, Text, StyleSheet, Platform, Animated } from 'react-native';
 import { Image } from 'expo-image';
 import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -236,14 +237,14 @@ const RunMapMemo = ({
       </MapContainer>
 
       {/* Custom Recenter Button matching the native screen overlay */}
-      <TouchableOpacity 
+      <BouncyButton 
         style={[styles.recenterButton, { padding: 0 }]} 
         onPress={recenterMap}
       >
         <BlurView intensity={80} tint="light" style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}>
           <Ionicons name="navigate" size={24} color="#000" />
         </BlurView>
-      </TouchableOpacity>
+      </BouncyButton>
 
       {/* Live / spectate pill — only visible when a run is active or watching */}
       {(isRunning || mode === 'spectate') && (

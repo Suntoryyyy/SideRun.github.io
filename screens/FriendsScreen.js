@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Image } from "expo-image";
+import BouncyButton from "../components/BouncyButton";
 import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   Alert,
   TextInput,
   Modal,
@@ -375,10 +375,10 @@ export default function FriendsScreen({ navigation }) {
                 {activeFriends.length > 0 ? `${activeFriends.length} crew members` : 'No one active'}
               </Text>
             </View>
-            <TouchableOpacity style={styles.cheerBtn} activeOpacity={0.8}>
+            <BouncyButton style={styles.cheerBtn} activeOpacity={0.8}>
               <Ionicons name="heart" size={13} color="#FF5A36" />
               <Text style={styles.cheerBtnText}>Cheer all</Text>
-            </TouchableOpacity>
+            </BouncyButton>
           </View>
 
           <ScrollView
@@ -389,7 +389,7 @@ export default function FriendsScreen({ navigation }) {
             {activeFriends.map((friend, idx) => {
               const color = BUBBLE_COLORS[idx % BUBBLE_COLORS.length];
               return (
-                <TouchableOpacity
+                <BouncyButton
                   key={friend.id}
                   style={[styles.bubble, { borderColor: color }]}
                   activeOpacity={0.8}
@@ -420,7 +420,7 @@ export default function FriendsScreen({ navigation }) {
                       {friend.weeklyDistance.toFixed(1)} km
                     </Text>
                   )}
-                </TouchableOpacity>
+                </BouncyButton>
               );
             })}
           </ScrollView>
@@ -429,14 +429,14 @@ export default function FriendsScreen({ navigation }) {
 
       <View style={styles.friendsHeader}>
         <Text style={styles.sectionTitle}>Your Friends ({friends.length})</Text>
-        <TouchableOpacity
+        <BouncyButton
           style={styles.addButton}
           onPress={() => setAddFriendMode(!addFriendMode)}
         >
           <Text style={styles.addButtonText}>
             {addFriendMode ? "Cancel" : "+ Add Friend"}
           </Text>
-        </TouchableOpacity>
+        </BouncyButton>
       </View>
 
       {addFriendMode && (
@@ -448,14 +448,14 @@ export default function FriendsScreen({ navigation }) {
             onChangeText={setNewFriendName}
             autoCapitalize="none"
           />
-          <TouchableOpacity style={styles.confirmButton} onPress={addFriend}>
+          <BouncyButton style={styles.confirmButton} onPress={addFriend}>
             <Text style={styles.confirmButtonText}>Add Friend</Text>
-          </TouchableOpacity>
+          </BouncyButton>
         </View>
       )}
 
       {friends.map((friend) => (
-        <TouchableOpacity
+        <BouncyButton
           key={friend.id}
           style={styles.friendCard}
           onPress={() => openFriendProfile(friend)}
@@ -507,7 +507,7 @@ export default function FriendsScreen({ navigation }) {
               </View>
             </View>
           </View>
-        </TouchableOpacity>
+        </BouncyButton>
       ))}
 
       {friends.length === 0 && !addFriendMode && (
@@ -616,13 +616,13 @@ export default function FriendsScreen({ navigation }) {
                   <Text style={styles.sheetPhone}>
                     {selectedFriend.phone || "Runner"}
                   </Text>
-                  <TouchableOpacity
+                  <BouncyButton
                     style={styles.sheetClose}
                     onPress={closeFriendProfile}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <Ionicons name="close" size={18} color="#0B0F13" />
-                  </TouchableOpacity>
+                  </BouncyButton>
                 </View>
 
                 <View style={styles.sheetStats}>
@@ -641,7 +641,7 @@ export default function FriendsScreen({ navigation }) {
                 </View>
 
                 {selectedFriend.isOnline && (
-                  <TouchableOpacity
+                  <BouncyButton
                     style={[styles.chatBtn, styles.chatBtnSecondary]}
                     onPress={() => {
                       closeFriendProfile();
@@ -653,10 +653,10 @@ export default function FriendsScreen({ navigation }) {
                   >
                     <Ionicons name="eye-outline" size={18} color="#FFF" />
                     <Text style={styles.chatBtnText}>Spectate live run</Text>
-                  </TouchableOpacity>
+                  </BouncyButton>
                 )}
 
-                <TouchableOpacity
+                <BouncyButton
                   style={styles.chatBtn}
                   onPress={() => {
                     closeFriendProfile();
@@ -668,9 +668,9 @@ export default function FriendsScreen({ navigation }) {
                 >
                   <Ionicons name="chatbubble-outline" size={18} color="#FFF" />
                   <Text style={styles.chatBtnText}>Message</Text>
-                </TouchableOpacity>
+                </BouncyButton>
 
-                <TouchableOpacity
+                <BouncyButton
                   style={styles.removeFriendBtn}
                   onPress={() => {
                     closeFriendProfile();
@@ -678,7 +678,7 @@ export default function FriendsScreen({ navigation }) {
                   }}
                 >
                   <Text style={styles.removeFriendBtnText}>Remove Friend</Text>
-                </TouchableOpacity>
+                </BouncyButton>
               </Animated.View>
             </TouchableWithoutFeedback>
           </View>
@@ -695,13 +695,13 @@ export default function FriendsScreen({ navigation }) {
       >
         <View style={styles.header}>
           <View style={styles.headerTopRow}>
-            <TouchableOpacity
+            <BouncyButton
               style={styles.backButton}
               onPress={() => navigation.goBack()}
               hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
             >
               <Ionicons name="chevron-back" size={22} color="#0B0F13" />
-            </TouchableOpacity>
+            </BouncyButton>
           </View>
           <Text style={styles.title}>Crew</Text>
           <Text style={styles.subtitle}>
@@ -710,7 +710,7 @@ export default function FriendsScreen({ navigation }) {
         </View>
 
         <View style={styles.tabBar}>
-          <TouchableOpacity
+          <BouncyButton
             style={[styles.tab, activeTab === "friends" && styles.activeTab]}
             onPress={() => setActiveTab("friends")}
           >
@@ -722,8 +722,8 @@ export default function FriendsScreen({ navigation }) {
             >
               Friends
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </BouncyButton>
+          <BouncyButton
             style={[styles.tab, activeTab === "feed" && styles.activeTab]}
             onPress={() => setActiveTab("feed")}
           >
@@ -735,8 +735,8 @@ export default function FriendsScreen({ navigation }) {
             >
               Feed
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </BouncyButton>
+          <BouncyButton
             style={[
               styles.tab,
               activeTab === "leaderboard" && styles.activeTab,
@@ -751,7 +751,7 @@ export default function FriendsScreen({ navigation }) {
             >
               Leaderboard
             </Text>
-          </TouchableOpacity>
+          </BouncyButton>
         </View>
 
         {activeTab === "friends" ? (

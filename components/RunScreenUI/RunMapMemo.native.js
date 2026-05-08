@@ -2,7 +2,8 @@ import { Animated } from 'react-native';
 import React from 'react';
 import * as Haptics from 'expo-haptics';
 import { BlurView } from 'expo-blur';
-import { View, Text, TouchableOpacity, Platform } from 'react-native';
+import BouncyButton from '../BouncyButton';
+import { View, Text, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Polyline, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import MapStyle from '../../screens/MapStyle.json';
@@ -93,7 +94,7 @@ const RunMapMemo = React.memo(({
   return (
     <View style={styles.mapContainer}>
         {/* Floating Back Button */}
-        <TouchableOpacity
+        <BouncyButton
           style={[styles.backButton, { padding: 0 }]}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -104,7 +105,7 @@ const RunMapMemo = React.memo(({
           <BlurView intensity={80} tint="light" style={{ padding: 10, borderRadius: 20 }}>
           <Ionicons name="arrow-back" size={28} color="#333" />
           </BlurView>
-        </TouchableOpacity>
+        </BouncyButton>
 
         {Platform.OS === "web" ? (
           // Real OpenStreetMap embed for web fallback
@@ -246,7 +247,7 @@ const RunMapMemo = React.memo(({
           </View>
 
           {/* Recenter Button */}
-          <TouchableOpacity 
+          <BouncyButton 
           style={[styles.recenterButton, { padding: 0 }]} 
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -256,7 +257,7 @@ const RunMapMemo = React.memo(({
           <BlurView intensity={80} tint="light" style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}>
             <Ionicons name="navigate" size={24} color="#000" />
           </BlurView>
-          </TouchableOpacity>
+          </BouncyButton>
         </View>
         )}
 

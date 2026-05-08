@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
+import BouncyButton from "../components/BouncyButton";
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
   Dimensions,
   Image,
@@ -315,7 +315,7 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.greeting}>{getGreeting()}</Text>
               <Text style={styles.userName}>{username}</Text>
             </View>
-            <TouchableOpacity
+            <BouncyButton
               onPress={() => navigation.navigate('Profile')}
               activeOpacity={0.8}
             >
@@ -334,7 +334,7 @@ export default function HomeScreen({ navigation }) {
                   </Text>
                 </View>
               )}
-            </TouchableOpacity>
+            </BouncyButton>
           </View>
         </View>
 
@@ -412,7 +412,7 @@ export default function HomeScreen({ navigation }) {
           const [condLabel, condDesc] = getRunCondition(temp, wid);
           const tempStr = temp != null ? `${Math.round(temp)}°C · ` : '';
           return (
-            <TouchableOpacity
+            <BouncyButton
               activeOpacity={0.85}
               onPress={() => { hapticLight(); navigation.navigate("Weather"); }}
               style={styles.weatherCard}
@@ -425,21 +425,21 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.weatherDesc}>{condDesc}</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#9AA0A6" />
-            </TouchableOpacity>
+            </BouncyButton>
           );
         })()}
 
         {/* Recent Run */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Recent run</Text>
-          <TouchableOpacity onPress={() => navigation.navigate("RunHistory")}>
+          <BouncyButton onPress={() => navigation.navigate("RunHistory")}>
             <Text style={styles.seeAllText}>See all</Text>
-          </TouchableOpacity>
+          </BouncyButton>
         </View>
 
         {recentRun ? (
           <>
-            <TouchableOpacity
+            <BouncyButton
               activeOpacity={0.85}
               onPress={() => navigation.navigate("RunHistory")}
               style={styles.recentRunCard}
@@ -472,10 +472,10 @@ export default function HomeScreen({ navigation }) {
                   <Text style={styles.runTime}>duration</Text>
                 )}
               </View>
-            </TouchableOpacity>
+            </BouncyButton>
 
             {nextTarget && (
-              <TouchableOpacity
+              <BouncyButton
                 activeOpacity={0.8}
                 onPress={() => navigation.navigate("Run", { mode: 'solo', spectateFriend: null })}
                 style={styles.nextTargetChip}
@@ -485,7 +485,7 @@ export default function HomeScreen({ navigation }) {
                   Next target: <Text style={styles.nextTargetBold}>{nextTarget.label} ({nextTarget.km.toFixed(1)} km)</Text>
                 </Text>
                 <Ionicons name="chevron-forward" size={14} color="#9AA0A6" />
-              </TouchableOpacity>
+              </BouncyButton>
             )}
           </>
         ) : (

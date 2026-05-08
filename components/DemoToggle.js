@@ -9,7 +9,8 @@
  * instead so the button always feels responsive.
  */
 import React, { useEffect, useState } from 'react';
-import { View, Text, Switch, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import BouncyButton from './BouncyButton';
+import { View, Text, Switch, StyleSheet, Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { DEMO_MODE_KEY, broadcastDemoMode, DEMO_ROUTE_COORDS } from '../hooks/useDemoMode';
@@ -91,7 +92,7 @@ export default function DemoToggle() {
         />
       </View>
 
-      <TouchableOpacity
+      <BouncyButton
         style={[styles.seedBtn, seedState === 'loading' && styles.seedBtnLoading]}
         activeOpacity={0.8}
         onPress={seedCompletedRun}
@@ -105,7 +106,7 @@ export default function DemoToggle() {
         <Text style={styles.seedBtnText}>
           {seedState === 'loading' ? 'Seeding…' : 'Seed a completed run'}
         </Text>
-      </TouchableOpacity>
+      </BouncyButton>
 
       {/* Inline toast — shown instead of Alert.alert so it works on web/PWA */}
       {seedState !== 'idle' && seedState !== 'loading' && (
