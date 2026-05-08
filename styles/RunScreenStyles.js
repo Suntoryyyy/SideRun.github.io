@@ -201,7 +201,10 @@ export default StyleSheet.create({
     paddingBottom: 20,
   },
   dashboardSpectate: {
-    height: height * 0.38 + 200,
+    height: height * 0.28 + 200,
+  },
+  dashboardSpectateExpanded: {
+    height: height * 0.45 + 200,
   },
   dashboardCollapsed: {
     flex: 0,
@@ -595,6 +598,73 @@ export default StyleSheet.create({
     borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+
+  // Spectator cheer drawer styles
+  spectateMainAction: {
+    backgroundColor: '#0B0F13',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 48,
+    borderRadius: 24,
+    marginHorizontal: 40,
+    marginTop: 10,
+  },
+  spectateMainActionText: {
+    color: '#FFFFFF',
+    fontFamily: FONT.bold,
+    fontSize: 14,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  spectateGrid: {
+    paddingHorizontal: 24,
+    gap: 12,
+  },
+  spectateGridTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  spectateGridEmojiBtn: {
+    backgroundColor: '#F4F5F7',
+    flex: 1,
+    height: 56,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  spectateGridEmoji: {
+    fontSize: 26,
+  },
+  spectateGridBottom: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  spectateGridActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E4E6EA',
+    height: 56,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+  },
+  spectateGridActionText: {
+    color: '#0B0F13',
+    fontFamily: FONT.semibold,
+    fontSize: 14,
+  },
+  spectateCloseBtn: {
+    alignSelf: 'center',
+    paddingTop: 8,
+    paddingBottom: 20,
   },
 
   cheerButton: {

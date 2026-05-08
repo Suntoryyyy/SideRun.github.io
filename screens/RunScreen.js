@@ -56,6 +56,7 @@ export default function RunScreen({ route, navigation }) {
   const [userAvatar, setUserAvatar] = useState(user?.avatar || null);
   const [cheers, setCheers] = useState([]);
   const [visibilityScope, setVisibilityScope] = useState("friends");
+  const [spectatorExpanded, setSpectatorExpanded] = useState(false);
 
   const [liveEmojis, setLiveEmojis] = useState([]);
   const [regionSet, setRegionSet] = useState(false);
@@ -458,7 +459,7 @@ export default function RunScreen({ route, navigation }) {
   const showDashboard = mode === 'spectate' || isPreRun || isPausedRun;
   const dashboardStateStyle =
     mode === 'spectate'
-      ? styles.dashboardSpectate
+      ? spectatorExpanded ? styles.dashboardSpectateExpanded : styles.dashboardSpectate
       : isPausedRun
       ? styles.dashboardPaused
       : styles.dashboardPreRun;
@@ -597,6 +598,7 @@ export default function RunScreen({ route, navigation }) {
             contentOpacity={contentOpacity}
             friendsWatching={friendsWatching}
             signalLost={signalLost}
+            spectatorExpanded={spectatorExpanded}
           />
 
           {/* Pause state = expanded stats review. Active running intentionally
@@ -695,8 +697,13 @@ export default function RunScreen({ route, navigation }) {
                 resumeRun={resumeRun}
                 stopRun={stopRun}
                 closeRun={closeRun}
-                sendCheer={sendCheer}
+                sendCheer={(emoji) => {
+                  sendCheer(emoji);
+                  if (spectatorExpanded) setSpectatorExpanded(false);
+                }}
                 contentOpacity={contentOpacity}
+                spectatorExpanded={spectatorExpanded}
+                setSpectatorExpanded={setSpectatorExpanded}
               />
             </>
           )}

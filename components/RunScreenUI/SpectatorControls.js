@@ -22,74 +22,107 @@ const SpectatorControls = ({
   closeRun,
   sendCheer,
   contentOpacity,
+  spectatorExpanded,
+  setSpectatorExpanded,
 }) => {
   if (mode === 'spectate') {
+    if (!spectatorExpanded) {
+      return (
+        <View style={[styles.controlsContainer, { paddingTop: 0 }]}>
+          <BouncyButton
+            style={styles.spectateMainAction}
+            onPress={() => setSpectatorExpanded(true)}
+            activeOpacity={0.9}
+          >
+            <Ionicons name="megaphone" size={18} color="#FFFFFF" />
+            <Text style={styles.spectateMainActionText}>Cheer</Text>
+          </BouncyButton>
+        </View>
+      );
+    }
+
     return (
       <View style={[styles.controlsContainer, { paddingTop: 10 }]}>
-        <View style={styles.spectatorTray}>
-          {CHEER_EMOJIS.map((emoji) => (
+        <View style={styles.spectateGrid}>
+          <View style={styles.spectateGridTop}>
+            {CHEER_EMOJIS.map((emoji) => (
+              <BouncyButton
+                key={emoji}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                  sendCheer(emoji);
+                }}
+                style={styles.spectateGridEmojiBtn}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.spectateGridEmoji}>{emoji}</Text>
+              </BouncyButton>
+            ))}
+          </View>
+          
+          <View style={styles.spectateGridBottom}>
             <BouncyButton
-              key={emoji}
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-                sendCheer(emoji);
-              }}
-              style={styles.spectatorCheerBtn}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.spectatorCheerEmoji}>{emoji}</Text>
-            </BouncyButton>
-          ))}
-          <BouncyButton
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              if (Platform.OS === 'web') {
-                const text = window.prompt('Type a message to cheer them on!');
-                if (text && text.trim().length > 0) {
-                  sendCheer(text);
-                }
-              } else {
-                Alert.prompt(
-                  'Send message',
-                  'Type a message to cheer them on!',
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    {
-                      text: 'Send',
-                      onPress: (text) => {
-                        if (text && text.trim().length > 0) {
-                          sendCheer(text);
-                        }
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                if (Platform.OS === 'web') {
+                  const text = window.prompt('Type a message to cheer them on!');
+                  if (text && text.trim().length > 0) {
+                    sendCheer(text);
+                  }
+                } else {
+                  Alert.prompt(
+                    'Send message',
+                    'Type a message to cheer them on!',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Send',
+                        onPress: (text) => {
+                          if (text && text.trim().length > 0) {
+                            sendCheer(text);
+                          }
+                        },
                       },
-                    },
-                  ],
-                );
-              }
-            }}
-            style={styles.spectatorMessageBtn}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="chatbubble-outline" size={18} color="#FFFFFF" />
-          </BouncyButton>
-          <BouncyButton
-            onPress={async () => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ['images'],
-                allowsEditing: true,
-                aspect: [1, 1],
-                quality: 0.1,
-                base64: true,
-              });
+                    ],
+                  );
+                }
+              }}
+              style={styles.spectateGridActionBtn}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="chatbubble-outline" size={18} color="#0B0F13" />
+              <Text style={styles.spectateGridActionText}>Message</Text>
+            </BouncyButton>
 
-              if (!result.canceled && result.assets?.[0]?.base64) {
-                sendCheer(`data:image/jpeg;base64,${result.assets[0].base64}`);
-              }
-            }}
-            style={styles.spectatorPhotoBtn}
-            activeOpacity={0.85}
+            <BouncyButton
+              onPress={async () => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                const result = await ImagePicker.launchImageLibraryAsync({
+                  mediaTypes: ['images'],
+                  allowsEditing: true,
+                  aspect: [1, 1],
+                  quality: 0.1,
+                  base64: true,
+                });
+
+                if (!result.canceled && result.assets?.[0]?.base64) {
+                  sendCheer(`data:image/jpeg;base64,${result.assets[0].base64}`);
+                }
+              }}
+              style={styles.spectateGridActionBtn}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="camera-outline" size={18} color="#0B0F13" />
+              <Text style={styles.spectateGridActionText}>Photo</Text>
+            </BouncyButton>
+          </View>
+          
+          <BouncyButton
+             style={styles.spectateCloseBtn}
+             onPress={() => setSpectatorExpanded(false)}
+             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="image-outline" size={18} color="#0B0F13" />
+             <Ionicons name="chevron-down" size={24} color="#9AA0A6" />
           </BouncyButton>
         </View>
       </View>
