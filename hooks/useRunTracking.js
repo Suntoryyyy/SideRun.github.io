@@ -61,7 +61,12 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
       setCurrentLocation(demoLocation);
       // Seed the panel with a believable mid-run snapshot so the metrics
       // aren't all zero before the demo coordinates start streaming in.
-      setDurationInSeconds(742); // 12:22
+      setDurationInSeconds((prev) => {
+        durationRef.current = 742;
+        return 742;
+      }); // 12:22
+      lastSplitDistRef.current = 2;
+      lastSplitTimeRef.current = 613; // 311 + 302
       setRunData({
         distance: 2.4,
         calories: 144,
@@ -144,18 +149,49 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
         : 0;
       if (distFromLast > 0.001 && distFromLast < 1.0) {
         lastLocation.current = newLoc;
-        setRunData((prev) => ({
-          ...prev,
-          distance: prev.distance + distFromLast,
-          calories: prev.calories + distFromLast * 60,
-          coordinates: [...prev.coordinates, newLoc],
-        }));
+        setRunData((prev) => {
+          const newDist = prev.distance + distFromLast;
+          const crossedKm = Math.floor(newDist);
+          const prevKm = Math.floor(prev.distance);
+          let newSplits = prev.splits || [];
+          if (crossedKm > prevKm && crossedKm > 0) {
+            const splitDurSec = durationRef.current - lastSplitTimeRef.current;
+            const splitDistKm = crossedKm - lastSplitDistRef.current;
+            const paceMinPerKm = splitDistKm > 0 ? splitDurSec / 60 / splitDistKm : 0;
+            newSplits = [...newSplits, { km: crossedKm, paceMinPerKm, durationSec: splitDurSec }];
+            lastSplitDistRef.current = crossedKm;
+            lastSplitTimeRef.current = durationRef.current;
+          }
+          return {
+            ...prev,
+            distance: newDist,
+            calories: prev.calories + distFromLast * 60,
+            coordinates: [...prev.coordinates, newLoc],
+            splits: newSplits,
+          };
+        });
       } else if (!lastLocation.current) {
         lastLocation.current = newLoc;
       }
     });
   }, [demoCoordinates, isDemoMode, mode]);
 
+
+  // When mode changes to 'solo', reset the entire run tracking state to prevent
+  // bleeding spectate state into a solo run.
+  useEffect(() => {
+    if (mode === 'solo' && isRunning) {
+      setIsRunning(false);
+      setIsPaused(false);
+      setIsFinished(false);
+      setDurationInSeconds(0);
+      setRunData({ distance: 0, calories: 0, coordinates: [], splits: [] });
+      lastLocation.current = null;
+      durationRef.current = 0;
+      lastSplitDistRef.current = 0;
+      lastSplitTimeRef.current = 0;
+    }
+  }, [mode]);
 
   useEffect(() => {
     let interval;
@@ -561,8 +597,9 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
     }
   };
 
-  const closeRun = () => {
+  const closeRun = (options) => {
     setIsFinished(false);
+    if (options?.skipGoBack) return;
     navigation.goBack();
   };
 

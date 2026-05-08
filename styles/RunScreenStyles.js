@@ -371,6 +371,7 @@ export default StyleSheet.create({
     paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    width: '100%',
     paddingBottom: Platform.OS === 'ios' ? 12 : 0,
   },
   circleStartButton: {
@@ -606,6 +607,7 @@ export default StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'stretch',
     gap: 8,
     height: 48,
     borderRadius: 24,
@@ -620,6 +622,7 @@ export default StyleSheet.create({
     textTransform: 'uppercase',
   },
   spectateGrid: {
+    alignSelf: 'stretch',
     paddingHorizontal: 24,
     gap: 12,
   },

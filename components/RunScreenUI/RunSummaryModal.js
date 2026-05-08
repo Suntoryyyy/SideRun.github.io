@@ -816,10 +816,13 @@ const RunSummaryModal = ({
                 activeOpacity={0.75}
                 onPress={() => {
                   if (navigation) {
-                    navigation.navigate('TrainingInsight', {
-                      runData,
-                      durationInSeconds: duration,
-                    });
+                    closeRun({ skipGoBack: true });
+                    setTimeout(() => {
+                      navigation.navigate('TrainingInsight', {
+                        runData,
+                        durationInSeconds: duration,
+                      });
+                    }, 50);
                   }
                 }}
               >
