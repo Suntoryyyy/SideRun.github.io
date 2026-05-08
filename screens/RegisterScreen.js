@@ -93,7 +93,7 @@ export default function RegisterScreen({ navigation }) {
       if (data.user) {
         const { error: insertError } = await supabase
           .from('users')
-          .insert([
+          .upsert([
             {
               id: data.user.id,
               phone: trimmedPhone,
@@ -101,9 +101,9 @@ export default function RegisterScreen({ navigation }) {
               weeklyDistance: 0,
               totalRuns: 0,
             },
-          ]);
+          ], { onConflict: 'id' });
         if (insertError) {
-          console.error('Database Insert Error:', insertError);
+          console.error('Database Upsert Error:', insertError);
           setIsLoading(false);
           showAlert(
             'Database error',

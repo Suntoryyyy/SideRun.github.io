@@ -88,15 +88,30 @@ export default function LoginScreen({ navigation }) {
         return;
       }
       let username = 'Runner';
+      let avatar = null;
       if (data.user) {
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from('users')
-          .select('username')
+          .select('*')
           .eq('id', data.user.id)
           .single();
-        if (profile?.username) username = profile.username;
+        
+        if (profileError) {
+          console.warn("Could not fetch user profile on login:", profileError);
+          // Fallback: try fetching by phone
+          const { data: phoneProfile } = await supabase
+            .from('users')
+            .select('*')
+            .eq('phone', trimmedPhone)
+            .single();
+          if (phoneProfile?.username) username = phoneProfile.username;
+          if (phoneProfile?.avatar) avatar = phoneProfile.avatar;
+        } else {
+          if (profile?.username) username = profile.username;
+          if (profile?.avatar) avatar = profile.avatar;
+        }
       }
-      const userInfo = { phone: trimmedPhone, username, id: data?.user?.id };
+      const userInfo = { phone: trimmedPhone, username, avatar, id: data?.user?.id };
       if (rememberMe) {
         try { await AsyncStorage.setItem('rememberedPhone', trimmedPhone); } catch (_) {}
       } else {
