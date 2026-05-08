@@ -46,7 +46,7 @@ const MetricDashboard = ({
       </View>
 
       {/* Secondary row — time + pace + kcal */}
-      <View style={[styles.secondaryRow, isCompact && { opacity: 0 }]} pointerEvents={isCompact ? 'none' : 'auto'}>
+      <View style={[styles.secondaryRow, isCompact && { display: 'none' }]} pointerEvents={isCompact ? 'none' : 'auto'}>
         <View style={styles.statBox}>
           <Text style={styles.statValue} adjustsFontSizeToFit numberOfLines={1}>
             {formatDuration(durationInSeconds)}

@@ -283,13 +283,17 @@ export default function RunScreen({ route, navigation }) {
 
   // React to programmatic toggle (clicking the bar)
   useEffect(() => {
+    if (mode === 'spectate') {
+      panY.setValue(0);
+      return;
+    }
     Animated.spring(panY, {
       toValue: isPanelCollapsed ? height * 0.75 - 200 : 0,
       useNativeDriver: false,
       tension: 65,
       friction: 10,
     }).start();
-  }, [isPanelCollapsed]);
+  }, [isPanelCollapsed, mode]);
 
   // ── Glance Mode (Scheme A) ──────────────────────────────────────────
   // Drive the sliding panel automatically based on run state:
@@ -306,7 +310,7 @@ export default function RunScreen({ route, navigation }) {
   }, [isRunning, isPaused, mode]);
 
   const togglePanel = () => {
-    if (isActiveRun) return;
+    if (isActiveRun || mode === 'spectate') return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setIsPanelCollapsed(!isPanelCollapsed);
   };
@@ -578,7 +582,7 @@ export default function RunScreen({ route, navigation }) {
             dashboardStateStyle,
             { transform: [{ translateY: panY }] },
           ]}
-          {...(Platform.OS !== 'web' ? panResponder.panHandlers : {})}
+          {...(Platform.OS !== 'web' && mode !== 'spectate' ? panResponder.panHandlers : {})}
         >
           <BouncyButton
             style={styles.dragHandleContainer}
@@ -652,38 +656,6 @@ export default function RunScreen({ route, navigation }) {
           {(isPreRun || mode === 'spectate') && (
             <>
               <View style={styles.panelDivider} />
-
-              {/* Demo-only entry point: lets the user jump into a fake
-                  spectate session against a demo crew member, so the
-                  spectator-side cheer flow can be shown end-to-end
-                  without needing real online friends. */}
-              {isPreRun && isDemoMode && (
-                <View style={styles.demoSpectateRow}>
-                  <Text style={styles.demoSpectateLabel}>Or watch a demo friend</Text>
-                  <View style={styles.demoSpectateChips}>
-                    {DEMO_FRIENDS.map((friend) => (
-                      <BouncyButton
-                        key={friend.id}
-                        style={[styles.demoSpectateChip, { borderColor: friend.color }]}
-                        activeOpacity={0.85}
-                        onPress={() => {
-                          if (Platform.OS !== 'web') {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                          }
-                          navigation.navigate('Run', {
-                            mode: 'spectate',
-                            spectateFriend: friend,
-                          });
-                        }}
-                      >
-                        <Text style={styles.demoSpectateChipAvatar}>{friend.avatar}</Text>
-                        <Text style={styles.demoSpectateChipName}>{friend.name}</Text>
-                        <View style={[styles.demoSpectateChipDot, { backgroundColor: friend.color }]} />
-                      </BouncyButton>
-                    ))}
-                  </View>
-                </View>
-              )}
 
               <SpectatorControls
                 mode={mode}

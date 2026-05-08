@@ -20,7 +20,7 @@ import ActivityFeed from "../components/ActivityFeed";
 import CustomAlert from "../components/CustomAlert";
 import Leaderboard from "../components/Leaderboard";
 import EmptyState from "../components/EmptyState";
-import { DEMO_MODE_KEY } from "../hooks/useDemoMode";
+import useDemoMode, { DEMO_MODE_KEY } from "../hooks/useDemoMode";
 import { DEMO_FRIENDS } from "../hooks/useDemoSocial";
 
 const isImageAvatar = (a) =>
@@ -30,6 +30,7 @@ const avatarInitial = (name) =>
   (name || "?").trim().charAt(0).toUpperCase() || "?";
 
 export default function FriendsScreen({ navigation }) {
+  const { isDemoMode } = useDemoMode();
   const [friends, setFriends] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [feed, setFeed] = useState([]);
@@ -48,37 +49,27 @@ export default function FriendsScreen({ navigation }) {
   const showAlert = (title, message, type = "error") =>
     setAlertConfig({ visible: true, title, message, type });
 
+  const displayFriends = React.useMemo(() => {
+    if (!isDemoMode) return friends;
+    const demos = DEMO_FRIENDS.map((f) => ({
+      id: f.id,
+      name: f.name,
+      phone: 'Demo',
+      weeklyDistance: 8.4 + Math.random() * 12,
+      totalRuns: 18 + Math.floor(Math.random() * 30),
+      isOnline: true,
+      lastRun: 'Live now',
+      avatar: f.avatar,
+      _isDemo: true,
+      color: f.color,
+    }));
+    const existingIds = new Set(friends.map((f) => f.id));
+    return [...demos.filter((d) => !existingIds.has(d.id)), ...friends];
+  }, [friends, isDemoMode]);
+
   useEffect(() => {
     loadFriendsData();
   }, []);
-
-  // When Demo Mode is on we surface 3 fake online crew members so the
-  // showcase can demonstrate the spectate + emoji-cheer loop end-to-end
-  // without any real backend friends. These get merged into whatever
-  // real friends exist (real ones win on ID collision, which won't
-  // happen because demo IDs are namespaced "demo-…").
-  const mergeDemoFriendsIfEnabled = async (existing) => {
-    try {
-      const v = await AsyncStorage.getItem(DEMO_MODE_KEY);
-      if (v !== '1') return existing;
-      const demos = DEMO_FRIENDS.map((f) => ({
-        id: f.id,
-        name: f.name,
-        phone: 'Demo',
-        weeklyDistance: 8.4 + Math.random() * 12,
-        totalRuns: 18 + Math.floor(Math.random() * 30),
-        isOnline: true,
-        lastRun: 'Live now',
-        avatar: f.avatar,
-        _isDemo: true,
-        color: f.color,
-      }));
-      const existingIds = new Set(existing.map((f) => f.id));
-      return [...demos.filter((d) => !existingIds.has(d.id)), ...existing];
-    } catch (_) {
-      return existing;
-    }
-  };
 
   const loadFriendsData = async () => {
     try {
@@ -149,11 +140,11 @@ export default function FriendsScreen({ navigation }) {
       }
 
         if (!dbFailed && dbFriends.length > 0) {
-          setFriends(await mergeDemoFriendsIfEnabled(dbFriends));
+          setFriends(dbFriends);
         } else {
           const friendsData = await AsyncStorage.getItem("friends");
           const local = friendsData ? JSON.parse(friendsData) : [];
-          setFriends(await mergeDemoFriendsIfEnabled(local));
+          setFriends(local);
         }
 
       if (!dbFailed && feedData.length > 0) {
@@ -361,12 +352,12 @@ export default function FriendsScreen({ navigation }) {
 
   const renderFriendsTab = () => {
     // Simulate "active now" — real apps would use presence channels.
-    const activeFriends = friends.slice(0, Math.min(friends.length, 5));
+    const activeFriends = displayFriends.slice(0, Math.min(displayFriends.length, 5));
     return (
     <View style={styles.tabContent}>
 
       {/* ── Active hero section ── */}
-      {friends.length > 0 && (
+      {displayFriends.length > 0 && (
         <View style={styles.heroSection}>
           <View style={styles.heroTop}>
             <View>
@@ -428,7 +419,7 @@ export default function FriendsScreen({ navigation }) {
       )}
 
       <View style={styles.friendsHeader}>
-        <Text style={styles.sectionTitle}>Your Friends ({friends.length})</Text>
+        <Text style={styles.sectionTitle}>Your Friends ({displayFriends.length})</Text>
         <BouncyButton
           style={styles.addButton}
           onPress={() => setAddFriendMode(!addFriendMode)}
@@ -454,7 +445,7 @@ export default function FriendsScreen({ navigation }) {
         </View>
       )}
 
-      {friends.map((friend) => (
+      {displayFriends.map((friend) => (
         <BouncyButton
           key={friend.id}
           style={styles.friendCard}
@@ -510,7 +501,7 @@ export default function FriendsScreen({ navigation }) {
         </BouncyButton>
       ))}
 
-      {friends.length === 0 && !addFriendMode && (
+      {displayFriends.length === 0 && !addFriendMode && (
         <EmptyState
           icon="people-outline"
           title="Your crew is empty"
