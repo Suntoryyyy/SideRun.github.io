@@ -310,7 +310,9 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
 
   const startRun = async () => {
     requestWakeLock();
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    }
 
     // In demo mode, always use the current simulated location so the run
     // starts on the Tokyo loop regardless of real GPS availability.
@@ -323,6 +325,9 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
     if (isDemoMode) {
       setCurrentLocation(demoLocation);
       setRegion(demoRegion);
+      // Fast-forward our pointer so we don't instantly accumulate all
+      // the background points that were generated before we tapped GO.
+      prevDemoCoordLen.current = demoCoordinates.length;
     }
 
     if (visibilityScope !== "private") {

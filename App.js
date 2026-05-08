@@ -39,6 +39,13 @@ import useWebBottomGuard from './hooks/useWebViewportInset';
 
 fixWebViewport();
 
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  const script = document.createElement('script');
+  script.src = "https://mcp.figma.com/mcp/html-to-design/capture.js";
+  script.async = true;
+  document.head.appendChild(script);
+}
+
 import HomeScreen from './screens/HomeScreen';
 import FriendsScreen from './screens/FriendsScreen';
 import ChatScreen from './screens/ChatScreen';
@@ -141,6 +148,14 @@ function MainTabNavigator({ handleLogout }) {
             </View>
           ),
         }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            // Prevent default behavior so we can force a clean state
+            e.preventDefault();
+            // Navigate to Run tab and reset params to solo mode
+            navigation.navigate('Run', { mode: 'solo', spectateFriend: null });
+          },
+        })}
       />
       <Tab.Screen
         name="Weather"

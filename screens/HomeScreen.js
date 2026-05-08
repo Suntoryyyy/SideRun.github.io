@@ -477,7 +477,7 @@ export default function HomeScreen({ navigation }) {
             {nextTarget && (
               <TouchableOpacity
                 activeOpacity={0.8}
-                onPress={() => navigation.navigate("Run")}
+                onPress={() => navigation.navigate("Run", { mode: 'solo', spectateFriend: null })}
                 style={styles.nextTargetChip}
               >
                 <Ionicons name="trending-up" size={14} color="#24C789" />

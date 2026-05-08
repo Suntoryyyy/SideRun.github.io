@@ -1,6 +1,6 @@
 import React from 'react';
 import * as Haptics from 'expo-haptics';
-import { View, Text, TouchableOpacity, Animated, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Animated, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import styles from '../../styles/RunScreenStyles';
@@ -42,21 +42,28 @@ const SpectatorControls = ({
           <TouchableOpacity
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              Alert.prompt(
-                'Send message',
-                'Type a message to cheer them on!',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Send',
-                    onPress: (text) => {
-                      if (text && text.trim().length > 0) {
-                        sendCheer(text);
-                      }
+              if (Platform.OS === 'web') {
+                const text = window.prompt('Type a message to cheer them on!');
+                if (text && text.trim().length > 0) {
+                  sendCheer(text);
+                }
+              } else {
+                Alert.prompt(
+                  'Send message',
+                  'Type a message to cheer them on!',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Send',
+                      onPress: (text) => {
+                        if (text && text.trim().length > 0) {
+                          sendCheer(text);
+                        }
+                      },
                     },
-                  },
-                ],
-              );
+                  ],
+                );
+              }
             }}
             style={styles.spectatorMessageBtn}
             activeOpacity={0.85}

@@ -12,11 +12,15 @@ import styles from '../../styles/RunScreenStyles';
 
 const FloatingEmoji = ({ emoji, onComplete }) => {
   const [anim] = React.useState(new Animated.Value(0));
+  const randomX = React.useMemo(() => (Math.random() - 0.5) * 150, []);
+  const randomRot = React.useMemo(() => (Math.random() - 0.5) * 45, []);
+  const duration = React.useMemo(() => 2000 + Math.random() * 1000, []);
+  const targetBottom = React.useMemo(() => 450 + Math.random() * 100, []);
 
   React.useEffect(() => {
     Animated.timing(anim, {
       toValue: 1,
-      duration: 2000,
+      duration: duration,
       useNativeDriver: false,
     }).start(onComplete);
   }, []);
@@ -28,11 +32,31 @@ const FloatingEmoji = ({ emoji, onComplete }) => {
         {
           bottom: anim.interpolate({
             inputRange: [0, 1],
-            outputRange: [150, 450],
+            outputRange: [150, targetBottom],
           }),
+          transform: [
+            {
+              translateX: anim.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0, randomX, randomX * 1.2],
+              })
+            },
+            {
+              rotate: anim.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['0deg', `${randomRot}deg`],
+              })
+            },
+            {
+              scale: anim.interpolate({
+                inputRange: [0, 0.1, 0.8, 1],
+                outputRange: [0.5, 1.2, 1, 0.8],
+              })
+            }
+          ],
           opacity: anim.interpolate({
-            inputRange: [0, 0.8, 1],
-            outputRange: [1, 1, 0],
+            inputRange: [0, 0.2, 0.8, 1],
+            outputRange: [0, 1, 1, 0],
           }),
         },
       ]}
