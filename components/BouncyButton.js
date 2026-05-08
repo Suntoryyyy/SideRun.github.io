@@ -14,6 +14,8 @@ import * as Haptics from 'expo-haptics';
  * - bounceFriction: Spring friction (default: 10)
  * - All other standard Pressable/TouchableOpacity props (onPress, style, hitSlop, disabled, etc.)
  */
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 export default function BouncyButton({
   children,
   style,
@@ -70,19 +72,16 @@ export default function BouncyButton({
   };
 
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       onLongPress={onLongPress}
       disabled={disabled}
+      style={[style, { transform: [{ scale }] }]}
       {...props}
     >
-      {({ pressed }) => (
-        <Animated.View style={[style, { transform: [{ scale }] }]}>
-          {typeof children === 'function' ? children({ pressed }) : children}
-        </Animated.View>
-      )}
-    </Pressable>
+      {children}
+    </AnimatedPressable>
   );
 }
