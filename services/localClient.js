@@ -82,36 +82,62 @@ async function ensureSeeded() {
   if (seedPromise) return seedPromise;
   seedPromise = (async () => {
     try {
-      const flag = await AsyncStorage.getItem(SEED_FLAG_KEY);
-      if (flag === '1') return;
-
+      // Self-healing seeding. We deliberately do NOT gate on a single boolean
+      // flag: if that flag ever desyncs from the actual data (an interrupted
+      // first write, a half-cleared localStorage, a build that set the flag
+      // before localClient existed), the demo accounts silently vanish and
+      // every login fails with "Invalid login credentials". Instead we verify
+      // the seed accounts are actually present on every cold start and recreate
+      // any that are missing — cheap (5 rows) and always correct.
       const authUsers = await readTable('auth_users');
       const users = await readTable('users');
+      let changed = false;
 
       for (const s of SEED_USERS) {
         const email = `${s.phone}@siderun.app`;
-        if (authUsers.some((a) => a.email === email)) continue;
-        const id = genId();
-        authUsers.push({ id, email, password: SEED_PASSWORD });
-        users.push({
-          id,
-          phone: s.phone,
-          username: s.username,
-          avatar: null,
-          weeklyDistance: s.weeklyDistance,
-          totalRuns: s.totalRuns,
-          unlocked_badges: ['first_steps'],
-          allowFriendsViewRecord: true,
-          allowStrangersAdd: true,
-          created_at: nowIso(),
-        });
+        let authRow = authUsers.find((a) => a.email === email);
+
+        if (authRow) {
+          // Keep the demo password valid even if an older seed wrote a
+          // different one.
+          if (authRow.password !== SEED_PASSWORD) {
+            authRow.password = SEED_PASSWORD;
+            changed = true;
+          }
+        } else {
+          authRow = { id: genId(), email, password: SEED_PASSWORD };
+          authUsers.push(authRow);
+          changed = true;
+        }
+
+        // Ensure a matching profile row exists for this auth user.
+        if (!users.some((u) => looseEq(u.id, authRow.id))) {
+          users.push({
+            id: authRow.id,
+            phone: s.phone,
+            username: s.username,
+            avatar: null,
+            weeklyDistance: s.weeklyDistance,
+            totalRuns: s.totalRuns,
+            unlocked_badges: ['first_steps'],
+            allowFriendsViewRecord: true,
+            allowStrangersAdd: true,
+            created_at: nowIso(),
+          });
+          changed = true;
+        }
       }
 
-      await writeTable('auth_users', authUsers);
-      await writeTable('users', users);
-      await AsyncStorage.setItem(SEED_FLAG_KEY, '1');
+      if (changed) {
+        await writeTable('auth_users', authUsers);
+        await writeTable('users', users);
+      }
+      // Best-effort marker (no longer used as a gate; kept for diagnostics).
+      try { await AsyncStorage.setItem(SEED_FLAG_KEY, '1'); } catch (_) {}
     } catch (e) {
       console.warn('[localClient] seeding failed', e);
+      // Allow a retry on the next call instead of caching a failed run.
+      seedPromise = null;
     }
   })();
   return seedPromise;
