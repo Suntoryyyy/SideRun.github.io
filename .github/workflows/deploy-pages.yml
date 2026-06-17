@@ -33,20 +33,12 @@ jobs:
 
       - name: Build web export
         env:
-          # Supabase credentials are injected at build time so Expo bakes them
-          # into the web bundle. Configure these in:
-          # GitHub → Settings → Secrets and variables → Actions → Repository secrets
-          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
-          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
-          # Optional — leave empty if you don't use OpenWeather on web
+          # The app now runs fully offline (auth + data via services/localClient.js),
+          # so no Supabase/MemFire backend secrets are required to build or run it.
+          # OpenWeather stays optional: when unset the app falls back to mock
+          # weather, so the build must NOT fail when this secret is absent.
           EXPO_PUBLIC_OPENWEATHER_API_KEY: ${{ secrets.EXPO_PUBLIC_OPENWEATHER_API_KEY }}
-        run: |
-          if [ -z "$EXPO_PUBLIC_SUPABASE_URL" ] || [ -z "$EXPO_PUBLIC_SUPABASE_ANON_KEY" ]; then
-            echo "::error::Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY repository secret."
-            echo "Add them under Settings → Secrets and variables → Actions, then re-run this workflow."
-            exit 1
-          fi
-          npm run predeploy
+        run: npm run predeploy
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

@@ -89,9 +89,9 @@ export default MetricDashboard;
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 28,
-    paddingTop: 6,
-    paddingBottom: 16,
+    paddingHorizontal: 24,
+    paddingTop: 4,
+    paddingBottom: 8,
   },
 
   /* primary distance */
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 18,
   },
   primaryValue: {
     fontFamily: FONT.extraBold,
@@ -118,11 +118,17 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  /* three-up secondary row */
+  /* three-up secondary row — grouped on one quiet surface so the trio reads
+     as a single unit beneath the hero distance instead of three floating
+     numbers. */
   secondaryRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    backgroundColor: '#F4F5F7',
+    borderRadius: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 4,
   },
   statBox: {
     flex: 1,

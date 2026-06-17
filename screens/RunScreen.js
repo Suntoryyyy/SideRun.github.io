@@ -21,6 +21,7 @@ import { supabase } from "../services/supabase";
 import RunMapMemo from "../components/RunScreenUI/RunMapMemo";
 import MetricDashboard from "../components/RunScreenUI/MetricDashboard";
 import RunLivePanel from "../components/RunScreenUI/RunLivePanel";
+import CollapsedStatBar from "../components/RunScreenUI/CollapsedStatBar";
 import SpectatorControls from "../components/RunScreenUI/SpectatorControls";
 import RunSummaryModal from "../components/RunScreenUI/RunSummaryModal";
 import { DEMO_FRIENDS, useDemoIncomingCheers, pickDemoReply } from "../hooks/useDemoSocial";
@@ -39,14 +40,6 @@ const { width, height } = Dimensions.get("window");
 // ---------------------------------
 
 import { useRunTracking } from "../hooks/useRunTracking";
-
-const formatDuration = (totalSeconds) => {
-  const h = Math.floor(totalSeconds / 3600);
-  const m = Math.floor((totalSeconds % 3600) / 60);
-  const s = totalSeconds % 60;
-  if (h > 0) return `${h}:${m < 10 ? "0" + m : m}:${s < 10 ? "0" + s : s}`;
-  return `${m < 10 ? "0" + m : m}:${s < 10 ? "0" + s : s}`;
-};
 
 export default function RunScreen({ route, navigation }) {
   const { mode = "solo", spectateFriend = null } = route?.params || {};
@@ -460,14 +453,17 @@ export default function RunScreen({ route, navigation }) {
   const isActiveRun = isRunning && !isPaused && mode !== 'spectate';
   const isPausedRun = isRunning && isPaused && mode !== 'spectate';
   const isPreRun = !isRunning && mode !== 'spectate';
-  const showDashboard = mode === 'spectate' || isPreRun || isPausedRun;
+  // Pre-run with the sheet pulled down: show the compact Keep-style data bar
+  // instead of a half-cut giant number peeking above the dock.
+  const collapsedPreRun = isPreRun && isPanelCollapsed;
+  const showDashboard =
+    mode === 'spectate' || (isPreRun && !isPanelCollapsed) || isPausedRun;
   const dashboardStateStyle =
     mode === 'spectate'
       ? spectatorExpanded ? styles.dashboardSpectateExpanded : styles.dashboardSpectate
       : isPausedRun
       ? styles.dashboardPaused
       : styles.dashboardPreRun;
-  const glanceDist = (runData?.distance ?? 0).toFixed(2);
 
   return (
     <View style={styles.container}>
@@ -507,24 +503,6 @@ export default function RunScreen({ route, navigation }) {
               </Text>
             </>
           )}
-        </View>
-      )}
-
-      {/* ── Glance pill ───────────────────────────────────────────────
-          Running state: only distance + time, no drill-down cards. */}
-      {isActiveRun && (
-        <View
-          style={[styles.glancePill, isDemoMode && styles.glancePillBelowBanner]}
-        >
-          <View style={styles.glancePillCol}>
-            <Text style={styles.glancePillValue}>{glanceDist}</Text>
-            <Text style={styles.glancePillLabel}>KM</Text>
-          </View>
-          <View style={styles.glancePillSep} />
-          <View style={styles.glancePillCol}>
-            <Text style={styles.glancePillValue}>{formatDuration(durationInSeconds)}</Text>
-            <Text style={styles.glancePillLabel}>TIME</Text>
-          </View>
         </View>
       )}
 
@@ -593,17 +571,19 @@ export default function RunScreen({ route, navigation }) {
             <View style={styles.dragHandle} />
           </BouncyButton>
 
-          <MetricDashboard
-            mode={mode}
-            spectateFriend={spectateFriend}
-            runData={runData}
-            durationInSeconds={durationInSeconds}
-            currentSpeed={currentSpeed}
-            contentOpacity={contentOpacity}
-            friendsWatching={friendsWatching}
-            signalLost={signalLost}
-            spectatorExpanded={spectatorExpanded}
-          />
+          <Animated.View style={{ opacity: contentOpacity }}>
+            <MetricDashboard
+              mode={mode}
+              spectateFriend={spectateFriend}
+              runData={runData}
+              durationInSeconds={durationInSeconds}
+              currentSpeed={currentSpeed}
+              contentOpacity={contentOpacity}
+              friendsWatching={friendsWatching}
+              signalLost={signalLost}
+              spectatorExpanded={spectatorExpanded}
+            />
+          </Animated.View>
 
           {/* Pause state = expanded stats review. Active running intentionally
               removes these detail cards so the phone can stay in-pocket. */}
@@ -686,6 +666,11 @@ export default function RunScreen({ route, navigation }) {
           the expanded dashboard so they don't float over pace data. */}
       {isActiveRun && mode !== 'spectate' && (
         <View style={styles.fixedControls} pointerEvents="box-none">
+          <CollapsedStatBar
+            runData={runData}
+            durationInSeconds={durationInSeconds}
+            style={styles.collapsedBarSpacing}
+          />
           <View style={styles.fixedControlsSingle}>
             <BouncyButton
               style={styles.pauseBtn}
@@ -696,6 +681,36 @@ export default function RunScreen({ route, navigation }) {
               activeOpacity={0.9}
             >
               <Text style={styles.fixedBtnText}>Pause</Text>
+            </BouncyButton>
+          </View>
+        </View>
+      )}
+
+      {/* Pre-run, sheet collapsed: a complete compact data bar (tap to expand)
+          plus a thumb-reachable GO, so the map stays visible without losing the
+          start affordance. */}
+      {collapsedPreRun && (
+        <View style={styles.fixedControls} pointerEvents="box-none">
+          <BouncyButton
+            activeOpacity={0.9}
+            onPress={togglePanel}
+            style={styles.collapsedBarSpacing}
+          >
+            <CollapsedStatBar
+              runData={runData}
+              durationInSeconds={durationInSeconds}
+            />
+          </BouncyButton>
+          <View style={styles.fixedControlsSingle}>
+            <BouncyButton
+              style={styles.pauseBtn}
+              onPress={() => {
+                if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                startRun();
+              }}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.fixedBtnText}>Go</Text>
             </BouncyButton>
           </View>
         </View>

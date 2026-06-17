@@ -417,6 +417,11 @@ export default StyleSheet.create({
   fixedControlsSingle: {
     flexDirection: 'row',
   },
+  // Gap between the compact Keep-style data bar and the primary control
+  // (Pause / Go) beneath it in the collapsed / active running layout.
+  collapsedBarSpacing: {
+    marginBottom: 12,
+  },
   pauseBtn: {
     flex: 1,
     height: 56,

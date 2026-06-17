@@ -10,6 +10,31 @@ const useUserStore = create((set, get) => ({
   // Initialize the store by reading from storage once
   initialize: async () => {
     try {
+      // One-time migration to the local (no-backend) auth system.
+      //
+      // The previously deployed build authenticated against a hosted backend
+      // and persisted `currentUser` in web localStorage. Those sessions point
+      // at accounts that no longer exist locally, which made the web app skip
+      // the login screen and drop the user straight onto Home — blocking the
+      // "sign in / switch accounts" demo flow. On the first launch after the
+      // switch to local auth we drop any legacy session so the login screen
+      // shows once; subsequent local logins persist normally.
+      try {
+        const authMode = await AsyncStorage.getItem('siderun_auth_mode');
+        if (authMode !== 'local') {
+          await AsyncStorage.removeItem('currentUser');
+          await AsyncStorage.removeItem('rememberedPhone');
+          if (Platform.OS === 'web') {
+            try { sessionStorage.removeItem('currentUser'); } catch (_) {}
+          }
+          await AsyncStorage.setItem('siderun_auth_mode', 'local');
+          set({ user: null, isLoggedIn: false, isLoading: false });
+          return;
+        }
+      } catch (e) {
+        console.warn('auth-mode migration check failed', e);
+      }
+
       let userData = null;
       if (Platform.OS === 'web') {
         try {

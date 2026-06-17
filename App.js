@@ -223,7 +223,7 @@ export default function App() {
 
   const handleLogoutWrapper = async () => {
     try {
-      if (global.account) await global.account.deleteSession('current');
+      await supabase.auth.signOut();
     } catch (e) {}
     await logout();
   };
@@ -330,6 +330,9 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   runTabFocused: {
-    backgroundColor: '#24C789',
+    // Keep the run button the same brand-dark across every tab. Turning it
+    // green only on the Run screen read as inconsistent with the rest of the
+    // app's primary-action language (GO / Pause / buttons are all #0B0F13).
+    backgroundColor: '#0B0F13',
   },
 });
