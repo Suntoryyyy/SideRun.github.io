@@ -236,15 +236,21 @@ const RunMapMemo = ({
         ))}
       </MapContainer>
 
-      {/* Custom Recenter Button matching the native screen overlay */}
-      <BouncyButton 
-        style={[styles.recenterButton, { padding: 0 }]} 
-        onPress={recenterMap}
-      >
-        <BlurView intensity={80} tint="light" style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}>
-          <Ionicons name="navigate" size={24} color="#000" />
-        </BlurView>
-      </BouncyButton>
+      {/* Custom Recenter Button matching the native screen overlay.
+          Hidden during an active/paused solo run: the bottom data bar + control
+          live there, the map already auto-follows the runner via RecenterControl,
+          and the frosted circle otherwise overlaps the Pause button's top-right
+          as a stray grey blob. Still shown pre-run and while spectating. */}
+      {(!isRunning || mode === 'spectate') && (
+        <BouncyButton
+          style={[styles.recenterButton, { padding: 0 }]}
+          onPress={recenterMap}
+        >
+          <BlurView intensity={80} tint="light" style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}>
+            <Ionicons name="navigate" size={24} color="#000" />
+          </BlurView>
+        </BouncyButton>
+      )}
 
       {/* Live / spectate pill — only visible when a run is active or watching */}
       {(isRunning || mode === 'spectate') && (

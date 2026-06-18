@@ -456,8 +456,13 @@ export default function RunScreen({ route, navigation }) {
   // Pre-run with the sheet pulled down: show the compact Keep-style data bar
   // instead of a half-cut giant number peeking above the dock.
   const collapsedPreRun = isPreRun && isPanelCollapsed;
+  // Paused with the summary sheet pulled down: collapse to the same compact
+  // data bar used while running, instead of a tall blank white panel.
+  const collapsedPaused = isPausedRun && isPanelCollapsed;
   const showDashboard =
-    mode === 'spectate' || (isPreRun && !isPanelCollapsed) || isPausedRun;
+    mode === 'spectate' ||
+    (isPreRun && !isPanelCollapsed) ||
+    (isPausedRun && !isPanelCollapsed);
   const dashboardStateStyle =
     mode === 'spectate'
       ? spectatorExpanded ? styles.dashboardSpectateExpanded : styles.dashboardSpectate
@@ -711,6 +716,45 @@ export default function RunScreen({ route, navigation }) {
               activeOpacity={0.9}
             >
               <Text style={styles.fixedBtnText}>Go</Text>
+            </BouncyButton>
+          </View>
+        </View>
+      )}
+
+      {/* Paused, sheet collapsed: same compact data bar as the running view
+          (tap to reopen the summary) with Resume / Stop kept reachable. */}
+      {collapsedPaused && (
+        <View style={styles.fixedControls} pointerEvents="box-none">
+          <BouncyButton
+            activeOpacity={0.9}
+            onPress={togglePanel}
+            style={styles.collapsedBarSpacing}
+          >
+            <CollapsedStatBar
+              runData={runData}
+              durationInSeconds={durationInSeconds}
+            />
+          </BouncyButton>
+          <View style={styles.fixedControlsRow}>
+            <BouncyButton
+              style={styles.resumeBtn}
+              onPress={() => {
+                if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                resumeRun();
+              }}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.fixedBtnText}>Resume</Text>
+            </BouncyButton>
+            <BouncyButton
+              style={styles.stopBtn}
+              onPress={() => {
+                if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                stopRun();
+              }}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.fixedBtnText}>Stop</Text>
             </BouncyButton>
           </View>
         </View>
