@@ -325,8 +325,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   attachBtn: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -344,9 +344,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -282,12 +282,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   rowBtn: {
-    paddingHorizontal: 12,
-    height: 34,
-    borderRadius: 17,
+    paddingHorizontal: 14,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 74,
+    minWidth: 80,
   },
   rowBtnText: {
     fontFamily: FONT.extraBold,
