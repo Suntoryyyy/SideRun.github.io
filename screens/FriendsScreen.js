@@ -9,6 +9,8 @@ import {
   TextInput,
   Modal,
   Animated,
+  Switch,
+  StyleSheet,
   TouchableWithoutFeedback,
 } from "react-native";
 import styles from "../styles/FriendsScreenStyles";
@@ -22,6 +24,7 @@ import Leaderboard from "../components/Leaderboard";
 import EmptyState from "../components/EmptyState";
 import useDemoMode, { DEMO_MODE_KEY } from "../hooks/useDemoMode";
 import { DEMO_FRIENDS } from "../hooks/useDemoSocial";
+import useMapVisibilityStore from "../store/useMapVisibilityStore";
 
 const isImageAvatar = (a) =>
   typeof a === "string" &&
@@ -29,8 +32,31 @@ const isImageAvatar = (a) =>
 const avatarInitial = (name) =>
   (name || "?").trim().charAt(0).toUpperCase() || "?";
 
+const MAP_TOGGLE = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 8,
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#5B6470",
+  },
+  switch: {
+    transform: [{ scaleX: 0.78 }, { scaleY: 0.78 }],
+  },
+});
+
 export default function FriendsScreen({ navigation }) {
   const { isDemoMode } = useDemoMode();
+  // Map visibility — shared with the Run map so toggling here updates the
+  // markers live, and hiding a marker on the map flips the switch here.
+  const mapVisibility = useMapVisibilityStore((s) => s.visibility);
+  const setMapVisible = useMapVisibilityStore((s) => s.setVisible);
+  const hydrateMapVisibility = useMapVisibilityStore((s) => s.hydrate);
+  useEffect(() => { hydrateMapVisibility(); }, [hydrateMapVisibility]);
   const [friends, setFriends] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [feed, setFeed] = useState([]);
@@ -495,6 +521,31 @@ export default function FriendsScreen({ navigation }) {
                 >
                   {friend.isOnline ? "ONLINE" : "OFFLINE"}
                 </Text>
+              </View>
+              <View style={MAP_TOGGLE.row}>
+                <Ionicons
+                  name={
+                    mapVisibility[friend.id] !== false
+                      ? "location"
+                      : "location-outline"
+                  }
+                  size={13}
+                  color={
+                    mapVisibility[friend.id] !== false ? "#24C789" : "#9AA0A6"
+                  }
+                />
+                <Text style={MAP_TOGGLE.label}>Map</Text>
+                <Switch
+                  value={mapVisibility[friend.id] !== false}
+                  onValueChange={(v) => {
+                    Haptics.selectionAsync();
+                    setMapVisible(friend.id, v);
+                  }}
+                  trackColor={{ false: "#D6DAE0", true: "#24C789" }}
+                  thumbColor="#FFFFFF"
+                  ios_backgroundColor="#D6DAE0"
+                  style={MAP_TOGGLE.switch}
+                />
               </View>
             </View>
           </View>

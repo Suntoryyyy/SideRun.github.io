@@ -1,14 +1,26 @@
 import { Animated } from 'react-native';
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import { BlurView } from 'expo-blur';
 import BouncyButton from '../BouncyButton';
-import { View, Text, Platform } from 'react-native';
+import { View, Text, Platform, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Polyline, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import MapStyle from '../../screens/MapStyle.json';
 import { Image } from 'expo-image';
 import useDemoMode, { DEMO_ROUTE_COORDS } from '../../hooks/useDemoMode';
+import useMapFriends from '../../hooks/useMapFriends';
+import useMapVisibilityStore from '../../store/useMapVisibilityStore';
+import { getDistance } from '../../utils/locationUtils';
+import { formatDuration } from '../../utils/timeUtils';
+import {
+  NATIVE_REGION_DELTA,
+  badgeColor,
+  isImageAvatar,
+  isEmojiAvatar,
+  avatarInitial,
+  formatMapDistance,
+} from '../../constants/mapConfig';
 import styles from '../../styles/RunScreenStyles';
 
 const FloatingEmoji = ({ emoji, onComplete }) => {
@@ -91,6 +103,59 @@ const RunMapMemo = React.memo(({
   setLiveEmojis
 }) => {
   const { isDemoMode } = useDemoMode();
+
+  // ── Live crew layer state ────────────────────────────────────────────────
+  const mapFriends = useMapFriends(currentLocation);
+  const visibility = useMapVisibilityStore((s) => s.visibility);
+  const setVisible = useMapVisibilityStore((s) => s.setVisible);
+  const hydrateVisibility = useMapVisibilityStore((s) => s.hydrate);
+  const [selectedId, setSelectedId] = useState(null);
+  const [latDelta, setLatDelta] = useState(region?.latitudeDelta ?? 0.02);
+  const didFitRef = useRef(false);
+
+  useEffect(() => { hydrateVisibility(); }, [hydrateVisibility]);
+
+  const showFriendLayer = mode !== 'spectate' && visibilityScope !== 'private';
+  const visibleFriends = React.useMemo(
+    () => mapFriends.filter((f) => visibility[f.id] !== false),
+    [mapFriends, visibility]
+  );
+  const showLabel = latDelta <= NATIVE_REGION_DELTA.label;
+  const showDistance = latDelta <= NATIVE_REGION_DELTA.distance;
+  const distTo = (f) =>
+    currentLocation && currentLocation.latitude != null
+      ? getDistance(currentLocation, { latitude: f.latitude, longitude: f.longitude }) * 1000
+      : null;
+  const selectedFriend = visibleFriends.find((f) => f.id === selectedId) || null;
+
+  // Auto-fit the camera to (you + visible friends) once on entry.
+  useEffect(() => {
+    if (Platform.OS === 'web' || !showFriendLayer || didFitRef.current) return;
+    if (!mapRef || !mapRef.current) return;
+    const pts = [];
+    if (currentLocation && currentLocation.latitude != null) {
+      pts.push({ latitude: currentLocation.latitude, longitude: currentLocation.longitude });
+    }
+    visibleFriends.forEach((f) => pts.push({ latitude: f.latitude, longitude: f.longitude }));
+    if (pts.length === 0) return;
+    didFitRef.current = true;
+    requestAnimationFrame(() => {
+      try {
+        if (pts.length === 1) {
+          mapRef.current.animateToRegion(
+            { ...pts[0], latitudeDelta: 0.02, longitudeDelta: 0.02 },
+            600
+          );
+        } else {
+          mapRef.current.fitToCoordinates(pts, {
+            edgePadding: { top: 130, right: 70, bottom: 320, left: 70 },
+            animated: true,
+          });
+        }
+      } catch (_) {}
+    });
+  }, [showFriendLayer, visibleFriends, currentLocation, mapRef]);
+
   return (
     <View style={styles.mapContainer}>
         {/* Floating Back Button */}
@@ -147,6 +212,10 @@ const RunMapMemo = React.memo(({
               showsUserLocation={mode !== 'spectate'}
               followsUserLocation={false} // Detach forced follow
               customMapStyle={MapStyle}
+              onPress={() => setSelectedId(null)}
+              onRegionChangeComplete={(r) => {
+                if (r && r.latitudeDelta != null) setLatDelta(r.latitudeDelta);
+              }}
             >
               {/* Demo-mode preview of the Tokyo loop — dashed, low opacity */}
               {isDemoMode && (
@@ -185,33 +254,63 @@ const RunMapMemo = React.memo(({
                   </View>
                 </Marker>
               )}
-            {visibilityScope !== "private" && isRunning && liveFriends.map((friend) => (
-                <Marker
-                  key={friend.id}
-                  coordinate={{
-                    latitude: friend.latitude,
-                    longitude: friend.longitude,
-                  }}
-                  title={`${friend.name} is running`}
-                  anchor={{ x: 0.5, y: 0.5 }}
-                >
-                  <View
-                    style={[
-                      styles.avatarHaloOuter,
-                      { backgroundColor: "rgba(36, 199, 137, 0.2)" },
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.avatarHaloInner,
-                        { borderColor: "#24C789" },
-                      ]}
+            {showFriendLayer && visibleFriends.map((friend) => {
+                const color = badgeColor(friend.id);
+                const dist = distTo(friend);
+                return (
+                  <React.Fragment key={friend.id}>
+                    <Marker
+                      // Re-mount when density crosses a threshold so the snapshot
+                      // (tracksViewChanges=false) reflects label/distance changes.
+                      key={`${friend.id}-${showLabel}-${showDistance}`}
+                      coordinate={{ latitude: friend.latitude, longitude: friend.longitude }}
+                      anchor={{ x: 0.5, y: 1 }}
+                      onPress={() =>
+                        setSelectedId((id) => (id === friend.id ? null : friend.id))
+                      }
+                      tracksViewChanges={false}
                     >
-                      <Text style={styles.mapAvatarEmoji}>{friend.avatar}</Text>
-                    </View>
-                  </View>
-                </Marker>
-              ))}
+                      <View style={{ alignItems: 'center' }}>
+                        <View style={[mStyles.avatarWrap, { borderColor: color }]}>
+                          {isImageAvatar(friend.avatar) ? (
+                            <Image source={{ uri: friend.avatar }} style={mStyles.avatarImg} contentFit="cover" />
+                          ) : isEmojiAvatar(friend.avatar) ? (
+                            <Text style={{ fontSize: 16 }}>{friend.avatar}</Text>
+                          ) : (
+                            <View style={[mStyles.badge, { backgroundColor: color }]}>
+                              <Text style={mStyles.badgeText}>{avatarInitial(friend.name)}</Text>
+                            </View>
+                          )}
+                        </View>
+                        <View style={[mStyles.pinStem, { borderTopColor: color }]} />
+                        {showLabel && (
+                          <View style={mStyles.label}>
+                            <Text style={mStyles.labelName} numberOfLines={1}>{friend.name}</Text>
+                            {showDistance && dist != null && (
+                              <Text style={mStyles.labelDist}>{formatMapDistance(dist)}</Text>
+                            )}
+                          </View>
+                        )}
+                      </View>
+                    </Marker>
+                    {/* Per-pin close button */}
+                    <Marker
+                      coordinate={{ latitude: friend.latitude, longitude: friend.longitude }}
+                      anchor={{ x: 0.5, y: 1 }}
+                      centerOffset={{ x: 17, y: -34 }}
+                      onPress={() => {
+                        setVisible(friend.id, false);
+                        if (selectedId === friend.id) setSelectedId(null);
+                      }}
+                      tracksViewChanges={false}
+                    >
+                      <View style={mStyles.closeBtn}>
+                        <Text style={mStyles.closeX}>×</Text>
+                      </View>
+                    </Marker>
+                  </React.Fragment>
+                );
+              })}
           </MapView>
                     {/* User Identity floating badge */}
           <View style={{
@@ -258,6 +357,50 @@ const RunMapMemo = React.memo(({
             <Ionicons name="navigate" size={24} color="#000" />
           </BlurView>
           </BouncyButton>
+
+          {/* Mini info card for the tapped friend. Anchored near the top so it
+              never sits on top of the markers clustered around mid-map. */}
+          {showFriendLayer && selectedFriend && (
+            <View style={mStyles.cardWrap} pointerEvents="box-none">
+              <View style={mStyles.card}>
+                <View style={mStyles.cardHeader}>
+                  <View style={[mStyles.cardAvatar, { borderColor: badgeColor(selectedFriend.id) }]}>
+                    {isImageAvatar(selectedFriend.avatar) ? (
+                      <Image source={{ uri: selectedFriend.avatar }} style={mStyles.cardAvatarImg} contentFit="cover" />
+                    ) : isEmojiAvatar(selectedFriend.avatar) ? (
+                      <Text style={{ fontSize: 20 }}>{selectedFriend.avatar}</Text>
+                    ) : (
+                      <View style={[mStyles.badge, { backgroundColor: badgeColor(selectedFriend.id), width: '100%', height: '100%' }]}>
+                        <Text style={mStyles.badgeText}>{avatarInitial(selectedFriend.name)}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={mStyles.cardName} numberOfLines={1}>{selectedFriend.name}</Text>
+                    <Text style={[mStyles.cardStatus, { color: selectedFriend.status === 'running' ? '#0B8A57' : '#5B6470' }]}>
+                      {selectedFriend.status === 'running' ? '● 跑步中' : '已结束'}
+                    </Text>
+                  </View>
+                  {distTo(selectedFriend) != null && (
+                    <Text style={mStyles.cardDist}>{formatMapDistance(distTo(selectedFriend))}</Text>
+                  )}
+                  <BouncyButton
+                    style={mStyles.cardClose}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    onPress={() => setSelectedId(null)}
+                  >
+                    <Ionicons name="close" size={16} color="#0B0F13" />
+                  </BouncyButton>
+                </View>
+                <View style={mStyles.cardMetaRow}>
+                  <Text style={mStyles.cardMeta}>{selectedFriend.distanceKm.toFixed(2)} km</Text>
+                  <Text style={mStyles.cardSep}>·</Text>
+                  <Text style={mStyles.cardMeta}>{formatDuration(selectedFriend.durationSec)}</Text>
+                </View>
+                <Text style={mStyles.cardMsg} numberOfLines={1}>{selectedFriend.lastMessage}</Text>
+              </View>
+            </View>
+          )}
         </View>
         )}
 
@@ -291,6 +434,102 @@ const RunMapMemo = React.memo(({
     prevProps.cheers.length === nextProps.cheers.length &&
     prevProps.isRunning === nextProps.isRunning
   );
+});
+
+const mStyles = StyleSheet.create({
+  avatarWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#24C789',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  avatarImg: { width: '100%', height: '100%', borderRadius: 15 },
+  badge: { alignItems: 'center', justifyContent: 'center', borderRadius: 15, width: '100%', height: '100%' },
+  badgeText: { color: '#FFFFFF', fontWeight: '800', fontSize: 13 },
+  pinStem: {
+    width: 0,
+    height: 0,
+    marginTop: -1,
+    borderLeftWidth: 4,
+    borderRightWidth: 4,
+    borderTopWidth: 6,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#24C789',
+  },
+  closeBtn: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#0B0F13',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeX: { color: '#FFFFFF', fontSize: 13, fontWeight: '700', lineHeight: 14 },
+  label: {
+    marginTop: 3,
+    maxWidth: 150,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  labelName: { fontSize: 11, fontWeight: '700', color: '#0B0F13' },
+  labelDist: { fontSize: 10, fontWeight: '700', color: '#24C789' },
+  cardWrap: {
+    position: 'absolute',
+    top: '15%',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  card: {
+    width: 240,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 12,
+    shadowColor: '#0B0F13',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  cardAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#24C789',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  cardAvatarImg: { width: '100%', height: '100%', borderRadius: 19 },
+  cardName: { fontSize: 14, fontWeight: '800', color: '#0B0F13' },
+  cardStatus: { fontSize: 11, fontWeight: '700', marginTop: 1 },
+  cardDist: { fontSize: 12, fontWeight: '800', color: '#0B0F13' },
+  cardClose: { padding: 2, marginLeft: 2 },
+  cardMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+  cardMeta: { fontSize: 12, fontWeight: '700', color: '#0B0F13' },
+  cardSep: { fontSize: 12, color: '#C2C7CE' },
+  cardMsg: { fontSize: 11, color: '#5B6470', marginTop: 6 },
 });
 
 export default RunMapMemo;

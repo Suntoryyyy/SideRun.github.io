@@ -8,6 +8,8 @@ import L from 'leaflet';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import useDemoMode, { DEMO_ROUTE_COORDS } from '../../hooks/useDemoMode';
+import useMapFriends from '../../hooks/useMapFriends';
+import FriendMapLayer from './FriendMapLayer.web';
 
 // Fix leaflet icon paths
 delete L.Icon.Default.prototype._getIconUrl;
@@ -127,7 +129,7 @@ const FloatingEmoji = ({ emoji, onComplete }) => {
   );
 };
 
-const RecenterControl = ({ location }) => {
+const RecenterControl = ({ location, follow }) => {
   const map = useMap();
   useEffect(() => {
     // Android Web PWA 0x0 container size issue fix
@@ -135,11 +137,14 @@ const RecenterControl = ({ location }) => {
       map.invalidateSize();
     }, 400);
 
-    if (location) {
+    // Only hard-follow the runner while actually running. Before a run we let
+    // FriendMapLayer frame "you + crew", and we don't fight the user panning
+    // around to browse friend markers.
+    if (location && follow) {
       map.setView([location.latitude, location.longitude], map.getZoom());
     }
     return () => clearTimeout(t);
-  }, [location, map]);
+  }, [location, follow, map]);
   return null;
 };
 
@@ -174,6 +179,11 @@ const RunMapMemo = ({
     ? DEMO_ROUTE_COORDS.map((c) => [c.latitude, c.longitude])
     : null;
 
+  // Local virtual crew positioned around the runner — drives the interactive
+  // friend markers / mini cards. Only shown on your own run map (not spectate).
+  const mapFriends = useMapFriends(currentLocation);
+  const showFriendLayer = mode !== 'spectate' && visibilityScope !== 'private';
+
   return (
     <View style={[styles.container, { flex: 1, height: '100vh', width: '100vw' }]}>
       <MapContainer 
@@ -188,7 +198,7 @@ const RunMapMemo = ({
           url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
         />
 
-        {currentLocation && <RecenterControl location={currentLocation} />}
+        {currentLocation && <RecenterControl location={currentLocation} follow={isRunning} />}
 
         {/* Demo-mode route preview — faint dashed loop showing where the
             simulated run will go. Only visible when demo mode is on. */}
@@ -228,12 +238,11 @@ const RunMapMemo = ({
           <Marker position={[currentLocation.latitude, currentLocation.longitude]} icon={currentPosIcon} />
         )}
         
-        {/* Live friends */}
-        {visibilityScope !== "private" && isRunning && liveFriends.map(friend => (
-          <Marker key={friend.id} position={[friend.latitude, friend.longitude]}>
-            <Popup>{friend.name || friend.avatar}</Popup>
-          </Marker>
-        ))}
+        {/* Interactive crew layer: avatar markers, labels, mini cards,
+            zoom-based density and auto camera-fit. */}
+        {showFriendLayer && (
+          <FriendMapLayer friends={mapFriends} selfLocation={currentLocation} />
+        )}
       </MapContainer>
 
       {/* Custom Recenter Button matching the native screen overlay.
