@@ -8,7 +8,7 @@
  *      "story" (IG Story 9:16) — the user picks based on where they share.
  *   3. What the user sees in-app matches the PNG they'll get out.
  */
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import BouncyButton from '../BouncyButton';
 import {
   View,
@@ -20,7 +20,10 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Animated,
 } from 'react-native';
+import CelebrationPulse from '../CelebrationPulse';
+import useReducedMotion from '../../hooks/useReducedMotion';
 import { BlurView } from 'expo-blur';
 import { formatDuration } from '../../utils/timeUtils';
 import { Ionicons } from '@expo/vector-icons';
@@ -554,6 +557,8 @@ const RunSummaryModal = ({
   const shareStoryRef = useRef(null);
   const [busy, setBusy] = useState(null); // 'card' | 'story' | null
   const username = useUserStore((s) => s.user?.username) || 'Runner';
+  const reducedMotion = useReducedMotion();
+  const heroScale = useRef(new Animated.Value(1)).current;
 
   const distanceKm = Number(runData?.distance || 0);
   const duration = Number(durationInSeconds || 0);
@@ -562,6 +567,30 @@ const RunSummaryModal = ({
   const paceLabel = formatPace(paceMinPerKm);
   const kcal = Math.round(distanceKm * 62);
   const isPB = distanceKm >= DISTANCE_TARGET_KM;
+
+  // One-time "you finished" flourish: pop the distance number in, and on a PB
+  // fire a success haptic. Honors Reduce Motion (instant, no spring).
+  useEffect(() => {
+    if (reducedMotion) {
+      heroScale.setValue(1);
+    } else {
+      heroScale.setValue(0.86);
+      Animated.spring(heroScale, {
+        toValue: 1,
+        delay: 120,
+        tension: 120,
+        friction: 9,
+        useNativeDriver: true,
+      }).start();
+    }
+    if (isPB && Platform.OS !== 'web') {
+      try {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch (_) {}
+    }
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const now = new Date();
   const hour = now.getHours();
@@ -755,12 +784,17 @@ const RunSummaryModal = ({
               />
             </View>
 
-            {/* Distance */}
-            <View style={styles.heroRow}>
-              <Text style={styles.heroNum} allowFontScaling={false}>
-                {distanceKm.toFixed(2)}
-              </Text>
-              <Text style={styles.heroUnit}>km</Text>
+            {/* Distance — pops in on mount; PB earns a one-time pulse */}
+            <View style={styles.heroWrap}>
+              {isPB && <CelebrationPulse size={150} color="#24C789" rings={2} />}
+              <Animated.View
+                style={[styles.heroRow, { transform: [{ scale: heroScale }] }]}
+              >
+                <Text style={styles.heroNum} allowFontScaling={false}>
+                  {distanceKm.toFixed(2)}
+                </Text>
+                <Text style={styles.heroUnit}>km</Text>
+              </Animated.View>
             </View>
 
             {/* Stats */}
@@ -964,6 +998,10 @@ const styles = StyleSheet.create({
     borderRadius: 22,
   },
 
+  heroWrap: {
+    alignSelf: 'flex-start',
+    justifyContent: 'center',
+  },
   heroRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
