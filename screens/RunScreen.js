@@ -77,6 +77,27 @@ export default function RunScreen({ route, navigation }) {
     }
   }, []);
 
+  // Push a cheer onto the floating layer. Rapid repeats of the SAME plain
+  // emoji (within 900ms) merge into one rising reaction with a ×N combo badge
+  // instead of spamming duplicates — turns spam-tapping into a satisfying combo.
+  const addCheerEmoji = (emoji) => {
+    const value = emoji || "🔥";
+    const now = Date.now();
+    const isPlain = typeof value === "string" && value.length <= 2;
+    setLiveEmojis((prev) => {
+      const last = prev[prev.length - 1];
+      if (isPlain && last && last.emoji === value && now - (last._t || 0) < 900) {
+        const bumped = { ...last, count: (last.count || 1) + 1, _t: now };
+        return [...prev.slice(0, -1), bumped];
+      }
+      const limited = prev.length > 15 ? prev.slice(-14) : prev;
+      return [
+        ...limited,
+        { id: now.toString() + Math.random(), emoji: value, count: 1, _t: now },
+      ];
+    });
+  };
+
   const processCheerQueue = async () => {
     if (isPlayingCheer.current || cheerQueue.current.length === 0) return;
     isPlayingCheer.current = true;
@@ -150,13 +171,9 @@ export default function RunScreen({ route, navigation }) {
           },
           (payload) => {
             const newCheer = payload.new;
-            const cheerId = Date.now().toString() + Math.random();
 
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            setLiveEmojis((prev) => {
-              const limited = prev.length > 15 ? prev.slice(-14) : prev;
-              return [...limited, { id: cheerId, emoji: newCheer.emoji || "🔥" }];
-            });
+            addCheerEmoji(newCheer.emoji || "🔥");
 
             cheerQueue.current.push({ ...newCheer });
             processCheerQueue();
@@ -361,12 +378,8 @@ export default function RunScreen({ route, navigation }) {
     const emojis = ["💪", "🔥", "🏃‍♂️", "🎉", "👍", "⚡️", "🚀"];
     const emojiToUse = specificEmoji || emojis[Math.floor(Math.random() * emojis.length)];
 
-    // Render locally for instant feedback
-    const cheerId = Date.now().toString() + Math.random();
-    setLiveEmojis((prev) => {
-      const limited = prev.length > 15 ? prev.slice(-14) : prev;
-      return [...limited, { id: cheerId, emoji: emojiToUse }];
-    });
+    // Render locally for instant feedback (merges rapid repeats into a combo)
+    addCheerEmoji(emojiToUse);
 
     // Demo spectate: skip the Supabase round-trip (it would silently fail
     // for un-signed-in demo sessions anyway), and instead surface a fake
@@ -402,10 +415,7 @@ export default function RunScreen({ route, navigation }) {
   useDemoIncomingCheers({
     active: isDemoMode && isRunning && !isPaused && mode !== 'spectate',
     onCheer: ({ id, emoji, sender }) => {
-      setLiveEmojis((prev) => {
-        const limited = prev.length > 15 ? prev.slice(-14) : prev;
-        return [...limited, { id, emoji }];
-      });
+      addCheerEmoji(emoji);
       showSenderToast({ kind: 'incoming', name: sender.name, emoji, color: sender.color });
     },
   });

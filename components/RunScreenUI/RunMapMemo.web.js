@@ -10,6 +10,7 @@ import { BlurView } from 'expo-blur';
 import useDemoMode, { DEMO_ROUTE_COORDS } from '../../hooks/useDemoMode';
 import useMapFriends from '../../hooks/useMapFriends';
 import FriendMapLayer from './FriendMapLayer.web';
+import FloatingCheer from './FloatingCheer';
 
 // Fix leaflet icon paths
 delete L.Icon.Default.prototype._getIconUrl;
@@ -65,68 +66,6 @@ const buildPaceSegments = (coords) => {
     });
   }
   return segments;
-};
-
-const FloatingEmoji = ({ emoji, onComplete }) => {
-  const [anim] = React.useState(new Animated.Value(0));
-  const randomX = React.useMemo(() => (Math.random() - 0.5) * 150, []);
-  const randomRot = React.useMemo(() => (Math.random() - 0.5) * 45, []);
-  const duration = React.useMemo(() => 2000 + Math.random() * 1000, []);
-  const targetBottom = React.useMemo(() => 450 + Math.random() * 100, []);
-
-  React.useEffect(() => {
-    Animated.timing(anim, {
-      toValue: 1,
-      duration: duration,
-      useNativeDriver: false, // web doesn't fully support all native drivers, false is safer wrapper
-    }).start(onComplete);
-  }, []);
-
-  return (
-    <Animated.View
-      style={[
-        styles.floatingEmoji,
-        {
-          bottom: anim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [150, targetBottom],
-          }),
-          transform: [
-            {
-              translateX: anim.interpolate({
-                inputRange: [0, 0.5, 1],
-                outputRange: [0, randomX, randomX * 1.2],
-              })
-            },
-            {
-              rotate: anim.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['0deg', `${randomRot}deg`],
-              })
-            },
-            {
-              scale: anim.interpolate({
-                inputRange: [0, 0.1, 0.8, 1],
-                outputRange: [0.5, 1.2, 1, 0.8],
-              })
-            }
-          ],
-          opacity: anim.interpolate({
-            inputRange: [0, 0.2, 0.8, 1],
-            outputRange: [0, 1, 1, 0],
-          }),
-        },
-      ]}
-    >
-      {emoji && typeof emoji === 'string' && (emoji.startsWith('data:image') || emoji.startsWith('file:') || emoji.startsWith('http')) ? (
-        <Image source={{ uri: emoji }} style={{ width: 80, height: 80, borderRadius: 12, borderWidth: 3, borderColor: '#24C789', backgroundColor: '#fff', overflow: 'hidden' }} />
-      ) : (
-        <View style={{ backgroundColor: emoji.length > 2 ? 'rgba(36, 199, 137, 0.9)' : 'transparent', paddingHorizontal: emoji.length > 2 ? 15 : 0, paddingVertical: emoji.length > 2 ? 10 : 0, borderRadius: 20 }}>
-          <Text style={[styles.floatingEmojiText, emoji.length > 2 ? { fontSize: 18, color: '#fff', fontWeight: 'bold' } : {}]}>{emoji}</Text>
-        </View>
-      )}
-    </Animated.View>
-  );
 };
 
 const RecenterControl = ({ location, follow }) => {
@@ -276,9 +215,10 @@ const RunMapMemo = ({
 
       {/* Floating Emojis (received) */}
       {liveEmojis.map((c) => (
-        <FloatingEmoji
+        <FloatingCheer
           key={c.id}
           emoji={c.emoji}
+          count={c.count}
           onComplete={() => {
             if (setLiveEmojis) {
               setLiveEmojis((prev) => prev.filter((e) => e.id !== c.id));
