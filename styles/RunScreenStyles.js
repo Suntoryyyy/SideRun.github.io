@@ -195,10 +195,14 @@ export default StyleSheet.create({
   //       behind the tab bar.
   // Anchoring to bottom:0 with a tall enough height + modest paddingBottom
   // guarantees every control sits above the dock on every modern phone.
+  // Keep-style bottom sheet: hugs its content (height comes from the inline
+  // `height: undefined` override in RunScreen, which nukes the base fixed
+  // height) so there is never a tall white gap below the Resume/Stop controls.
+  // paddingBottom lifts those controls clear of the floating tab dock.
   dashboardPaused: {
     bottom: 0,
-    height: height * 0.82,
-    paddingBottom: 20,
+    height: undefined,
+    paddingBottom: Platform.OS === 'ios' ? 104 : Platform.OS === 'android' ? 84 : 92,
   },
   dashboardSpectate: {
     height: height * 0.28 + 200,

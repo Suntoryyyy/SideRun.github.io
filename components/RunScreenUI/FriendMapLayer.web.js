@@ -190,8 +190,8 @@ export default function FriendMapLayer({ friends = [], selfLocation, fitOnMount 
               <AvatarInner friend={f} size={30} failed={failedAvatars.has(f.id)} onError={() => markFailed(f.id)} />
             </div>
             <div style={{ ...S.pinStem, borderTopColor: color }} />
-            {/* Nickname + distance label */}
-            {showLabel && (
+            {/* Nickname + distance label (per-friend label opt-out honoured) */}
+            {showLabel && visibility[`${f.id}:label`] !== false && (
               <div style={S.label}>
                 <span style={S.labelName}>{f.name}</span>
                 {showDistance && dist != null && (

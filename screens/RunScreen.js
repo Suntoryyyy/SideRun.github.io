@@ -563,6 +563,9 @@ export default function RunScreen({ route, navigation }) {
           style={[
             styles.dashboardContainer,
             dashboardStateStyle,
+            // Paused sheet hugs content (override the base fixed height) so it
+            // sits flush above the dock with no dead white space below.
+            isPausedRun && { height: undefined },
             { transform: [{ translateY: panY }] },
           ]}
           {...(Platform.OS !== 'web' && mode !== 'spectate' ? panResponder.panHandlers : {})}

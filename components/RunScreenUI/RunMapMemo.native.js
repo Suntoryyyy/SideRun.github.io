@@ -262,7 +262,7 @@ const RunMapMemo = React.memo(({
                     <Marker
                       // Re-mount when density crosses a threshold so the snapshot
                       // (tracksViewChanges=false) reflects label/distance changes.
-                      key={`${friend.id}-${showLabel}-${showDistance}`}
+                      key={`${friend.id}-${showLabel}-${showDistance}-${visibility[`${friend.id}:label`] !== false}`}
                       coordinate={{ latitude: friend.latitude, longitude: friend.longitude }}
                       anchor={{ x: 0.5, y: 1 }}
                       onPress={() =>
@@ -283,7 +283,7 @@ const RunMapMemo = React.memo(({
                           )}
                         </View>
                         <View style={[mStyles.pinStem, { borderTopColor: color }]} />
-                        {showLabel && (
+                        {showLabel && visibility[`${friend.id}:label`] !== false && (
                           <View style={mStyles.label}>
                             <Text style={mStyles.labelName} numberOfLines={1}>{friend.name}</Text>
                             {showDistance && dist != null && (
