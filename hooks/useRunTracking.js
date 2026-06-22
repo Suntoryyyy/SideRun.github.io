@@ -11,6 +11,7 @@ import * as Haptics from "expo-haptics";
 import { getDistance } from "../utils/locationUtils";
 import { formatDuration } from "../utils/timeUtils";
 import useDemoMode from "./useDemoMode";
+import { applyBadgeUnlocks } from "../constants/badges";
 
 export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
   const {
@@ -25,6 +26,7 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
+  const [newBadgeUnlocks, setNewBadgeUnlocks] = useState([]);
   const [durationInSeconds, setDurationInSeconds] = useState(0);
   const [runData, setRunData] = useState({
     distance: 0,
@@ -549,17 +551,33 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
         // Fetch current user stats and increments them
         const { data: userData } = await supabase
           .from("users")
-          .select("weeklyDistance, totalRuns")
+          .select("weeklyDistance, totalRuns, unlocked_badges")
           .eq("id", userId)
           .single();
         if (userData) {
+          const nextWeekly = (userData.weeklyDistance || 0) + runData.distance;
+          const nextRuns = (userData.totalRuns || 0) + 1;
           await supabase
             .from("users")
             .update({
-              weeklyDistance: (userData.weeklyDistance || 0) + runData.distance,
-              totalRuns: (userData.totalRuns || 0) + 1,
+              weeklyDistance: nextWeekly,
+              totalRuns: nextRuns,
             })
             .eq("id", userId);
+
+          const stats = {
+            totalDistance: nextWeekly,
+            totalRuns: nextRuns,
+            weeklyDistance: nextWeekly,
+            weeklyRuns: nextRuns,
+          };
+          const { newIds } = await applyBadgeUnlocks(
+            supabase,
+            userId,
+            userData.unlocked_badges || ["first_steps"],
+            stats
+          );
+          if (newIds.length > 0) setNewBadgeUnlocks(newIds);
         }
       }
       try {
@@ -599,6 +617,7 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
 
   const closeRun = (options) => {
     setIsFinished(false);
+    setNewBadgeUnlocks([]);
     if (options?.skipGoBack) return;
     navigation.goBack();
   };
@@ -620,5 +639,6 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
     closeRun,
     isDemoMode,
     demoSpeed,
+    newBadgeUnlocks,
   };
 }

@@ -12,22 +12,27 @@ import { Ionicons } from "@expo/vector-icons";
 import { T, FONT } from "../constants/typography";
 import ProgressRing from "../components/ProgressRing";
 import FadeInView from "../components/FadeInView";
+import BadgeUnlockModal from "../components/BadgeUnlockModal";
+import {
+  BADGE_ICONS,
+  BADGE_CATALOG,
+  applyBadgeUnlocks,
+} from "../constants/badges";
 
-// Badge catalog: id → { ion icon name, accent color }
-const BADGE_ICONS = {
-  first_steps: { icon: "footsteps-outline", color: "#24C789" },
-  first_5k: { icon: "walk-outline", color: "#24C789" },
-  first_10k: { icon: "flash-outline", color: "#FF5A36" },
-  marathoner: { icon: "medal-outline", color: "#F6C65D" },
-  week_warrior: { icon: "shield-checkmark-outline", color: "#0B0F13" },
-  consistent_runner: { icon: "calendar-outline", color: "#00C2FF" },
-  early_bird: { icon: "sunny-outline", color: "#F6C65D" },
-  social_butterfly: { icon: "people-outline", color: "#00C2FF" },
-  speed_demon: { icon: "flash-outline", color: "#FF5A36" },
-  night_runner: { icon: "moon-outline", color: "#3A5BD9" },
-  weather_warrior: { icon: "rainy-outline", color: "#00C2FF" },
-  route_explorer: { icon: "map-outline", color: "#24C789" },
-};
+const LOCKED_EXTRAS = [
+  {
+    id: "weather_warrior",
+    name: "Weather Warrior",
+    description: "Run in challenging weather conditions",
+    category: "Adventure",
+  },
+  {
+    id: "route_explorer",
+    name: "Route Explorer",
+    description: "Discover and run 10 different routes",
+    category: "Exploration",
+  },
+];
 
 export default function BadgesScreen({ navigation }) {
   const [userStats, setUserStats] = useState({
@@ -37,6 +42,7 @@ export default function BadgesScreen({ navigation }) {
     weeklyRuns: 0,
   });
   const [unlockedBadges, setUnlockedBadges] = useState([]);
+  const [badgeQueue, setBadgeQueue] = useState([]);
 
   useEffect(() => {
     loadUserData();
@@ -73,130 +79,29 @@ export default function BadgesScreen({ navigation }) {
   };
 
   const checkBadgeUnlocks = async (stats, currentBadges, userId) => {
-    const badgesToCheck = [
-      { id: "first_5k", condition: stats.totalDistance >= 5 },
-      { id: "first_10k", condition: stats.totalDistance >= 10 },
-      { id: "marathoner", condition: stats.totalDistance >= 42.2 },
-      { id: "week_warrior", condition: stats.weeklyDistance >= 20 },
-      { id: "consistent_runner", condition: stats.weeklyRuns >= 5 },
-      { id: "early_bird", condition: stats.weeklyRuns >= 3 },
-      { id: "social_butterfly", condition: stats.totalRuns >= 10 },
-      { id: "speed_demon", condition: stats.totalRuns >= 5 },
-      { id: "night_runner", condition: stats.totalRuns >= 3 },
-    ];
-
-    const newBadges = badgesToCheck
-      .filter((badge) => badge.condition && !currentBadges.includes(badge.id))
-      .map((badge) => badge.id);
-
-    if (newBadges.length > 0) {
-      const updatedBadges = [...currentBadges, ...newBadges];
-      setUnlockedBadges(updatedBadges);
-      if (userId) {
-        await supabase
-          .from("users")
-          .update({ unlocked_badges: updatedBadges })
-          .eq("id", userId);
-      }
+    const { updated, newIds } = await applyBadgeUnlocks(
+      supabase,
+      userId,
+      currentBadges,
+      stats
+    );
+    if (newIds.length > 0) {
+      setUnlockedBadges(updated);
+      setBadgeQueue(newIds);
     }
   };
 
   const allBadges = [
-    {
-      id: "first_steps",
-      name: "First Steps",
-      description: "Complete your first run",
-      category: "Getting Started",
-      unlocked: unlockedBadges.includes("first_steps"),
-    },
-    {
-      id: "first_5k",
-      name: "First 5K",
-      description: "Run your first 5 kilometers",
-      category: "Distance",
-      unlocked: unlockedBadges.includes("first_5k"),
-      progress: Math.min(userStats.totalDistance / 5, 1),
-    },
-    {
-      id: "first_10k",
-      name: "First 10K",
-      description: "Run your first 10 kilometers",
-      category: "Distance",
-      unlocked: unlockedBadges.includes("first_10k"),
-      progress: Math.min(userStats.totalDistance / 10, 1),
-    },
-    {
-      id: "marathoner",
-      name: "Marathoner",
-      description: "Complete a full marathon (42.2 km)",
-      category: "Distance",
-      unlocked: unlockedBadges.includes("marathoner"),
-      progress: Math.min(userStats.totalDistance / 42.2, 1),
-    },
-    {
-      id: "week_warrior",
-      name: "Week Warrior",
-      description: "Run 20+ km in a week",
-      category: "Weekly",
-      unlocked: unlockedBadges.includes("week_warrior"),
-      progress: Math.min(userStats.weeklyDistance / 20, 1),
-    },
-    {
-      id: "consistent_runner",
-      name: "Consistent",
-      description: "Complete 5 runs in a week",
-      category: "Consistency",
-      unlocked: unlockedBadges.includes("consistent_runner"),
-      progress: Math.min(userStats.weeklyRuns / 5, 1),
-    },
-    {
-      id: "early_bird",
-      name: "Early Bird",
-      description: "Run 5 times before 7 AM",
-      category: "Time",
-      unlocked: unlockedBadges.includes("early_bird"),
-      progress: Math.min(userStats.weeklyRuns / 5, 1),
-    },
-    {
-      id: "social_butterfly",
-      name: "Social",
-      description: "Share 10 runs with friends",
-      category: "Social",
-      unlocked: unlockedBadges.includes("social_butterfly"),
-      progress: Math.min(userStats.totalRuns / 10, 1),
-    },
-    {
-      id: "speed_demon",
-      name: "Speed Demon",
-      description: "Keep pace under 5 min/km",
-      category: "Speed",
-      unlocked: unlockedBadges.includes("speed_demon"),
-      progress: 0.5,
-    },
-    {
-      id: "night_runner",
-      name: "Night Runner",
-      description: "Complete 5 runs after sunset",
-      category: "Time",
-      unlocked: unlockedBadges.includes("night_runner"),
-      progress: Math.min(userStats.totalRuns / 5, 1),
-    },
-    {
-      id: "weather_warrior",
-      name: "Weather Warrior",
-      description: "Run in challenging weather conditions",
-      category: "Adventure",
-      unlocked: false,
+    ...BADGE_CATALOG.map((b) => ({
+      ...b,
+      unlocked: unlockedBadges.includes(b.id),
+      progress: b.progressOf ? b.progressOf(userStats) : undefined,
+    })),
+    ...LOCKED_EXTRAS.map((b) => ({
+      ...b,
+      unlocked: unlockedBadges.includes(b.id),
       progress: 0,
-    },
-    {
-      id: "route_explorer",
-      name: "Route Explorer",
-      description: "Discover and run 10 different routes",
-      category: "Exploration",
-      unlocked: false,
-      progress: 0,
-    },
+    })),
   ];
 
   const categories = [
@@ -224,6 +129,12 @@ export default function BadgesScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      {badgeQueue.length > 0 && (
+        <BadgeUnlockModal
+          badgeId={badgeQueue[0]}
+          onDismiss={() => setBadgeQueue((q) => q.slice(1))}
+        />
+      )}
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}

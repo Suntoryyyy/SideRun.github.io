@@ -22,13 +22,11 @@ import {
   Alert,
   Animated,
 } from 'react-native';
-import CelebrationPulse from '../CelebrationPulse';
 import useReducedMotion from '../../hooks/useReducedMotion';
 import { BlurView } from 'expo-blur';
 import { formatDuration } from '../../utils/timeUtils';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import RouteArt from '../RouteArt';
 import ShareCard, {
   SHARE_CARD_HEIGHT,
   SHARE_CARD_WIDTH,
@@ -39,6 +37,9 @@ import ShareCardStory, {
 } from '../ShareCardStory';
 import useUserStore from '../../store/useUserStore';
 import { T, FONT } from '../../constants/typography';
+import { getRunSummaryProfile } from '../../utils/runSummaryProfile';
+import { COLORS } from '../../constants/colors';
+import RunSummaryPreview, { PREVIEW_STYLES } from './RunSummaryPreview';
 
 const { width } = Dimensions.get('window');
 
@@ -546,16 +547,24 @@ const buildStoryBlob = ({
 };
 // ── End web canvas builders ──────────────────────────────────────────────
 
+const HIGHLIGHT_TONES = {
+  accent: { bg: COLORS.accentTint, text: COLORS.accent, border: 'rgba(36,199,137,0.35)' },
+  social: { bg: 'rgba(255,145,90,0.14)', text: '#FF915A', border: 'rgba(255,145,90,0.35)' },
+  neutral: { bg: 'rgba(255,255,255,0.06)', text: 'rgba(255,255,255,0.85)', border: 'rgba(255,255,255,0.12)' },
+};
+
 const RunSummaryModal = ({
   durationInSeconds,
   runData,
   currentSpeed,
+  cheersReceived = 0,
   closeRun,
   navigation,
 }) => {
   const shareSquareRef = useRef(null);
   const shareStoryRef = useRef(null);
   const [busy, setBusy] = useState(null); // 'card' | 'story' | null
+  const [previewStyle, setPreviewStyle] = useState('route');
   const username = useUserStore((s) => s.user?.username) || 'Runner';
   const reducedMotion = useReducedMotion();
   const heroScale = useRef(new Animated.Value(1)).current;
@@ -628,6 +637,16 @@ const RunSummaryModal = ({
   const fastest = splitsPaces.length ? Math.min(...splitsPaces) : 0;
   const slowest = splitsPaces.length ? Math.max(...splitsPaces) : 0;
   const paceRange = slowest - fastest || 0.01;
+
+  const profile = getRunSummaryProfile({
+    distanceKm,
+    durationSec: duration,
+    isPB,
+    cheersReceived,
+    splitsPaces,
+    username,
+    hour,
+  });
 
   const handleShare = async (format) => {
     if (busy) return;
@@ -757,91 +776,94 @@ const RunSummaryModal = ({
 
       <BlurView intensity={90} tint="dark" style={styles.blurContainer}>
         <View style={styles.card}>
+          <View
+            pointerEvents="none"
+            style={[styles.moodGlow, { backgroundColor: profile.accentTint }]}
+          />
           <ScrollView
             contentContainerStyle={styles.scroll}
             showsVerticalScrollIndicator={false}
           >
-            {/* Headline */}
+            {/* Headline — copy varies by run profile */}
             <View style={styles.headline}>
-              <Text style={styles.title}>
-                {isPB ? `New PB, ${username} 🎉` : `Great run, ${username}`}
-              </Text>
-              <Text style={styles.subtitle}>
-                {placeName} · {dateLabel} · {timeLabel}
-              </Text>
-            </View>
-
-            {/* Route hero */}
-            <View style={[styles.mapWrap, { width: previewW, height: mapH }]}>
-              <RouteArt
-                coordinates={runData?.coordinates}
-                width={previewW}
-                height={mapH}
-                variant="hero"
-                strokeColor="#24C789"
-                placeName={placeName}
-                badge={isPB ? { icon: 'star', label: 'NEW 5K PB' } : null}
-              />
-            </View>
-
-            {/* Distance — pops in on mount; PB earns a one-time pulse */}
-            <View style={styles.heroWrap}>
-              {isPB && <CelebrationPulse size={150} color="#24C789" rings={2} />}
-              <Animated.View
-                style={[styles.heroRow, { transform: [{ scale: heroScale }] }]}
-              >
-                <Text style={styles.heroNum} allowFontScaling={false}>
-                  {distanceKm.toFixed(2)}
+              <View style={[styles.moodPill, { backgroundColor: profile.accentTint }]}>
+                <View style={[styles.moodDot, { backgroundColor: profile.accent }]} />
+                <Text style={[styles.moodPillText, { color: profile.accent }]}>
+                  {profile.mood.label}
                 </Text>
-                <Text style={styles.heroUnit}>km</Text>
-              </Animated.View>
+              </View>
+              <Text style={styles.title}>{profile.title}</Text>
+              <Text style={styles.subtitle}>
+                {profile.subtitle} · {dateLabel} · {timeLabel}
+              </Text>
             </View>
 
-            {/* Stats */}
-            <View style={styles.stats}>
-              <InlineStat label="TIME" value={formatDuration(duration)} />
-              <View style={styles.statDivider} />
-              <InlineStat label="PACE" value={paceLabel} unit="/km" />
-              <View style={styles.statDivider} />
-              <InlineStat label="KCAL" value={String(kcal)} />
-            </View>
-
-            {/* Splits */}
-            {splitsPaces.length > 0 && (
-              <View style={styles.splitsBlock}>
-                <View style={styles.splitsHeader}>
-                  <Text style={styles.splitsLabel}>PER-KM PACE</Text>
-                  <Text style={styles.splitsLabel}>
-                    Fastest {formatPace(fastest)}
-                  </Text>
-                </View>
-                <View style={styles.splitsRow}>
-                  {splitsPaces.map((p, i) => {
-                    const ratio = (slowest - p) / paceRange;
-                    const h = 20 + ratio * 56;
-                    const isFastest = p === fastest;
-                    return (
-                      <View key={`split-${i}`} style={styles.splitCol}>
-                        <View
-                          style={[
-                            styles.splitBar,
-                            { height: h, opacity: isFastest ? 1 : 0.35 },
-                          ]}
-                        />
-                        <Text
-                          style={[
-                            styles.splitText,
-                            isFastest && styles.splitTextFast,
-                          ]}
-                        >
-                          km {i + 1}
-                        </Text>
-                      </View>
-                    );
-                  })}
-                </View>
+            {/* Highlight chips — PB, cheers, pace, distance type */}
+            {profile.highlights.length > 0 && (
+              <View style={styles.highlightsRow}>
+                {profile.highlights.map((h) => {
+                  const tone = HIGHLIGHT_TONES[h.tone] || HIGHLIGHT_TONES.neutral;
+                  return (
+                    <View
+                      key={h.label}
+                      style={[
+                        styles.highlightChip,
+                        { backgroundColor: tone.bg, borderColor: tone.border },
+                      ]}
+                    >
+                      <Ionicons name={h.icon} size={12} color={tone.text} />
+                      <Text style={[styles.highlightText, { color: tone.text }]}>
+                        {h.label}
+                      </Text>
+                    </View>
+                  );
+                })}
               </View>
             )}
+
+            {/* Preview style switcher */}
+            <View style={styles.styleSwitcher}>
+              {PREVIEW_STYLES.map((s) => {
+                const active = previewStyle === s.key;
+                return (
+                  <BouncyButton
+                    key={s.key}
+                    style={[styles.styleTab, active && styles.styleTabActive]}
+                    activeOpacity={0.8}
+                    onPress={() => setPreviewStyle(s.key)}
+                  >
+                    <Ionicons
+                      name={s.icon}
+                      size={14}
+                      color={active ? '#0B0F13' : 'rgba(255,255,255,0.55)'}
+                    />
+                    <Text style={[styles.styleTabText, active && styles.styleTabTextActive]}>
+                      {s.label}
+                    </Text>
+                  </BouncyButton>
+                );
+              })}
+            </View>
+
+            <RunSummaryPreview
+              style={previewStyle}
+              profile={profile}
+              distanceKm={distanceKm}
+              durationLabel={formatDuration(duration)}
+              paceLabel={paceLabel}
+              kcal={kcal}
+              runData={runData}
+              isPB={isPB}
+              cheersReceived={cheersReceived}
+              splitsPaces={splitsPaces}
+              fastest={fastest}
+              slowest={slowest}
+              paceRange={paceRange}
+              formatPace={formatPace}
+              previewW={previewW}
+              mapH={mapH}
+              heroScale={heroScale}
+            />
 
             {/* Training insight link */}
             {distanceKm > 0 && (
@@ -925,20 +947,6 @@ const RunSummaryModal = ({
   );
 };
 
-function InlineStat({ label, value, unit }) {
-  return (
-    <View style={styles.inlineStat}>
-      <Text style={styles.inlineStatLabel}>{label}</Text>
-      <View style={styles.inlineStatRow}>
-        <Text style={styles.inlineStatValue} allowFontScaling={false}>
-          {value}
-        </Text>
-        {unit ? <Text style={styles.inlineStatUnit}>{unit}</Text> : null}
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   blurContainer: {
     flex: 1,
@@ -960,6 +968,15 @@ const styles = StyleSheet.create({
     elevation: 10,
     overflow: 'hidden',
   },
+  moodGlow: {
+    position: 'absolute',
+    top: -40,
+    left: '10%',
+    width: '80%',
+    height: 120,
+    borderRadius: 60,
+    opacity: 0.9,
+  },
   scroll: {
     padding: 24,
     alignItems: 'center',
@@ -976,6 +993,78 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     paddingHorizontal: 4,
     marginBottom: 2,
+    gap: 8,
+  },
+  moodPill: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+  },
+  moodDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  moodPillText: {
+    fontFamily: FONT.bold,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  highlightsRow: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingHorizontal: 4,
+  },
+  highlightChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  highlightText: {
+    fontFamily: FONT.bold,
+    fontSize: 11,
+    letterSpacing: 0.2,
+  },
+  styleSwitcher: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 4,
+  },
+  styleTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 38,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  styleTabActive: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
+  },
+  styleTabText: {
+    fontFamily: FONT.bold,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.55)',
+  },
+  styleTabTextActive: {
+    color: '#0B0F13',
   },
   title: {
     fontFamily: FONT.extraBold,

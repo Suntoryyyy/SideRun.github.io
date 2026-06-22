@@ -24,7 +24,10 @@ import RunLivePanel from "../components/RunScreenUI/RunLivePanel";
 import CollapsedStatBar from "../components/RunScreenUI/CollapsedStatBar";
 import SpectatorControls from "../components/RunScreenUI/SpectatorControls";
 import RunSummaryModal from "../components/RunScreenUI/RunSummaryModal";
+import KmMilestoneToast from "../components/RunScreenUI/KmMilestoneToast";
+import BadgeUnlockModal from "../components/BadgeUnlockModal";
 import { DEMO_FRIENDS, useDemoIncomingCheers, pickDemoReply } from "../hooks/useDemoSocial";
+import { crossedComboTier } from "../constants/cheerCombo";
 
 if (
   Platform.OS === "android" &&
@@ -52,6 +55,7 @@ export default function RunScreen({ route, navigation }) {
   const [spectatorExpanded, setSpectatorExpanded] = useState(false);
 
   const [liveEmojis, setLiveEmojis] = useState([]);
+  const [cheersReceived, setCheersReceived] = useState(0);
   const [regionSet, setRegionSet] = useState(false);
   const mapRef = useRef(null);
   const cheerQueue = useRef([]);
@@ -84,10 +88,22 @@ export default function RunScreen({ route, navigation }) {
     const value = emoji || "🔥";
     const now = Date.now();
     const isPlain = typeof value === "string" && value.length <= 2;
+    setCheersReceived((n) => n + 1);
     setLiveEmojis((prev) => {
       const last = prev[prev.length - 1];
       if (isPlain && last && last.emoji === value && now - (last._t || 0) < 900) {
-        const bumped = { ...last, count: (last.count || 1) + 1, _t: now };
+        const prevCount = last.count || 1;
+        const nextCount = prevCount + 1;
+        if (crossedComboTier(prevCount, nextCount) && Platform.OS !== "web") {
+          try {
+            Haptics.notificationAsync(
+              nextCount >= 10
+                ? Haptics.NotificationFeedbackType.Success
+                : Haptics.NotificationFeedbackType.Warning
+            );
+          } catch (_) {}
+        }
+        const bumped = { ...last, count: nextCount, _t: now };
         return [...prev.slice(0, -1), bumped];
       }
       const limited = prev.length > 15 ? prev.slice(-14) : prev;
@@ -205,7 +221,36 @@ export default function RunScreen({ route, navigation }) {
     signalLost,
     isDemoMode,
     demoSpeed,
+    newBadgeUnlocks,
   } = useRunTracking(visibilityScope, userAvatar, navigation, mode);
+
+  const [badgeQueue, setBadgeQueue] = useState([]);
+  const [kmMilestone, setKmMilestone] = useState(null);
+  const prevSplitsLen = useRef(0);
+
+  useEffect(() => {
+    if (isFinished && newBadgeUnlocks?.length) {
+      setBadgeQueue(newBadgeUnlocks);
+    }
+  }, [isFinished, newBadgeUnlocks]);
+
+  useEffect(() => {
+    if (!isRunning || isPaused) return;
+    const splits = runData?.splits || [];
+    if (splits.length > prevSplitsLen.current) {
+      const last = splits[splits.length - 1];
+      setKmMilestone({
+        km: last.km,
+        paceMinPerKm: last.paceMinPerKm,
+        id: Date.now(),
+      });
+    }
+    prevSplitsLen.current = splits.length;
+  }, [runData?.splits, isRunning, isPaused]);
+
+  useEffect(() => {
+    if (!isRunning) prevSplitsLen.current = 0;
+  }, [isRunning]);
 
   const recenterMap = () => {
     if (mapRef.current && currentLocation) {
@@ -773,11 +818,24 @@ export default function RunScreen({ route, navigation }) {
         </View>
       )}
 
-      {isFinished && (
+      <KmMilestoneToast
+        milestone={kmMilestone}
+        onDone={() => setKmMilestone(null)}
+      />
+
+      {badgeQueue.length > 0 && (
+        <BadgeUnlockModal
+          badgeId={badgeQueue[0]}
+          onDismiss={() => setBadgeQueue((q) => q.slice(1))}
+        />
+      )}
+
+      {isFinished && badgeQueue.length === 0 && (
         <RunSummaryModal
           durationInSeconds={durationInSeconds}
           runData={runData}
           currentSpeed={currentSpeed}
+          cheersReceived={cheersReceived}
           closeRun={closeRun}
           navigation={navigation}
         />
