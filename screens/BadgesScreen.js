@@ -11,6 +11,7 @@ import { supabase } from "../services/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { T, FONT } from "../constants/typography";
 import ProgressRing from "../components/ProgressRing";
+import FadeInView from "../components/FadeInView";
 
 // Badge catalog: id → { ion icon name, accent color }
 const BADGE_ICONS = {
@@ -23,7 +24,7 @@ const BADGE_ICONS = {
   early_bird: { icon: "sunny-outline", color: "#F6C65D" },
   social_butterfly: { icon: "people-outline", color: "#00C2FF" },
   speed_demon: { icon: "flash-outline", color: "#FF5A36" },
-  night_runner: { icon: "moon-outline", color: "#5B6CFF" },
+  night_runner: { icon: "moon-outline", color: "#3A5BD9" },
   weather_warrior: { icon: "rainy-outline", color: "#00C2FF" },
   route_explorer: { icon: "map-outline", color: "#24C789" },
 };
@@ -295,7 +296,7 @@ export default function BadgesScreen({ navigation }) {
         </ScrollView>
 
         <View style={styles.badgesContainer}>
-          {filteredBadges.map((badge) => {
+          {filteredBadges.map((badge, index) => {
             const meta = BADGE_ICONS[badge.id] || {
               icon: "ribbon-outline",
               color: "#0B0F13",
@@ -304,8 +305,9 @@ export default function BadgesScreen({ navigation }) {
             const iconBg = badge.unlocked ? `${meta.color}18` : "#F4F5F7";
 
             return (
-              <View
+              <FadeInView
                 key={badge.id}
+                delay={Math.min(index, 8) * 45}
                 style={[
                   styles.badgeCard,
                   !badge.unlocked && styles.badgeCardLocked,
@@ -361,7 +363,7 @@ export default function BadgesScreen({ navigation }) {
                     </View>
                   )}
                 </View>
-              </View>
+              </FadeInView>
             );
           })}
         </View>

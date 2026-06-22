@@ -25,6 +25,7 @@ import EmptyState from "../components/EmptyState";
 import useDemoMode, { DEMO_MODE_KEY } from "../hooks/useDemoMode";
 import { DEMO_FRIENDS } from "../hooks/useDemoSocial";
 import useMapVisibilityStore from "../store/useMapVisibilityStore";
+import FadeInView from "../components/FadeInView";
 
 const isImageAvatar = (a) =>
   typeof a === "string" &&
@@ -506,9 +507,9 @@ export default function FriendsScreen({ navigation }) {
         </View>
       )}
 
-      {displayFriends.map((friend) => (
+      {displayFriends.map((friend, index) => (
+        <FadeInView key={friend.id} delay={Math.min(index, 8) * 45}>
         <BouncyButton
-          key={friend.id}
           style={styles.friendCard}
           onPress={() => openFriendProfile(friend)}
           activeOpacity={0.7}
@@ -560,6 +561,7 @@ export default function FriendsScreen({ navigation }) {
             </View>
           </View>
         </BouncyButton>
+        </FadeInView>
       ))}
 
       {displayFriends.length === 0 && !addFriendMode && (

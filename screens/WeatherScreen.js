@@ -14,6 +14,7 @@ import axios from 'axios';
 import { Ionicons } from '@expo/vector-icons';
 import Sparkline from '../components/Sparkline';
 import EmptyState from '../components/EmptyState';
+import FadeInView from '../components/FadeInView';
 import { T, FONT } from '../constants/typography';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -265,7 +266,7 @@ export default function WeatherScreen({ navigation }) {
             onPress={() => navigation.goBack()}
             hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           >
-            <Ionicons name="arrow-back" size={28} color="#111111" />
+            <Ionicons name="arrow-back" size={28} color="#0B0F13" />
           </TouchableOpacity>
           <Text style={styles.title}>Weather & Running Guide</Text>
         </View>
@@ -293,7 +294,7 @@ export default function WeatherScreen({ navigation }) {
             onPress={() => navigation.goBack()}
             hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           >
-            <Ionicons name="arrow-back" size={28} color="#111111" />
+            <Ionicons name="arrow-back" size={28} color="#0B0F13" />
           </TouchableOpacity>
           <Text style={styles.title}>Weather & Running Guide</Text>
           <Text style={styles.subtitle}>Smart recommendations for your runs</Text>
@@ -314,7 +315,7 @@ export default function WeatherScreen({ navigation }) {
             })
             .toUpperCase();
           return (
-            <View style={styles.heroCard}>
+            <FadeInView delay={40} style={styles.heroCard}>
               <Text style={styles.heroLabel}>TODAY · {dateStr}</Text>
               <View style={styles.heroMainRow}>
                 <View style={styles.heroLeft}>
@@ -377,7 +378,7 @@ export default function WeatherScreen({ navigation }) {
                   <Text style={styles.heroStatValue}>45</Text>
                 </View>
               </View>
-            </View>
+            </FadeInView>
           );
         })()}
 
@@ -387,7 +388,7 @@ export default function WeatherScreen({ navigation }) {
         const { text: scoreLabel, color: scoreColor } = getRunScoreLabel(score);
         const barPct = (score ?? 0) / 100;
         return (
-          <View style={styles.runScoreCard}>
+          <FadeInView delay={100} style={styles.runScoreCard}>
             <View style={styles.runScoreHeader}>
               <View>
                 <Text style={styles.runScoreEyebrow}>RUN SCORE</Text>
@@ -428,7 +429,7 @@ export default function WeatherScreen({ navigation }) {
                 </View>
               ))}
             </View>
-          </View>
+          </FadeInView>
         );
       })()}
 
@@ -712,7 +713,7 @@ const styles = StyleSheet.create({
     margin: 20,
     marginTop: 0,
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
@@ -733,7 +734,7 @@ const styles = StyleSheet.create({
     margin: 20,
     marginTop: 0,
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
@@ -757,7 +758,7 @@ const styles = StyleSheet.create({
     margin: 20,
     marginTop: 0,
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
@@ -778,7 +779,7 @@ const styles = StyleSheet.create({
   hourTime: {
     ...T.caption,
     fontFamily: FONT.semibold,
-    color: '#888888',
+    color: '#5B6470',
     marginBottom: 8,
   },
   hourIcon: {
@@ -801,7 +802,7 @@ const styles = StyleSheet.create({
     margin: 20,
     marginTop: 0,
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
@@ -815,17 +816,17 @@ const styles = StyleSheet.create({
     paddingLeft: 10,
   },
   refreshButton: {
-    backgroundColor: '#24C789',
+    backgroundColor: '#0B0F13',
     margin: 20,
     marginTop: 0,
     padding: 16,
-    borderRadius: 30,
+    borderRadius: 28,
     alignItems: 'center',
     marginBottom: 40,
-    shadowColor: '#24C789',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowColor: '#0B0F13',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
     elevation: 5,
   },
   refreshButtonText: {

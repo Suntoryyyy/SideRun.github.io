@@ -17,6 +17,7 @@ import * as Haptics from "expo-haptics";
 import ProgressRing from "../components/ProgressRing";
 import Sparkline from "../components/Sparkline";
 import EmptyState from "../components/EmptyState";
+import FadeInView from "../components/FadeInView";
 import { T, FONT } from "../constants/typography";
 
 const { width } = Dimensions.get("window");
@@ -339,7 +340,7 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         {/* Weekly hero card — Apple Fitness / Oura inspired */}
-        <View style={styles.weekHeroCard}>
+        <FadeInView delay={40} style={styles.weekHeroCard}>
           <View style={styles.weekHeroTop}>
             <View style={styles.weekHeroLeft}>
               <Text style={styles.weekHeroLabel}>THIS WEEK</Text>
@@ -403,7 +404,7 @@ export default function HomeScreen({ navigation }) {
             color="#24C789"
             fillOpacity={0.18}
           />
-        </View>
+        </FadeInView>
 
         {/* Weather preview */}
         {(() => {
@@ -412,6 +413,7 @@ export default function HomeScreen({ navigation }) {
           const [condLabel, condDesc] = getRunCondition(temp, wid);
           const tempStr = temp != null ? `${Math.round(temp)}°C · ` : '';
           return (
+            <FadeInView delay={110}>
             <BouncyButton
               activeOpacity={0.85}
               onPress={() => { hapticLight(); navigation.navigate("Weather"); }}
@@ -426,19 +428,21 @@ export default function HomeScreen({ navigation }) {
               </View>
               <Ionicons name="chevron-forward" size={20} color="#9AA0A6" />
             </BouncyButton>
+            </FadeInView>
           );
         })()}
 
         {/* Recent Run */}
-        <View style={styles.sectionHeader}>
+        <FadeInView delay={170} style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Recent run</Text>
           <BouncyButton onPress={() => navigation.navigate("RunHistory")}>
             <Text style={styles.seeAllText}>See all</Text>
           </BouncyButton>
-        </View>
+        </FadeInView>
 
         {recentRun ? (
           <>
+            <FadeInView delay={210}>
             <BouncyButton
               activeOpacity={0.85}
               onPress={() => navigation.navigate("RunHistory")}
@@ -473,6 +477,7 @@ export default function HomeScreen({ navigation }) {
                 )}
               </View>
             </BouncyButton>
+            </FadeInView>
 
             {nextTarget && (
               <BouncyButton

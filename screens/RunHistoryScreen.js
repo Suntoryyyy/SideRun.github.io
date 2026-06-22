@@ -17,6 +17,7 @@ import * as Haptics from "expo-haptics";
 import HistoryMap from "../components/RunScreenUI/HistoryMap";
 import EmptyState from "../components/EmptyState";
 import ThreeRings from "../components/ThreeRings";
+import FadeInView from "../components/FadeInView";
 import { T, FONT } from "../constants/typography";
 
 const { width, height } = Dimensions.get("window");
@@ -152,7 +153,7 @@ export default function RunHistoryScreen({ navigation }) {
             onPress={() => navigation.goBack()}
             hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           >
-            <Ionicons name="arrow-back" size={28} color="#111111" />
+            <Ionicons name="arrow-back" size={28} color="#0B0F13" />
           </TouchableOpacity>
           <Text style={styles.title}>Run History</Text>
         </View>
@@ -196,8 +197,8 @@ export default function RunHistoryScreen({ navigation }) {
                     ? `${(distance * 1000).toFixed(0)} m`
                     : `${distance.toFixed(2)} km`;
                   return (
+                    <FadeInView key={index} delay={Math.min(index, 8) * 45}>
                     <TouchableOpacity
-                      key={index}
                       style={styles.runCard}
                       activeOpacity={0.85}
                       onPress={() => openRunDetails(run)}
@@ -223,6 +224,7 @@ export default function RunHistoryScreen({ navigation }) {
                         <Text style={styles.runCalories}>{run.calories ? `${Math.round(run.calories)} kcal` : '—'}</Text>
                       </View>
                     </TouchableOpacity>
+                    </FadeInView>
                   );
                 })}
               </View>
