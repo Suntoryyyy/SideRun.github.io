@@ -202,7 +202,8 @@ export default StyleSheet.create({
   dashboardPaused: {
     bottom: 0,
     height: undefined,
-    paddingBottom: Platform.OS === 'ios' ? 104 : Platform.OS === 'android' ? 84 : 92,
+    // Tab bar island + safe area — keep controls reachable without a tall dead zone.
+    paddingBottom: Platform.OS === 'ios' ? 56 : Platform.OS === 'android' ? 52 : 48,
   },
   dashboardSpectate: {
     height: height * 0.28 + 200,
@@ -482,8 +483,8 @@ export default StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 48,
-    paddingTop: 18,
-    paddingBottom: 8,
+    paddingTop: 16,
+    paddingBottom: 4,
   },
   pausedCircleLabel: {
     fontFamily: FONT.bold,

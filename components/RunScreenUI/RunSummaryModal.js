@@ -554,10 +554,13 @@ const HIGHLIGHT_TONES = {
 };
 
 const RunSummaryModal = ({
+  visible = true,
   durationInSeconds,
   runData,
   currentSpeed,
   cheersReceived = 0,
+  onDismiss,
+  onGoHome,
   closeRun,
   navigation,
 }) => {
@@ -568,6 +571,9 @@ const RunSummaryModal = ({
   const username = useUserStore((s) => s.user?.username) || 'Runner';
   const reducedMotion = useReducedMotion();
   const heroScale = useRef(new Animated.Value(1)).current;
+  const sheetY = useRef(new Animated.Value(0)).current;
+  const backdropOpacity = useRef(new Animated.Value(1)).current;
+  const exiting = useRef(false);
 
   const distanceKm = Number(runData?.distance || 0);
   const duration = Number(durationInSeconds || 0);
@@ -600,6 +606,38 @@ const RunSummaryModal = ({
     // run once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (visible) {
+      sheetY.setValue(0);
+      backdropOpacity.setValue(1);
+      exiting.current = false;
+    }
+  }, [visible]);
+
+  const exitModal = (then) => {
+    if (exiting.current) return;
+    exiting.current = true;
+    if (reducedMotion) {
+      then?.();
+      return;
+    }
+    Animated.parallel([
+      Animated.timing(sheetY, {
+        toValue: 420,
+        duration: 380,
+        useNativeDriver: true,
+      }),
+      Animated.timing(backdropOpacity, {
+        toValue: 0,
+        duration: 320,
+        useNativeDriver: true,
+      }),
+    ]).start(() => then?.());
+  };
+
+  const handleDismiss = () => exitModal(() => onDismiss?.());
+  const handleGoHome = () => exitModal(() => onGoHome?.());
 
   const now = new Date();
   const hour = now.getHours();
@@ -734,7 +772,7 @@ const RunSummaryModal = ({
   const mapH = Math.round(previewW * 0.5);
 
   return (
-    <Modal visible={true} transparent animationType="slide">
+    <Modal visible={visible} transparent animationType="none" onRequestClose={handleDismiss}>
       {/* Off-screen capture targets (native only) */}
       {Platform.OS !== 'web' ? (
         <View pointerEvents="none" style={styles.offscreen}>
@@ -774,8 +812,25 @@ const RunSummaryModal = ({
         </View>
       ) : null}
 
-      <BlurView intensity={90} tint="dark" style={styles.blurContainer}>
-        <View style={styles.card}>
+      <Animated.View style={[styles.blurContainer, { opacity: backdropOpacity }]}>
+        <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFill} />
+        <Animated.View
+          style={[
+            styles.card,
+            { transform: [{ translateY: sheetY }] },
+          ]}
+        >
+          <View style={styles.topBar}>
+            <BouncyButton
+              style={styles.laterBtn}
+              activeOpacity={0.75}
+              onPress={handleDismiss}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close" size={18} color="rgba(255,255,255,0.85)" />
+              <Text style={styles.laterBtnText}>稍后再看</Text>
+            </BouncyButton>
+          </View>
           <View
             pointerEvents="none"
             style={[styles.moodGlow, { backgroundColor: profile.accentTint }]}
@@ -935,14 +990,14 @@ const RunSummaryModal = ({
                 if (Platform.OS !== 'web') {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 }
-                closeRun();
+                handleGoHome();
               }}
             >
-              <Text style={styles.doneButtonText}>Done</Text>
+              <Text style={styles.doneButtonText}>Done · View on Home</Text>
             </BouncyButton>
           </ScrollView>
-        </View>
-      </BlurView>
+        </Animated.View>
+      </Animated.View>
     </Modal>
   );
 };
@@ -953,6 +1008,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  topBar: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  laterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  laterBtnText: {
+    fontFamily: FONT.semibold,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.85)',
+    letterSpacing: 0.3,
   },
   card: {
     width: width * 0.9,

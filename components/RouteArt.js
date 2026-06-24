@@ -50,6 +50,25 @@ function buildPath(coords, w, h) {
   return { pts, start: pts[0], end: pts[pts.length - 1] };
 }
 
+function polylineLength(pts) {
+  if (!pts || pts.length < 2) return 1;
+  let len = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const dx = pts[i].x - pts[i - 1].x;
+    const dy = pts[i].y - pts[i - 1].y;
+    len += Math.hypot(dx, dy);
+  }
+  return len || 1;
+}
+
+function dashProps(length, progress = 1) {
+  const p = Math.max(0, Math.min(1, progress));
+  return {
+    strokeDasharray: `${length}`,
+    strokeDashoffset: length * (1 - p),
+  };
+}
+
 // Friendly-looking stylised loop we draw when there are no real coords (web
 // demo mode, or runs saved without GPS samples). Keeps the share card from
 // ever looking empty.
@@ -81,11 +100,15 @@ export default function RouteArt({
   placeName,                     // optional chip label on hero variant
   badge,                         // optional top-right badge {icon, label}
   backgroundColor,               // override viewport bg
+  drawProgress = 1,              // 0..1 partial route draw (replay animation)
 }) {
   const path = useMemo(() => {
     const built = buildPath(coordinates, width, height);
     return built || FALLBACK_LOOP(width, height);
   }, [coordinates, width, height]);
+
+  const pathLen = useMemo(() => polylineLength(path.pts), [path.pts]);
+  const dash = dashProps(pathLen, drawProgress);
 
   const stroke = strokeColor || (variant === 'minimal' ? '#FFFFFF' : '#24C789');
   const bg =
@@ -143,6 +166,7 @@ export default function RouteArt({
           strokeWidth={14}
           strokeLinejoin="round"
           strokeLinecap="round"
+          {...dash}
         />
         {/* Inner halo pass */}
         <Polyline
@@ -153,6 +177,7 @@ export default function RouteArt({
           strokeWidth={9}
           strokeLinejoin="round"
           strokeLinecap="round"
+          {...dash}
         />
         {/* Main stroke */}
         <Polyline
@@ -162,11 +187,16 @@ export default function RouteArt({
           strokeWidth={4.5}
           strokeLinejoin="round"
           strokeLinecap="round"
+          {...dash}
         />
         {/* Start dot (white) */}
-        <Circle cx={path.start.x} cy={path.start.y} r={7} fill="#FFFFFF" stroke={bg} strokeWidth={3} />
+        {drawProgress > 0.02 && (
+          <Circle cx={path.start.x} cy={path.start.y} r={7} fill="#FFFFFF" stroke={bg} strokeWidth={3} />
+        )}
         {/* End dot (accent) */}
-        <Circle cx={path.end.x} cy={path.end.y} r={7} fill={stroke} stroke={bg} strokeWidth={3} />
+        {drawProgress >= 0.98 && (
+          <Circle cx={path.end.x} cy={path.end.y} r={7} fill={stroke} stroke={bg} strokeWidth={3} />
+        )}
       </Svg>
 
       {/* Hero-variant overlays */}

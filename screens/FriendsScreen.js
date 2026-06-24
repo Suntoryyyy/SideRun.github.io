@@ -9,7 +9,6 @@ import {
   TextInput,
   Modal,
   Animated,
-  Switch,
   StyleSheet,
   TouchableWithoutFeedback,
 } from "react-native";
@@ -26,6 +25,7 @@ import useDemoMode, { DEMO_MODE_KEY } from "../hooks/useDemoMode";
 import { DEMO_FRIENDS } from "../hooks/useDemoSocial";
 import useMapVisibilityStore from "../store/useMapVisibilityStore";
 import FadeInView from "../components/FadeInView";
+import PrefToggleRow from "../components/PrefToggleRow";
 
 const isImageAvatar = (a) =>
   typeof a === "string" &&
@@ -36,7 +36,9 @@ const avatarInitial = (name) =>
 const PREF = StyleSheet.create({
   section: {
     marginTop: 18,
-    marginBottom: 4,
+    marginBottom: 20,
+    alignSelf: 'stretch',
+    width: '100%',
   },
   sectionLabel: {
     fontSize: 11,
@@ -50,33 +52,6 @@ const PREF = StyleSheet.create({
     backgroundColor: "#F4F5F7",
     borderRadius: 16,
     paddingHorizontal: 14,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 13,
-  },
-  iconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  rowText: {
-    flex: 1,
-    minWidth: 0,
-  },
-  rowTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#0B0F13",
-  },
-  rowDesc: {
-    fontSize: 12,
-    color: "#6B6F76",
-    marginTop: 2,
   },
   divider: {
     height: 1,
@@ -699,59 +674,36 @@ export default function FriendsScreen({ navigation }) {
                 <View style={PREF.section}>
                   <Text style={PREF.sectionLabel}>PRIVACY & MAP</Text>
                   <View style={PREF.group}>
-                    <View style={PREF.row}>
-                      <View style={[PREF.iconWrap, { backgroundColor: "rgba(36,199,137,0.12)" }]}>
-                        <Ionicons name="map-outline" size={18} color="#24C789" />
-                      </View>
-                      <View style={PREF.rowText}>
-                        <Text style={PREF.rowTitle}>Show on map</Text>
-                        <Text style={PREF.rowDesc}>
-                          Display their live marker on your run map
-                        </Text>
-                      </View>
-                      <Switch
-                        value={mapVisibility[selectedFriend.id] !== false}
-                        onValueChange={(v) => {
-                          Haptics.selectionAsync();
-                          setMapVisible(selectedFriend.id, v);
-                        }}
-                        trackColor={{ false: "#D6DAE0", true: "#24C789" }}
-                        thumbColor="#FFFFFF"
-                        ios_backgroundColor="#D6DAE0"
-                      />
-                    </View>
+                    <PrefToggleRow
+                      icon={<Ionicons name="map-outline" size={18} color="#24C789" />}
+                      iconBg="rgba(36,199,137,0.12)"
+                      title="Show on map"
+                      description="Display their live marker on your run map"
+                      value={mapVisibility[selectedFriend.id] !== false}
+                      onChange={(v) => {
+                        Haptics.selectionAsync();
+                        setMapVisible(selectedFriend.id, v);
+                      }}
+                    />
                     <View style={PREF.divider} />
-                    <View style={PREF.row}>
-                      <View style={[PREF.iconWrap, { backgroundColor: "rgba(11,15,19,0.06)" }]}>
-                        <Ionicons name="eye-outline" size={18} color="#0B0F13" />
-                      </View>
-                      <View style={PREF.rowText}>
-                        <Text style={PREF.rowTitle}>Show their nickname</Text>
-                        <Text style={PREF.rowDesc}>
-                          Show the name label under their marker
-                        </Text>
-                      </View>
-                      <Switch
-                        value={
-                          mapVisibility[selectedFriend.id] !== false &&
-                          mapVisibility[`${selectedFriend.id}:label`] !== false
-                        }
-                        disabled={mapVisibility[selectedFriend.id] === false}
-                        onValueChange={(v) => {
-                          Haptics.selectionAsync();
-                          setMapVisible(`${selectedFriend.id}:label`, v);
-                        }}
-                        trackColor={{ false: "#D6DAE0", true: "#24C789" }}
-                        thumbColor="#FFFFFF"
-                        ios_backgroundColor="#D6DAE0"
-                      />
-                    </View>
+                    <PrefToggleRow
+                      icon={<Ionicons name="eye-outline" size={18} color="#0B0F13" />}
+                      iconBg="rgba(11,15,19,0.06)"
+                      title="Show their nickname"
+                      description="Show the name label under their marker"
+                      value={mapVisibility[`${selectedFriend.id}:label`] !== false}
+                      disabled={mapVisibility[selectedFriend.id] === false}
+                      onChange={(v) => {
+                        Haptics.selectionAsync();
+                        setMapVisible(`${selectedFriend.id}:label`, v);
+                      }}
+                    />
                   </View>
                 </View>
 
                 {selectedFriend.isOnline && (
                   <BouncyButton
-                    style={[styles.chatBtn, styles.chatBtnSecondary]}
+                    style={[styles.chatBtn, styles.chatBtnSecondary, styles.chatBtnAfterPrefs]}
                     onPress={() => {
                       closeFriendProfile();
                       navigation.navigate("Run", {

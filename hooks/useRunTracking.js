@@ -12,6 +12,7 @@ import { getDistance } from "../utils/locationUtils";
 import { formatDuration } from "../utils/timeUtils";
 import useDemoMode from "./useDemoMode";
 import { applyBadgeUnlocks } from "../constants/badges";
+import useRunCompletionStore from "../store/useRunCompletionStore";
 
 export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
   const {
@@ -503,6 +504,23 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
     const currentDurationMinutes = durationInSeconds / 60;
     const finalPace =
       runData.distance > 0 ? currentDurationMinutes / runData.distance : 0;
+    const completedAt = new Date().toISOString();
+
+    // Persist locally FIRST so Home always updates even if cloud writes fail.
+    const localCompletedRun = {
+      distance: runData.distance,
+      duration_seconds: durationInSeconds,
+      pace: finalPace,
+      calories: Math.round(runData.calories),
+      coordinates: runData.coordinates,
+      splits: runData.splits || [],
+      created_at: completedAt,
+    };
+
+    try {
+      await AsyncStorage.setItem('lastCompletedRun', JSON.stringify(localCompletedRun));
+      useRunCompletionStore.getState().bump();
+    } catch (_) {}
 
     try {
       const runRecord = {
@@ -532,6 +550,7 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
             duration_seconds: durationInSeconds,
             pace: finalPace,
             calories: runData.calories,
+            created_at: completedAt,
           },
         ]);
         if (runErr) console.error("Save Run Error", runErr);
@@ -595,18 +614,10 @@ export function useRunTracking(visibilityScope, userAvatar, navigation, mode) {
         } catch (_) {}
       }
 
-      // Persist the completed run locally so HomeScreen can show it instantly
-      // even before the Supabase query refreshes.
+      // Re-save after cloud sync (same payload, ensures consistency).
       try {
-        await AsyncStorage.setItem('lastCompletedRun', JSON.stringify({
-          distance: runData.distance,
-          duration_seconds: durationInSeconds,
-          pace: finalPace,
-          calories: Math.round(runData.calories),
-          coordinates: runData.coordinates,
-          splits: runData.splits || [],
-          created_at: new Date().toISOString(),
-        }));
+        await AsyncStorage.setItem('lastCompletedRun', JSON.stringify(localCompletedRun));
+        useRunCompletionStore.getState().bump();
       } catch (_) {}
 
       setIsFinished(true);

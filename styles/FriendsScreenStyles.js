@@ -346,6 +346,9 @@ export default StyleSheet.create({
     backgroundColor: "#FF5A36",
     shadowColor: "#FF5A36",
   },
+  chatBtnAfterPrefs: {
+    marginTop: 4,
+  },
   chatBtnText: {
     ...T.button,
     fontSize: 15,

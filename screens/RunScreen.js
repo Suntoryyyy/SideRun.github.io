@@ -25,7 +25,10 @@ import CollapsedStatBar from "../components/RunScreenUI/CollapsedStatBar";
 import SpectatorControls from "../components/RunScreenUI/SpectatorControls";
 import RunSummaryModal from "../components/RunScreenUI/RunSummaryModal";
 import KmMilestoneToast from "../components/RunScreenUI/KmMilestoneToast";
+import SavedRunStrip from "../components/RunScreenUI/SavedRunStrip";
+import RouteReplayOverlay from "../components/RunScreenUI/RouteReplayOverlay";
 import BadgeUnlockModal from "../components/BadgeUnlockModal";
+import useRunCompletionStore from "../store/useRunCompletionStore";
 import { DEMO_FRIENDS, useDemoIncomingCheers, pickDemoReply } from "../hooks/useDemoSocial";
 import { crossedComboTier } from "../constants/cheerCombo";
 
@@ -226,7 +229,40 @@ export default function RunScreen({ route, navigation }) {
 
   const [badgeQueue, setBadgeQueue] = useState([]);
   const [kmMilestone, setKmMilestone] = useState(null);
+  const [summaryVisible, setSummaryVisible] = useState(false);
+  const [routeReplayVisible, setRouteReplayVisible] = useState(false);
   const prevSplitsLen = useRef(0);
+
+  useEffect(() => {
+    if (isFinished && badgeQueue.length === 0) {
+      setSummaryVisible(true);
+    }
+  }, [isFinished, badgeQueue.length]);
+
+  useEffect(() => {
+    if (!isFinished) {
+      setSummaryVisible(false);
+      setRouteReplayVisible(false);
+    }
+  }, [isFinished]);
+
+  const isReviewingRun =
+    isFinished && !summaryVisible && !routeReplayVisible;
+
+  const goHomeHandoff = () => {
+    useRunCompletionStore.getState().setHandoff({
+      addedKm: runData?.distance || 0,
+      distanceKm: runData?.distance || 0,
+    });
+    setSummaryVisible(false);
+    setRouteReplayVisible(true);
+  };
+
+  const onReplayComplete = () => {
+    setRouteReplayVisible(false);
+    navigation.navigate("Home");
+    closeRun({ skipGoBack: true });
+  };
 
   useEffect(() => {
     if (isFinished && newBadgeUnlocks?.length) {
@@ -515,9 +551,10 @@ export default function RunScreen({ route, navigation }) {
   // data bar used while running, instead of a tall blank white panel.
   const collapsedPaused = isPausedRun && isPanelCollapsed;
   const showDashboard =
-    mode === 'spectate' ||
+    !isReviewingRun &&
+    (mode === 'spectate' ||
     (isPreRun && !isPanelCollapsed) ||
-    (isPausedRun && !isPanelCollapsed);
+    (isPausedRun && !isPanelCollapsed));
   const dashboardStateStyle =
     mode === 'spectate'
       ? spectatorExpanded ? styles.dashboardSpectateExpanded : styles.dashboardSpectate
@@ -620,7 +657,10 @@ export default function RunScreen({ route, navigation }) {
             dashboardStateStyle,
             // Paused sheet hugs content (override the base fixed height) so it
             // sits flush above the dock with no dead white space below.
-            isPausedRun && { height: undefined },
+            isPausedRun && {
+              height: undefined,
+              paddingBottom: Platform.OS === 'ios' ? 56 : Platform.OS === 'android' ? 52 : 48,
+            },
             { transform: [{ translateY: panY }] },
           ]}
           {...(Platform.OS !== 'web' && mode !== 'spectate' ? panResponder.panHandlers : {})}
@@ -727,7 +767,7 @@ export default function RunScreen({ route, navigation }) {
       {/* Active-run only: floating Pause pill above the tab bar.
           Paused state renders Resume / Stop as circular buttons INSIDE
           the expanded dashboard so they don't float over pace data. */}
-      {isActiveRun && mode !== 'spectate' && (
+      {isActiveRun && mode !== 'spectate' && !isReviewingRun && (
         <View style={styles.fixedControls} pointerEvents="box-none">
           <CollapsedStatBar
             runData={runData}
@@ -752,7 +792,7 @@ export default function RunScreen({ route, navigation }) {
       {/* Pre-run, sheet collapsed: a complete compact data bar (tap to expand)
           plus a thumb-reachable GO, so the map stays visible without losing the
           start affordance. */}
-      {collapsedPreRun && (
+      {collapsedPreRun && !isReviewingRun && (
         <View style={styles.fixedControls} pointerEvents="box-none">
           <BouncyButton
             activeOpacity={0.9}
@@ -781,7 +821,7 @@ export default function RunScreen({ route, navigation }) {
 
       {/* Paused, sheet collapsed: same compact data bar as the running view
           (tap to reopen the summary) with Resume / Stop kept reachable. */}
-      {collapsedPaused && (
+      {collapsedPaused && !isReviewingRun && (
         <View style={styles.fixedControls} pointerEvents="box-none">
           <BouncyButton
             activeOpacity={0.9}
@@ -830,12 +870,30 @@ export default function RunScreen({ route, navigation }) {
         />
       )}
 
+      {routeReplayVisible && (
+        <RouteReplayOverlay
+          coordinates={runData?.coordinates}
+          distanceKm={runData?.distance}
+          onComplete={onReplayComplete}
+        />
+      )}
+
+      {isReviewingRun && (
+        <SavedRunStrip
+          distanceKm={runData?.distance || 0}
+          onViewHome={goHomeHandoff}
+        />
+      )}
+
       {isFinished && badgeQueue.length === 0 && (
         <RunSummaryModal
+          visible={summaryVisible}
           durationInSeconds={durationInSeconds}
           runData={runData}
           currentSpeed={currentSpeed}
           cheersReceived={cheersReceived}
+          onDismiss={() => setSummaryVisible(false)}
+          onGoHome={goHomeHandoff}
           closeRun={closeRun}
           navigation={navigation}
         />

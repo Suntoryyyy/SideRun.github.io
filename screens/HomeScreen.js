@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import BouncyButton from "../components/BouncyButton";
 import {
   View,
@@ -8,6 +8,7 @@ import {
   Dimensions,
   Image,
   Platform,
+  Animated,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../services/supabase";
@@ -18,6 +19,9 @@ import ProgressRing from "../components/ProgressRing";
 import Sparkline from "../components/Sparkline";
 import EmptyState from "../components/EmptyState";
 import FadeInView from "../components/FadeInView";
+import CelebrationPulse from "../components/CelebrationPulse";
+import useReducedMotion from "../hooks/useReducedMotion";
+import useRunCompletionStore from "../store/useRunCompletionStore";
 import { T, FONT } from "../constants/typography";
 
 const { width } = Dimensions.get("window");
@@ -73,6 +77,15 @@ const mergeLocalRun = (runs = [], localRun = null) => {
   return [...runs, localRun];
 };
 
+/** Pick the most recent run — local cache wins ties on created_at. */
+const pickRecentRun = (runs = [], localRun = null) => {
+  const merged = mergeLocalRun(runs, localRun);
+  if (!merged.length) return null;
+  return [...merged].sort(
+    (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
+  )[0];
+};
+
 const buildWeekSummary = (runs = []) => {
   const series = [...EMPTY_WEEK_SERIES];
   const sevenDaysAgo = new Date();
@@ -116,6 +129,13 @@ export default function HomeScreen({ navigation }) {
   const [recentRun, setRecentRun] = useState(null);
   const [nextTarget, setNextTarget] = useState(null); // { km, label }
   const [weather, setWeather] = useState(null);
+  const runCompletionVersion = useRunCompletionStore((s) => s.version);
+  const handoff = useRunCompletionStore((s) => s.handoff);
+  const reducedMotion = useReducedMotion();
+  const ringAnim = useRef(new Animated.Value(0)).current;
+  const [ringDisplay, setRingDisplay] = useState(0);
+  const [highlightRecent, setHighlightRecent] = useState(false);
+  const recentScale = useRef(new Animated.Value(1)).current;
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -126,7 +146,7 @@ export default function HomeScreen({ navigation }) {
 
   useEffect(() => {
     if (isFocused) loadUserData();
-  }, [isFocused]);
+  }, [isFocused, runCompletionVersion]);
 
   useEffect(() => {
     fetchWeather();
@@ -250,7 +270,7 @@ export default function HomeScreen({ navigation }) {
       const mergedRecentRuns = mergeLocalRun(latestRuns || [], localRun)
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
         .slice(0, 4);
-      setRecentRun(mergedRecentRuns[0] || null);
+      setRecentRun(pickRecentRun(latestRuns || [], localRun));
 
       // Compute next-target suggestion from recent history.
       if (mergedRecentRuns.length > 0) {
@@ -301,7 +321,74 @@ export default function HomeScreen({ navigation }) {
   };
 
   const goalProgress = Math.min(1, weekStats.km / weeklyGoalKm || 0);
-  const goalPct = Math.min(100, Math.round(goalProgress * 100));
+  const goalPct = Math.min(100, Math.round((ringDisplay || goalProgress) * 100));
+
+  useEffect(() => {
+    const id = ringAnim.addListener(({ value }) => setRingDisplay(value));
+    return () => ringAnim.removeListener(id);
+  }, [ringAnim]);
+
+  useEffect(() => {
+    if (!handoff) {
+      ringAnim.setValue(goalProgress);
+      setRingDisplay(goalProgress);
+    }
+  }, [goalProgress, handoff]);
+
+  useEffect(() => {
+    if (!handoff || !isFocused) return undefined;
+
+    const added = handoff.addedKm || 0;
+    // Wait until Home has reloaded stats that include this run.
+    if (added > 0 && weekStats.km + 1e-6 < added) return undefined;
+
+    const prior = Math.max(0, (weekStats.km - added) / weeklyGoalKm);
+    const next = Math.min(1, weekStats.km / weeklyGoalKm);
+
+    ringAnim.setValue(prior);
+    setRingDisplay(prior);
+    setHighlightRecent(true);
+
+    if (Platform.OS !== "web") {
+      try {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch (_) {}
+    }
+
+    if (!reducedMotion) {
+      Animated.parallel([
+        Animated.timing(ringAnim, {
+          toValue: next,
+          duration: 900,
+          useNativeDriver: false,
+        }),
+        Animated.sequence([
+          Animated.spring(recentScale, {
+            toValue: 1.03,
+            tension: 120,
+            friction: 8,
+            useNativeDriver: true,
+          }),
+          Animated.spring(recentScale, {
+            toValue: 1,
+            tension: 120,
+            friction: 9,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start();
+    } else {
+      ringAnim.setValue(next);
+      setRingDisplay(next);
+    }
+
+    const t = setTimeout(() => {
+      useRunCompletionStore.getState().clearHandoff();
+      setHighlightRecent(false);
+    }, 2800);
+
+    return () => clearTimeout(t);
+  }, [handoff, isFocused, weekStats.km, weeklyGoalKm, reducedMotion]);
 
   return (
     <View style={styles.container}>
@@ -359,7 +446,7 @@ export default function HomeScreen({ navigation }) {
             <ProgressRing
               size={96}
               stroke={10}
-              progress={goalProgress}
+              progress={ringDisplay}
               color="#24C789"
               trackColor="rgba(0,0,0,0.06)"
               valueText={`${goalPct}%`}
@@ -442,12 +529,21 @@ export default function HomeScreen({ navigation }) {
 
         {recentRun ? (
           <>
+            <Animated.View style={{ transform: [{ scale: recentScale }] }}>
             <FadeInView delay={210}>
             <BouncyButton
               activeOpacity={0.85}
               onPress={() => navigation.navigate("RunHistory")}
-              style={styles.recentRunCard}
+              style={[
+                styles.recentRunCard,
+                highlightRecent && styles.recentRunCardHighlight,
+              ]}
             >
+              {highlightRecent && (
+                <View style={styles.recentPulseWrap} pointerEvents="none">
+                  <CelebrationPulse size={120} color="#24C789" rings={1} duration={900} />
+                </View>
+              )}
               <View style={styles.runIconBg}>
                 <Ionicons name="footsteps" size={18} color="#FFF" />
               </View>
@@ -456,7 +552,9 @@ export default function HomeScreen({ navigation }) {
                   {Number(recentRun.distance).toFixed(2)} km
                 </Text>
                 <Text style={styles.runDate}>
-                  {formatRelativeDate(recentRun.created_at)}
+                  {highlightRecent
+                    ? "Just now"
+                    : formatRelativeDate(recentRun.created_at)}
                 </Text>
               </View>
               <View style={styles.runStats}>
@@ -478,6 +576,7 @@ export default function HomeScreen({ navigation }) {
               </View>
             </BouncyButton>
             </FadeInView>
+            </Animated.View>
 
             {nextTarget && (
               <BouncyButton
@@ -701,6 +800,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 18,
     elevation: 1,
+    overflow: "hidden",
+  },
+  recentRunCardHighlight: {
+    borderWidth: 2,
+    borderColor: "rgba(36,199,137,0.45)",
+    shadowColor: "#24C789",
+    shadowOpacity: 0.18,
+  },
+  recentPulseWrap: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
   },
   runIconBg: {
     width: 40,
